@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>SignUp Testsite</title>
+  {% block localheader %}
+  {% endblock %}
+</head>
+<body>
+  {% block menubar %}
+  <div>
+    {% if user.is_authenticated %}
+    <a href="{% url 'logout' %}">sign out</a>
+    {% else %}
+    <a href="{% url 'login' %}">sign in</a>
+    {% endif %}
+  </div>
+  {% endblock %}
+  <div>
+    <ul id="messages" class="messages">
+      {% for message in messages %}
+      {% if message.tags %}<li class="alert alert-{{ message.tags }}">
+        {% else %}<li class="alert">{% endif %}
+        {{ message }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% block content %}{% endblock %}
+  {% block footer %}{% endblock %}
+</body>
+{% block scripts %}{% endblock %}
+</html>

@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block content %}
+<div>
+<ul>
+<li>First Name: {{object.first_name}}</li>
+<li>Last Name: {{object.last_name}}</li>
+</ul>
+<a href="{% url 'user_activate' object.username %}">Activate</a>
+</div>
+{% endblock %}

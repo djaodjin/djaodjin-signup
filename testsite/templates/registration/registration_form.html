@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block content %}
+<div>
+    <h1>Sign up</div>
+    <div>
+        <form action="{% url 'registration_register' %}" method="post">
+            {% csrf_token %}
+            {{ form }}
+            <input type="submit" name="submit" value="Submit" />
+        </form>
+        <div>
+            <p>{% trans "You already have an account" %}? <a href="{% url 'login' %}">{% trans "Sign in" %}</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

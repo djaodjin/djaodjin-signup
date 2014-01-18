@@ -1,0 +1,21 @@
+{% load i18n %}
+
+{% block subject %}
+{% trans "Account activation on" %} {{ site.name }}
+{% endblock %}
+
+{% block plain %}
+{% blocktrans %}Activate your account at {{ site.name }} by visiting the following url:{% endblocktrans %}
+
+http://{{ site.domain }}{% url 'registration_activate' verification_key %}{% if next %}?next={{next}}{% endif %}
+
+{% blocktrans %}Link is valid for {{ expiration_days }} days.{% endblocktrans %}
+{% endblock %}
+
+{% block html %}
+{% blocktrans %}Activate your account at {{ site.name }} by visiting the following url:{% endblocktrans %}
+
+http://{{ site.domain }}{% url 'registration_activate' verification_key %}{% if next %}?next={{next}}{% endif %}
+
+{% blocktrans %}Link is valid for {{ expiration_days }} days.{% endblocktrans %}
+{% endblock %}

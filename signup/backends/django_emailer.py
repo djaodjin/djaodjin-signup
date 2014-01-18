@@ -1,0 +1,49 @@
+# Copyright (c) 2014, Fortylines LLC
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+#   * Redistributions of source code must retain the above copyright notice,
+#     this list of conditions and the following disclaimer.
+#   * Redistributions in binary form must reproduce the above copyright notice,
+#     this list of conditions and the following disclaimer in the documentation
+#     and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+# PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+# OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+# OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+from django.template import Context
+from django.template.loader_tags import BlockNode, ExtendsNode
+from django.template.loader import get_template
+
+from signup import settings
+
+class TemplateEmailBackend(object):
+
+    def send(self, recipients, template_name, context=None,
+             from_email=settings.DEFAULT_FROM_EMAIL):
+        multi_part = get_template(template_name)
+        context = Context(context)
+        for node in multi_part:
+            if isinstance(node, BlockNode):
+                if node.name == 'subject':
+                    # Email subject *must not* contain newlines
+                    subject = ''.join(node.render(context).splitlines())
+                elif  node.name == 'html':
+                    html = node.render(context)
+                elif  node.name == 'plain':
+                    plain = node.render(context)
+
+        for user in recipients:
+            user.email_user(subject, plain, from_email)
+
