@@ -69,7 +69,7 @@ def _send_verification_email(user, site,
     """
     emailer = TemplateEmailBackend()
     emailer.send([user], 'registration/verification.eml',
-                 {'verification_key': user.verification_key,
+                 {'verification_key': user.email_verification_key,
                   'expiration_days': settings.KEY_EXPIRATION,
                   'site': site,
                   redirect_field_name: next_url})
