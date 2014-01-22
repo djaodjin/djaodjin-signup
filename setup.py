@@ -1,4 +1,5 @@
 from distutils.core import setup
+import signup
 
 setup(
     name='signup',
@@ -8,7 +9,7 @@ setup(
     packages=['signup',
               'signup.backends',
               ],
-    url='https://github.com/djaodjin/frictionless-signup/',
+    url='https://github.com/djaodjin/djaodjin-signup/',
     license='BSD',
     description="DjaoDjin's Implementation of Frictionless Sign Up",
     long_description=open('README.md').read(),
