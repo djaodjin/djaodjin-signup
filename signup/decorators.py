@@ -35,7 +35,7 @@ from django.contrib.sites.models import RequestSite, Site
 from django.utils.decorators import available_attrs
 from django.utils.translation import ugettext_lazy as _
 
-from signup.backends.django_emailer import TemplateEmailBackend
+from signup.backends import emailer
 from signup import settings
 
 
@@ -67,8 +67,7 @@ def _send_verification_email(user, site,
     the verification email was sent from so that the user stays on her
     workflow once verification is completed.
     """
-    emailer = TemplateEmailBackend()
-    emailer.send([user], 'registration/verification.eml',
+    emailer().send([user], 'registration/verification.eml',
                  {'verification_key': user.email_verification_key,
                   'expiration_days': settings.KEY_EXPIRATION,
                   'site': site,
