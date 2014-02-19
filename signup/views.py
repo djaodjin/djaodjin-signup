@@ -97,10 +97,7 @@ class SignupView(FormView):
             return self.form_invalid(form, request)
 
     def form_invalid(self, form, request):
-        messages.error(
-            self.request, _("Please enter a valid name and email address."))
-        # XXX use request.REFERER instead ?
-        return _redirect_to(fail_url)
+        return self.render_to_response(self.get_context_data(form=form))
 
     def form_valid(self, form, request):
         new_user = self.register(request, **form.cleaned_data)
