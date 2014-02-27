@@ -42,13 +42,15 @@ EMAIL_VERIFICATION_RE = re.compile('^%s$' % settings.EMAIL_VERIFICATION_PAT)
 
 class ActivatedUserManager(UserManager):
 
-    def create_inactive_user(self, email, **extra_fields):
+    def create_inactive_user(self, email, **kwargs):
         """
         Create an inactive user with a default username.
         """
-        username = email.split('@')[0] \
-            + ''.join(random.choice('0123456789') for count in range(3))
-        user = self.create_user(username, email=email, **extra_fields)
+        username = kwargs.pop('username', None)
+        if not username:
+            username = email.split('@')[0] \
+                + ''.join(random.choice('0123456789') for count in range(3))
+        user = self.create_user(username, email=email, **kwargs)
 
         # Set the user inactive and create the verification key
         user.is_active = False
