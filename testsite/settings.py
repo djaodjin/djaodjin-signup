@@ -32,18 +32,15 @@ TEMPLATE_DEBUG = True
 
 ALLOWED_HOSTS = []
 
+# Database
+# https://docs.djangoproject.com/en/1.6/ref/settings/#databases
 
-# Application definition
-
-INSTALLED_APPS = (
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'signup',
-    'testsite'
-)
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+    }
+}
 
 MIDDLEWARE_CLASSES = (
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -57,17 +54,6 @@ MIDDLEWARE_CLASSES = (
 ROOT_URLCONF = 'testsite.urls'
 
 WSGI_APPLICATION = 'testsite.wsgi.application'
-
-
-# Database
-# https://docs.djangoproject.com/en/1.6/ref/settings/#databases
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-    }
-}
 
 # Internationalization
 # https://docs.djangoproject.com/en/1.6/topics/i18n/
@@ -104,3 +90,14 @@ DEFAULT_FROM_EMAIL = "admin@example.com"
 EMAIL_HOST_USER = ""
 EMAIL_HOST_PASSWORD = ""
 
+# Application definition
+
+INSTALLED_APPS = (
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'signup',
+    'testsite'
+)

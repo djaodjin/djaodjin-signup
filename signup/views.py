@@ -107,6 +107,13 @@ class SignupView(FormView):
             success_url = request.META['PATH_INFO']
         return _redirect_to(success_url)
 
+    def get_context_data(self, **kwargs):
+        context = super(SignupView, self).get_context_data(**kwargs)
+        next_url = self.request.GET.get(REDIRECT_FIELD_NAME, None)
+        if next_url:
+            context.update({REDIRECT_FIELD_NAME: next_url })
+        return context
+
     def get_success_url(self, request=None):
         next_url = request.GET.get(REDIRECT_FIELD_NAME, None)
         if not next_url:

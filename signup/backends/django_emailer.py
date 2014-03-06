@@ -22,6 +22,7 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+from django.core.mail import send_mail
 from django.template import Context
 from django.template.loader_tags import BlockNode, ExtendsNode
 from django.template.loader import get_template
@@ -44,6 +45,7 @@ class TemplateEmailBackend(object):
                 elif  node.name == 'plain':
                     plain = node.render(context)
 
-        for user in recipients:
-            user.email_user(subject, plain, from_email)
+        send_mail(subject, plain, from_email,
+            [ user.email for user in recipients], fail_silently=True)
+
 
