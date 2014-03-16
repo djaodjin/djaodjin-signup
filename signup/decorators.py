@@ -83,9 +83,9 @@ def check_user_active(request, user,
     Checks that a *user* is active. We won't activate the account of
     a user until we checked the email address is valid.
     """
-    if not user.is_active:
+    if user.has_invalid_password:
         # Let's send e-mail again.
-        if not user.is_reachable():
+        if not user.is_reachable:
             if Site._meta.installed:
                 site = Site.objects.get_current()
             else:

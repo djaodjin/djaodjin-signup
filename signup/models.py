@@ -45,6 +45,14 @@ class ActivatedUserManager(UserManager):
     def create_inactive_user(self, email, **kwargs):
         """
         Create an inactive user with a default username.
+
+        We have a different notion of an active user than Django does.
+        For Django when is_active is False, the user cannot be identified
+        and requests fall back to Anonymous. That's a problem because
+        we want a user who has given us a name and email address to be
+        able to use the site. We only require a password for the second
+        login. Our definition of inactive is thus a user that has an invalid
+        password.
         """
         username = kwargs.pop('username', None)
         if not username:
@@ -52,8 +60,9 @@ class ActivatedUserManager(UserManager):
                 + ''.join(random.choice('0123456789') for count in range(3))
         user = self.create_user(username, email=email, **kwargs)
 
-        # Set the user inactive and create the verification key
-        user.is_active = False
+        # Force is_active to True and create an email verification key
+        # (see above definition of active user).
+        user.is_active = True
         salt = hashlib.sha1(str(random.random())).hexdigest()[:5]
         if isinstance(username, unicode):
             username = username.encode('utf-8')
@@ -107,6 +116,11 @@ class ActivatedUser(AbstractUser):
                (self.last_login + expiration_date <= datetime_now())
     email_verification_key_expired.boolean = True
 
+    @property
+    def has_invalid_password(self):
+        return self.password.startswith('!')
+
+    @property
     def is_reachable(self):
         """
         Returns True if the user is reachable by email.

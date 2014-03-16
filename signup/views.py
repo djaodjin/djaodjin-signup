@@ -179,7 +179,7 @@ class ActivationView(TemplateView):
         verification_key = kwargs['verification_key']
         user = UserModel.objects.find_user(verification_key)
         if user:
-            if user.password.startswith('!'):
+            if user.has_invalid_password:
                 messages.info(self.request,
                     _("Please set a password to protect your account."))
                 url = reverse('registration_password_confirm',
