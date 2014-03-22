@@ -4,11 +4,11 @@
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
 #
-#   * Redistributions of source code must retain the above copyright notice,
-#     this list of conditions and the following disclaimer.
-#   * Redistributions in binary form must reproduce the above copyright notice,
-#     this list of conditions and the following disclaimer in the documentation
-#     and/or other materials provided with the distribution.
+# 1. Redistributions of source code must retain the above copyright notice,
+#    this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
 #
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 # AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
@@ -46,11 +46,11 @@ urlpatterns = patterns('',
 """
 
 from django import forms
-from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import AuthenticationForm
 from django.utils.translation import ugettext_lazy as _
 
-UserModel = get_user_model()
+from signup.compat import User
+
 
 class UsernameOrEmailAuthenticationForm(AuthenticationForm):
 
@@ -63,6 +63,7 @@ class UsernameOrEmailModelBackend(object):
     Backend to authenticate a user through either her username
     or email address.
     """
+    #pylint: disable=no-self-use
 
     def authenticate(self, username=None, password=None):
         if '@' in username:
@@ -70,14 +71,14 @@ class UsernameOrEmailModelBackend(object):
         else:
             kwargs = {'username': username}
         try:
-            user = UserModel.objects.get(**kwargs)
+            user = User.objects.get(**kwargs) #pylint: disable=star-args
             if user.check_password(password):
                 return user
-        except UserModel.DoesNotExist:
+        except User.DoesNotExist:
             return None
 
     def get_user(self, user_id):
         try:
-            return UserModel.objects.get(pk=user_id)
-        except UserModel.DoesNotExist:
+            return User.objects.get(pk=user_id)
+        except User.DoesNotExist:
             return None

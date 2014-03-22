@@ -4,11 +4,11 @@
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
 #
-#   * Redistributions of source code must retain the above copyright notice,
-#     this list of conditions and the following disclaimer.
-#   * Redistributions in binary form must reproduce the above copyright notice,
-#     this list of conditions and the following disclaimer in the documentation
-#     and/or other materials provided with the distribution.
+# 1. Redistributions of source code must retain the above copyright notice,
+#    this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
 #
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 # AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
@@ -86,7 +86,7 @@ def check_user_active(request, user,
     if user.has_invalid_password:
         # Let's send e-mail again.
         if not user.is_reachable:
-            if Site._meta.installed:
+            if Site._meta.installed: #pylint: disable=protected-access
                 site = Site.objects.get_current()
             else:
                 site = RequestSite(request)

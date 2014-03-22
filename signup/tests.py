@@ -4,11 +4,11 @@
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
 #
-#   * Redistributions of source code must retain the above copyright notice,
-#     this list of conditions and the following disclaimer.
-#   * Redistributions in binary form must reproduce the above copyright notice,
-#     this list of conditions and the following disclaimer in the documentation
-#     and/or other materials provided with the distribution.
+# 1. Redistributions of source code must retain the above copyright notice,
+#    this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
 #
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 # AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
@@ -27,9 +27,9 @@ import re
 from django.test import TestCase
 from django.test.client import Client
 from django.core.urlresolvers import reverse
-from django.contrib.auth import get_user_model
 
 from signup import settings
+from signup.models import ActivatedUser
 
 REGISTRATION_EMAIL = 'user@example.com'
 
@@ -37,14 +37,13 @@ REGISTRATION_EMAIL = 'user@example.com'
 class SignUpTests(TestCase):
     '''Tests signup functionality.'''
 
-    UserModel = get_user_model()
-
-    def test_activate_valid_ask_password(self):
-        user = UserModel.objects.create_inactive_user(REGISTRATION_EMAIL)
+    def test_activate_password(self):
+        user = ActivatedUser.objects.create_inactive_user(REGISTRATION_EMAIL)
         client = Client()
         response = client.get(reverse('registration_activate',
                                       args=(user.email_verification_key,)),
                               follow=True)
+        # pylint: disable=maybe-no-member
         self.assertTrue(response.status_code == 200)
         self.assertTrue(re.match(
      r'\S+/accounts/activate/(?P<verification_key>%s)/password/(?P<token>.+)/$'

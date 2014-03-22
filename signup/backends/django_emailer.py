@@ -4,11 +4,11 @@
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
 #
-#   * Redistributions of source code must retain the above copyright notice,
-#     this list of conditions and the following disclaimer.
-#   * Redistributions in binary form must reproduce the above copyright notice,
-#     this list of conditions and the following disclaimer in the documentation
-#     and/or other materials provided with the distribution.
+# 1. Redistributions of source code must retain the above copyright notice,
+#    this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
 #
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 # AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
@@ -24,12 +24,13 @@
 
 from django.core.mail import send_mail
 from django.template import Context
-from django.template.loader_tags import BlockNode, ExtendsNode
+from django.template.loader_tags import BlockNode
 from django.template.loader import get_template
 
 from signup import settings
 
 class TemplateEmailBackend(object):
+    #pylint: disable=no-self-use
 
     def send(self, recipients, template_name, context=None,
              from_email=settings.DEFAULT_FROM_EMAIL):
@@ -41,11 +42,11 @@ class TemplateEmailBackend(object):
                     # Email subject *must not* contain newlines
                     subject = ''.join(node.render(context).splitlines())
                 elif  node.name == 'html':
-                    html = node.render(context)
+                    html = node.render(context) #pylint: disable=unused-variable
                 elif  node.name == 'plain':
                     plain = node.render(context)
 
         send_mail(subject, plain, from_email,
-            [ user.email for user in recipients], fail_silently=True)
+            [user.email for user in recipients], fail_silently=True)
 
 

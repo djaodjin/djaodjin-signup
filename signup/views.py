@@ -4,11 +4,11 @@
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
 #
-#   * Redistributions of source code must retain the above copyright notice,
-#     this list of conditions and the following disclaimer.
-#   * Redistributions in binary form must reproduce the above copyright notice,
-#     this list of conditions and the following disclaimer in the documentation
-#     and/or other materials provided with the distribution.
+# 1. Redistributions of source code must retain the above copyright notice,
+#    this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
 #
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 # AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
@@ -25,33 +25,31 @@
 """Extra Forms and Views that might prove useful to register users."""
 
 from django import forms
-from django.core.urlresolvers import reverse, reverse_lazy
+from django.core.urlresolvers import reverse
 from django.contrib import messages
 from django.contrib.auth import login as auth_login
-from django.contrib.auth import REDIRECT_FIELD_NAME
-from django.contrib.auth import authenticate
-from django.contrib.auth import get_user_model
+from django.contrib.auth import REDIRECT_FIELD_NAME, authenticate
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import SetPasswordForm
 from django.contrib.auth.tokens import default_token_generator
 from django.shortcuts import render, redirect
 from django.utils.safestring import mark_safe
 from django.utils.translation import ugettext_lazy as _
-from django.views.generic.base import TemplateView
-from django.views.generic.edit import FormView
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.cache import never_cache
+from django.views.generic.base import TemplateView
+from django.views.generic.edit import FormView
 
 from signup.decorators import check_user_active
+from signup.compat import User
 from signup import signals
 from signup import settings
 
-UserModel = get_user_model()
 
 def _redirect_to(url):
     try:
-        to_url, args, kwargs = url
-        return redirect(to_url, *args, **kwargs)
+        to_url, args, kwargs = url #(cast to tuple) pylint: disable=star-args
+        return redirect(to_url, *args, **kwargs) #pylint: disable=star-args
     except ValueError:
         return redirect(url)
 
@@ -96,43 +94,44 @@ class SignupView(FormView):
         else:
             return self.form_invalid(form, request)
 
-    def form_invalid(self, form, request):
+    def form_invalid(self, form):
         return self.render_to_response(self.get_context_data(form=form))
 
-    def form_valid(self, form, request):
-        new_user = self.register(request, **form.cleaned_data)
+    def form_valid(self, form):
+        new_user = self.register(**form.cleaned_data)
         if new_user:
-            success_url = self.get_success_url(request)
+            success_url = self.get_success_url(self.request)
         else:
-            success_url = request.META['PATH_INFO']
+            success_url = self.request.META['PATH_INFO']
         return _redirect_to(success_url)
 
     def get_context_data(self, **kwargs):
         context = super(SignupView, self).get_context_data(**kwargs)
         next_url = self.request.GET.get(REDIRECT_FIELD_NAME, None)
         if next_url:
-            context.update({REDIRECT_FIELD_NAME: next_url })
+            context.update({REDIRECT_FIELD_NAME: next_url})
         return context
 
-    def get_success_url(self, request=None):
-        next_url = request.GET.get(REDIRECT_FIELD_NAME, None)
+    def get_success_url(self):
+        next_url = self.request.GET.get(REDIRECT_FIELD_NAME, None)
         if not next_url:
             next_url = super(SignupView, self).get_success_url()
         return next_url
 
-    def register(self, request, **cleaned_data):
+    def register(self, **cleaned_data):
+        #pylint: disable=maybe-no-member
         full_name, email = cleaned_data['full_name'], cleaned_data['email']
-        users = UserModel.objects.filter(email=email)
+        users = User.objects.filter(email=email)
         if users.exists():
             user = users.get()
-            if check_user_active(request, user,
-                                 next_url=self.get_success_url(request)):
-                messages.info(request, mark_safe(_(
+            if check_user_active(self.request, user,
+                                 next_url=self.get_success_url()):
+                messages.info(self.request, mark_safe(_(
                     'This email address has already been registered!'\
 ' Please <a href="%s">login</a> with your credentials. Thank you.'
                     % reverse('login'))))
             else:
-                messages.info(request, mark_safe(_(
+                messages.info(self.request, mark_safe(_(
                     "This email address has already been registered!"\
 " You should now secure and activate your account following "\
 " the instructions we just emailed you. Thank you.")))
@@ -149,20 +148,20 @@ class SignupView(FormView):
         if cleaned_data.has_key('username'):
             username = cleaned_data['username']
         if username and cleaned_data.has_key('password'):
-            user = UserModel.objects.create_user(
+            user = User.objects.create_user(
                 username=username, password=cleaned_data['password'],
                 email=email, first_name=first_name, last_name=last_name)
         else:
-            user = UserModel.objects.create_inactive_user(
+            user = User.objects.create_inactive_user(
                 username=username,
                 email=email, first_name=first_name, last_name=last_name)
         signals.user_registered.send(
-            sender=__name__, user=user, request=request)
+            sender=__name__, user=user, request=self.request)
 
         # Bypassing authentication here, we are doing frictionless registration
         # the first time around.
         user.backend = 'django.contrib.auth.backends.ModelBackend'
-        auth_login(request, user)
+        auth_login(self.request, user)
         return user
 
 
@@ -177,7 +176,8 @@ class ActivationView(TemplateView):
 
     def get(self, request, *args, **kwargs):
         verification_key = kwargs['verification_key']
-        user = UserModel.objects.find_user(verification_key)
+        #pylint: disable=maybe-no-member
+        user = User.objects.find_user(verification_key)
         if user:
             if user.has_invalid_password:
                 messages.info(self.request,
@@ -186,29 +186,28 @@ class ActivationView(TemplateView):
                               args=(user.email_verification_key,
                                     self.token_generator.make_token(user)))
             else:
-                user = UserModel.objects.activate_user(verification_key)
+                user = User.objects.activate_user(verification_key)
                 signals.user_activated.send(
-                    sender=__name__, user=user, request=request)
+                    sender=__name__, user=user, request=self.request)
                 messages.info(self.request,
                     _("Thank you. Your account is now active." \
                           " You can sign in at your convienience."))
                 url = reverse('login')
-            next_url = request.GET.get(REDIRECT_FIELD_NAME, None)
+            next_url = self.request.GET.get(REDIRECT_FIELD_NAME, None)
             if next_url:
                 success_url = "%s?%s=%s" % (url, REDIRECT_FIELD_NAME, next_url)
             else:
                 success_url = url
             return _redirect_to(success_url)
-        return super(ActivationView, self).get(request, *args, **kwargs)
+        return super(ActivationView, self).get(self.request, *args, **kwargs)
 
-
+#pylint: disable=too-many-arguments
 @sensitive_post_parameters()
 @never_cache
 def registration_password_confirm(request, verification_key, token=None,
         template_name='registration/password_reset_confirm.html',
         token_generator=default_token_generator,
         set_password_form=SetPasswordForm,
-        post_reset_redirect=reverse_lazy('accounts_profile'),
         extra_context=None,
         redirect_field_name=REDIRECT_FIELD_NAME):
     """
@@ -221,14 +220,15 @@ def registration_password_confirm(request, verification_key, token=None,
     # We use *find_user* instead of *activate_user* because we want
     # to make sure both the *verification_key* and *token* are valid
     # before doing any modification of the underlying models.
-    user = UserModel.objects.find_user(verification_key)
+    #pylint: disable=maybe-no-member
+    user = User.objects.find_user(verification_key)
     if user is not None and token_generator.check_token(user, token):
         validlink = True
         if request.method == 'POST':
             form = set_password_form(user, request.POST)
             if form.is_valid():
                 form.save()
-                user = UserModel.objects.activate_user(verification_key)
+                user = User.objects.activate_user(verification_key)
                 signals.user_activated.send(
                     sender=__name__, user=user, request=request)
                 messages.info(request,
