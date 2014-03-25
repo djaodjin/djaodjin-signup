@@ -90,9 +90,9 @@ class SignupView(FormView):
         form = self.get_form(form_class)
         if form.is_valid():
             # Pass request to form_valid.
-            return self.form_valid(form, request)
+            return self.form_valid(form)
         else:
-            return self.form_invalid(form, request)
+            return self.form_invalid(form)
 
     def form_invalid(self, form):
         return self.render_to_response(self.get_context_data(form=form))
@@ -100,7 +100,7 @@ class SignupView(FormView):
     def form_valid(self, form):
         new_user = self.register(**form.cleaned_data)
         if new_user:
-            success_url = self.get_success_url(self.request)
+            success_url = self.get_success_url()
         else:
             success_url = self.request.META['PATH_INFO']
         return _redirect_to(success_url)
