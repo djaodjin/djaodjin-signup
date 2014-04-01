@@ -152,9 +152,8 @@ class SignupView(FormView):
                 username=username, password=cleaned_data['password'],
                 email=email, first_name=first_name, last_name=last_name)
         else:
-            user = User.objects.create_inactive_user(
-                username=username,
-                email=email, first_name=first_name, last_name=last_name)
+            user = User.objects.create_inactive_user(email,
+                username=username, first_name=first_name, last_name=last_name)
         signals.user_registered.send(
             sender=__name__, user=user, request=self.request)
 
