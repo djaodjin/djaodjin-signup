@@ -16,11 +16,9 @@
   </div>
   {% endblock %}
   <div>
-    <ul id="messages" class="messages">
+    <ul id="messages">
       {% for message in messages %}
-      {% if message.tags %}<li class="alert alert-{{ message.tags }}">
-        {% else %}<li class="alert">{% endif %}
-        {{ message }}</li>
+      <li>{{ message }}</li>
       {% endfor %}
     </ul>
   </div>
