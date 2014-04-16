@@ -30,8 +30,9 @@ from django.contrib import messages
 from django.contrib.auth import login as auth_login
 from django.contrib.auth import REDIRECT_FIELD_NAME, authenticate
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.forms import SetPasswordForm
+from django.contrib.auth.forms import PasswordResetForm, SetPasswordForm
 from django.contrib.auth.tokens import default_token_generator
+from django.contrib.auth.views import password_reset
 from django.shortcuts import render, redirect
 from django.utils.safestring import mark_safe
 from django.utils.translation import ugettext_lazy as _
@@ -70,6 +71,38 @@ class NameEmailForm(forms.Form):
         widget=forms.TextInput(attrs={'placeholder':'Email',
                                       'maxlength': 75}),
         label=_("E-mail"))
+
+
+class PasswordResetView(FormView):
+    """
+    Enter email address to reset password.
+    """
+
+    form_class = PasswordResetForm
+    success_url = settings.LOGIN_REDIRECT_URL
+    template_name = 'registration/password_reset_form.html'
+
+    def form_valid(self, form):
+        messages.info(self.request, "Please follow the instructions "\
+            "in the email that has just been sent to you to reset"\
+            " your password.")
+        return password_reset(
+            self.request, template_name=self.template_name,
+            password_reset_form=self.form_class,
+            post_reset_redirect=self.get_success_url())
+
+    def get_success_url(self):
+        next_url = self.request.GET.get(REDIRECT_FIELD_NAME, None)
+        if not next_url:
+            next_url = super(PasswordResetView, self).get_success_url()
+        return next_url
+
+    def get_context_data(self, **kwargs):
+        context = super(PasswordResetView, self).get_context_data(**kwargs)
+        next_url = self.request.GET.get(REDIRECT_FIELD_NAME, None)
+        if next_url:
+            context.update({REDIRECT_FIELD_NAME: next_url})
+        return context
 
 
 class SignupView(FormView):

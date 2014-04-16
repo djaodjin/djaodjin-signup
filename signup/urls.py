@@ -36,7 +36,7 @@ from django.conf.urls import patterns, include, url
 
 from signup.backends.auth import UsernameOrEmailAuthenticationForm
 from signup.views import (
-    SignupView, ActivationView,
+    SignupView, ActivationView, PasswordResetView,
     registration_password_confirm, redirect_to_user_profile)
 from signup import settings
 
@@ -60,6 +60,8 @@ urlpatterns = patterns('',
     url(r'^login/$', 'django.contrib.auth.views.login',
         {'authentication_form': UsernameOrEmailAuthenticationForm},
         name='login'),
+    url(r'^password_reset/$',
+        PasswordResetView.as_view(), name='password_reset'),
     (r'', include('django.contrib.auth.urls')),
 )
 
