@@ -1,22 +1,17 @@
 {% extends "base.html" %}
-{% load i18n %}
 
 {% block content %}
 <div>
 
 {% if account %}
-
-<p>{% trans "Account successfully activated" %}</p>
-<p><a href="{% url 'login' %}">{% trans "Log in" %}</a></p>
-
+<p>Account successfully activated</p>
+<p><a href="{% url 'login' %}">Log in</a></p>
 {% else %}
-
-<p>{% trans "Account activation failed" %}</p>
-<p>{% trans "Please try again to " %} <a href="{% url 'registration_register' %}">{% trans "Register" %}</a></p>
+<p>Account activation failed</p>
+<p>Please try again to <a href="{% url 'registration_register' %}"> Register</a></p>
 {% endif %}
 
-<p>{% trans "For any questions, please email us at " %}<a href="mailto:info@example.com">info@example.com</a></p>
+<p>For any questions, please email us at <a href="mailto:info@example.com">info@example.com</a></p>
 
 </div>
-
 {% endblock %}

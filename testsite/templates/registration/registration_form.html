@@ -1,5 +1,4 @@
 {% extends "base.html" %}
-{% load i18n %}
 
 {% block content %}
 <div>
@@ -11,7 +10,7 @@
             <input type="submit" name="submit" value="Submit" />
         </form>
         <div>
-            <p>{% trans "You already have an account" %}? <a href="{% url 'login' %}">{% trans "Sign in" %}</a>
+            <p>You already have an account? <a href="{% url 'login' %}">Sign in</a>
         </div>
     </div>
 </div>
