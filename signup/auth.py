@@ -25,7 +25,15 @@
 import urlparse
 
 from django.conf import settings
+from django.contrib.auth import REDIRECT_FIELD_NAME
 from django.http.request import split_domain_port, validate_host
+
+def validate_redirect(request):
+    """
+    Get the REDIRECT_FIELD_NAME and validates it is a URL on allowed hosts.
+    """
+    return validate_redirect_url(request.GET.get(REDIRECT_FIELD_NAME, None))
+
 
 def validate_redirect_url(next_url):
     """

@@ -35,7 +35,7 @@ from django.contrib.sites.models import RequestSite, Site
 from django.utils.decorators import available_attrs
 from django.utils.translation import ugettext_lazy as _
 
-from signup.backends import emailer
+from signup.backends import get_email_backend
 from signup import settings
 
 
@@ -67,11 +67,12 @@ def _send_verification_email(user, site,
     the verification email was sent from so that the user stays on her
     workflow once verification is completed.
     """
-    emailer().send([user], 'registration/verification.eml',
-                 {'verification_key': user.email_verification_key,
-                  'expiration_days': settings.KEY_EXPIRATION,
-                  'site': site,
-                  redirect_field_name: next_url})
+    get_email_backend().send([user.email],
+        'registration/verification.eml',
+        {'user': user, 'site': site,
+         'verification_key': user.email_verification_key,
+         'expiration_days': settings.KEY_EXPIRATION,
+         redirect_field_name: next_url})
 
 
 # The user we are looking to activate might be different from

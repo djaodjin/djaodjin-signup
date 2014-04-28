@@ -28,3 +28,10 @@ except ImportError: # django < 1.5
     from django.contrib.auth.models import User #pylint: disable=unused-import
 else:
     User = get_user_model()                     #pylint: disable=invalid-name
+
+# We would use:
+#     from django.core.validators import slug_re
+#     SLUG_PAT = slug_re.pattern
+# but that includes ^ and $ which makes it unsuitable for use in URL patterns.
+
+SLUG_PAT = r'[-a-zA-Z0-9_]+'

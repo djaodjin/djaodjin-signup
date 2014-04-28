@@ -25,7 +25,11 @@
 from django.core.exceptions import ImproperlyConfigured
 from django.utils.importlib import import_module
 
-from signup import settings
+
+def get_email_backend():
+    # Delay until usage to avoid import loops.
+    from signup import settings
+    return _load_backend(settings.EMAILER_BACKEND)
 
 
 def _load_backend(path):
@@ -34,19 +38,14 @@ def _load_backend(path):
     try:
         mod = import_module(module)
     except ImportError as err:
-        raise ImproperlyConfigured(
-            'Error importing signup emailer backend %s: "%s"' % (path, err))
+        raise ImproperlyConfigured('Error importing emailer backend %s: "%s"'
+            % (path, err))
     except ValueError:
-        raise ImproperlyConfigured(
-            'Error importing signup emailer backends. '\
-            'Is SIGNUP_EMAILER_BACKEND a correctly defined list or tuple?')
+        raise ImproperlyConfigured('Error importing emailer backend. '\
+' Is EMAILER_BACKEND a correctly defined list or tuple?')
     try:
         cls = getattr(mod, attr)
     except AttributeError:
         raise ImproperlyConfigured('Module "%s" does not define a "%s" '\
-            'signup emailer backend' % (module, attr))
+' emailer backend' % (module, attr))
     return cls()
-
-def emailer():
-    # Delay until usage to avoid import loops.
-    return _load_backend(settings.EMAILER_BACKEND)

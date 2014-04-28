@@ -38,9 +38,10 @@ from django.utils.safestring import mark_safe
 from django.utils.translation import ugettext_lazy as _
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.cache import never_cache
-from django.views.generic.base import TemplateView
-from django.views.generic.edit import FormView
+from django.views.generic.base import TemplateResponseMixin, TemplateView
+from django.views.generic.edit import FormMixin, ProcessFormView
 
+from signup.auth import validate_redirect
 from signup.decorators import check_user_active
 from signup.compat import User
 from signup import signals
@@ -73,7 +74,30 @@ class NameEmailForm(forms.Form):
         label=_("E-mail"))
 
 
-class PasswordResetView(FormView):
+class RedirectFormMixin(FormMixin):
+
+    def get_success_url(self):
+        next_url = validate_redirect(self.request)
+        if not next_url:
+            next_url = super(RedirectFormMixin, self).get_success_url()
+        return next_url
+
+    def get_context_data(self, **kwargs):
+        context = super(RedirectFormMixin, self).get_context_data(**kwargs)
+        next_url = validate_redirect(self.request)
+        if next_url:
+            context.update({REDIRECT_FIELD_NAME: next_url})
+        return context
+
+
+class RedirectFormView(TemplateResponseMixin, RedirectFormMixin,
+                       ProcessFormView):
+    """
+    Redirects on form valid.
+    """
+
+
+class PasswordResetView(RedirectFormView):
     """
     Enter email address to reset password.
     """
@@ -91,21 +115,8 @@ class PasswordResetView(FormView):
             password_reset_form=self.form_class,
             post_reset_redirect=self.get_success_url())
 
-    def get_success_url(self):
-        next_url = self.request.GET.get(REDIRECT_FIELD_NAME, None)
-        if not next_url:
-            next_url = super(PasswordResetView, self).get_success_url()
-        return next_url
 
-    def get_context_data(self, **kwargs):
-        context = super(PasswordResetView, self).get_context_data(**kwargs)
-        next_url = self.request.GET.get(REDIRECT_FIELD_NAME, None)
-        if next_url:
-            context.update({REDIRECT_FIELD_NAME: next_url})
-        return context
-
-
-class SignupView(FormView):
+class SignupView(RedirectFormView):
     """
     A frictionless registration backend With a full name and email
     address, the user is immediately signed up and logged in.
@@ -137,19 +148,6 @@ class SignupView(FormView):
         else:
             success_url = self.request.META['PATH_INFO']
         return _redirect_to(success_url)
-
-    def get_context_data(self, **kwargs):
-        context = super(SignupView, self).get_context_data(**kwargs)
-        next_url = self.request.GET.get(REDIRECT_FIELD_NAME, None)
-        if next_url:
-            context.update({REDIRECT_FIELD_NAME: next_url})
-        return context
-
-    def get_success_url(self):
-        next_url = self.request.GET.get(REDIRECT_FIELD_NAME, None)
-        if not next_url:
-            next_url = super(SignupView, self).get_success_url()
-        return next_url
 
     def register(self, **cleaned_data):
         #pylint: disable=maybe-no-member
@@ -225,7 +223,7 @@ class ActivationView(TemplateView):
                     _("Thank you. Your account is now active." \
                           " You can sign in at your convienience."))
                 url = reverse('login')
-            next_url = self.request.GET.get(REDIRECT_FIELD_NAME, None)
+            next_url = validate_redirect(self.request)
             if next_url:
                 success_url = "%s?%s=%s" % (url, REDIRECT_FIELD_NAME, next_url)
             else:

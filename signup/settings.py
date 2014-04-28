@@ -35,5 +35,5 @@ LOGIN_REDIRECT_URL = getattr(settings, 'LOGIN_REDIRECT_URL')
 
 KEY_EXPIRATION = getattr(settings, 'ACCOUNT_ACTIVATION_DAYS', 2)
 EMAIL_VERIFICATION_PAT = r'[a-f0-9]{40}'
-EMAILER_BACKEND = getattr(settings, 'SIGNUP_EMAILER_BACKEND',
+EMAILER_BACKEND = getattr(settings, 'EMAILER_BACKEND',
                           'signup.backends.django_emailer.TemplateEmailBackend')

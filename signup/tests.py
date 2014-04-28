@@ -24,18 +24,62 @@
 
 import re
 
-from django.test import TestCase
-from django.test.client import Client
+from django.conf import settings
 from django.core.urlresolvers import reverse
+from django.test import TestCase
+from django.test.client import Client, RequestFactory
 
-from signup import settings
+from signup import settings as signup_settings
+from signup.auth import validate_redirect, validate_redirect_url
 from signup.models import ActivatedUser
 
 REGISTRATION_EMAIL = 'user@example.com'
 
 
 class SignUpTests(TestCase):
-    '''Tests signup functionality.'''
+    """
+    Tests signup functionality.
+    """
+
+    def setUp(self):
+        # Every test needs access to the request factory.
+        self.factory = RequestFactory()
+
+    def test_redirect_ok(self):
+        """
+        Tests to validate the redirect URL.
+        """
+        request = self.factory.get('/?next=/example/')
+        url = validate_redirect(request)
+        self.assertTrue(url == "/example/")
+
+    def test_redirect_fail1(self):
+        """
+        Tests to validate the redirect URL.
+        """
+        request = self.factory.get('/?next=http://example.com/example/')
+        url = validate_redirect(request)
+        if '*' in settings.ALLOWED_HOSTS:
+            self.assertTrue(url == "/example/")
+        else:
+            self.assertTrue(url is None)
+
+    def test_redirect_url_ok(self):
+        """
+        Tests to validate the redirect URL.
+        """
+        url = validate_redirect_url("/example/")
+        self.assertTrue(url == "/example/")
+
+    def test_redirect_url_fail1(self):
+        """
+        Tests to validate the redirect URL.
+        """
+        url = validate_redirect_url("http://example.com/example/")
+        if '*' in settings.ALLOWED_HOSTS:
+            self.assertTrue(url == "/example/")
+        else:
+            self.assertTrue(url is None)
 
     def test_activate_password(self):
         user = ActivatedUser.objects.create_inactive_user(REGISTRATION_EMAIL)
@@ -47,7 +91,7 @@ class SignUpTests(TestCase):
         self.assertTrue(response.status_code == 200)
         self.assertTrue(re.match(
      r'\S+/accounts/activate/(?P<verification_key>%s)/password/(?P<token>.+)/$'
-            % settings.EMAIL_VERIFICATION_PAT,
+            % signup_settings.EMAIL_VERIFICATION_PAT,
             response.redirect_chain[-1][0]))
 
     def test_register(self):

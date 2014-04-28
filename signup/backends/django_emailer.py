@@ -30,9 +30,9 @@ from django.template.loader import get_template
 from signup import settings
 
 class TemplateEmailBackend(object):
-    #pylint: disable=no-self-use
 
-    def send(self, recipients, template_name, context=None,
+    @staticmethod
+    def send(recipients, template_name, context=None,
              from_email=settings.DEFAULT_FROM_EMAIL):
         multi_part = get_template(template_name)
         context = Context(context)
@@ -41,12 +41,9 @@ class TemplateEmailBackend(object):
                 if node.name == 'subject':
                     # Email subject *must not* contain newlines
                     subject = ''.join(node.render(context).splitlines())
-                elif  node.name == 'html':
-                    html = node.render(context) #pylint: disable=unused-variable
-                elif  node.name == 'plain':
+                elif  node.name == 'plain_content':
                     plain = node.render(context)
 
-        send_mail(subject, plain, from_email,
-            [user.email for user in recipients], fail_silently=True)
+        send_mail(subject, plain, from_email, recipients)
 
 
