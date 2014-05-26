@@ -26,7 +26,7 @@ from distutils.core import setup
 import signup
 
 setup(
-    name='signup',
+    name='djaodjin-signup',
     version=signup.__version__,
     author='The DjaoDjin Team',
     author_email='support@djaodjin.com',
