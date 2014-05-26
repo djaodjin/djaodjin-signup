@@ -34,7 +34,7 @@ setup(
               'signup.backends',
               ],
     url='https://github.com/djaodjin/djaodjin-signup/',
-    download_url='https://github.com/djaodjin/djaodjin-signup/tarball/0.1'
+    download_url='https://github.com/djaodjin/djaodjin-signup/tarball/0.1',
     license='BSD',
     description="DjaoDjin's Implementation of Frictionless Sign Up",
     long_description=open('README.md').read(),
