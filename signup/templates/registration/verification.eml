@@ -2,7 +2,7 @@
 Account activation on {{ site.name }}
 {% endblock %}
 
-{% block plain %}
+{% block plain_content %}
 Activate your account at {{ site.name }} by visiting the following url:
 
 http://{{ site.domain }}{% url 'registration_activate' verification_key %}{% if next %}?next={{next}}{% endif %}
@@ -10,7 +10,7 @@ http://{{ site.domain }}{% url 'registration_activate' verification_key %}{% if 
 Link is valid for {{ expiration_days }} days.
 {% endblock %}
 
-{% block html %}
+{% block html_content %}
 Activate your account at {{ site.name }} by visiting the following url:
 
 http://{{ site.domain }}{% url 'registration_activate' verification_key %}{% if next %}?next={{next}}{% endif %}
