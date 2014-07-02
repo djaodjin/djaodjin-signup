@@ -22,14 +22,21 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from django.views.generic.base import RedirectView
-from django.core.urlresolvers import reverse_lazy
-from urldecorators import patterns, include, url
+from django.conf.urls import patterns, url
+
+from signup.views import (PasswordChangeView, SendActivationView,
+    UserProfileView, redirect_to_user_profile)
+
+USERNAME_PAT = r'[\w.@+-]+'
 
 urlpatterns = patterns('',
-    url(r'^users/',
-        include('signup.urls.users'),
-        decorators=['django.contrib.auth.decorators.login_required']),
-    url(r'^accounts/', include('signup.urls.accounts')),
-    url(r'^$', RedirectView.as_view(url=reverse_lazy('registration_register'))),
+    # These three URLs must be protected.
+    url(r'^(?P<username>%s)/activate/' % USERNAME_PAT,
+        SendActivationView.as_view(), name='users_activate'),
+    url(r'^(?P<username>%s)/password/' % USERNAME_PAT,
+        PasswordChangeView.as_view(), name='password_change'),
+    url(r'^(?P<username>%s)/' % USERNAME_PAT,
+        UserProfileView.as_view(), name='users_profile'),
+    url(r'^', redirect_to_user_profile, name='accounts_profile'),
 )
+

@@ -24,7 +24,6 @@
 
 """Extra Forms and Views that might prove useful to register users."""
 
-from django import forms
 from django.core.urlresolvers import reverse
 from django.contrib import messages
 from django.contrib.auth import login as auth_login
@@ -34,6 +33,7 @@ from django.contrib.auth.forms import PasswordResetForm, SetPasswordForm
 from django.contrib.auth.tokens import default_token_generator
 from django.contrib.auth.views import password_reset, login, logout
 from django.contrib.sites.models import RequestSite, Site
+from django.http import HttpResponseRedirect
 from django.shortcuts import render, redirect
 from django.utils.safestring import mark_safe
 from django.utils.translation import ugettext_lazy as _
@@ -244,6 +244,7 @@ class SigninView(TemplateView):
     template_name = 'accounts/login.html'
 
     def dispatch(self, request, *args, **kwargs):
+        #pylint: disable=unused-argument
         return login(
             request, template_name=self.template_name,
             redirect_field_name=REDIRECT_FIELD_NAME,
@@ -257,6 +258,7 @@ class SignoutView(TemplateView):
     template_name = 'accounts/logout.html'
 
     def dispatch(self, request, *args, **kwargs):
+        #pylint: disable=unused-argument
         return logout(request, next_page=None,
                       template_name=self.template_name,
                       redirect_field_name=REDIRECT_FIELD_NAME,

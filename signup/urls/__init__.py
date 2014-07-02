@@ -22,14 +22,23 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from django.views.generic.base import RedirectView
-from django.core.urlresolvers import reverse_lazy
-from urldecorators import patterns, include, url
+"""
+URLconf for frictionless signup.
+
+If the default behavior of these views is acceptable to you, simply
+use a line like this in your root URLconf to set up the default URLs
+for registration:
+
+    (r'^accounts/', include('signup.urls.accounts')),
+
+Optionally add URLs for User profiles:
+
+    (r'^users/', include('signup.urls.users')),
+"""
+
+from django.conf.urls import patterns, include, url
 
 urlpatterns = patterns('',
-    url(r'^users/',
-        include('signup.urls.users'),
-        decorators=['django.contrib.auth.decorators.login_required']),
     url(r'^accounts/', include('signup.urls.accounts')),
-    url(r'^$', RedirectView.as_view(url=reverse_lazy('registration_register'))),
+    url(r'^users/', include('signup.urls.users')),
 )

@@ -1,0 +1,4 @@
+django-urldecorators>=0.5
+
+
+
