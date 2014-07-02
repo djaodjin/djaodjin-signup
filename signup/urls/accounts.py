@@ -24,8 +24,9 @@
 
 from django.conf.urls import patterns, url
 
-from signup.views import (ActivationView, PasswordResetView, SigninView,
-    SignoutView, SignupView, registration_password_confirm)
+from signup.views import (ActivationView, PasswordResetView,
+    PasswordResetConfirmView, SigninView, SignoutView, SignupView,
+    registration_password_confirm)
 from signup import settings
 
 urlpatterns = patterns('',
@@ -46,6 +47,8 @@ urlpatterns = patterns('',
     url(r'^logout/$',
         SignoutView.as_view(), name='logout'),
     url(r'^recover/$',
-        PasswordResetView.as_view(), name='password_reset')
+        PasswordResetView.as_view(), name='password_reset'),
+    url(r'^reset/(?P<uidb64>[0-9A-Za-z_\-]+)/(?P<token>[0-9A-Za-z]{1,13}-[0-9A-Za-z]{1,20})/$', #pylint: disable=line-too-long
+        PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
 )
 

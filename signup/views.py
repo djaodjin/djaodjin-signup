@@ -31,10 +31,12 @@ from django.contrib.auth import REDIRECT_FIELD_NAME, authenticate
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import PasswordResetForm, SetPasswordForm
 from django.contrib.auth.tokens import default_token_generator
-from django.contrib.auth.views import password_reset, login, logout
-from django.contrib.sites.models import RequestSite, Site
+from django.contrib.auth.views import password_reset_confirm, login, logout
+from django.contrib.sites.models import get_current_site
 from django.http import HttpResponseRedirect
 from django.shortcuts import render, redirect
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
 from django.utils.safestring import mark_safe
 from django.utils.translation import ugettext_lazy as _
 from django.views.decorators.debug import sensitive_post_parameters
@@ -44,6 +46,7 @@ from django.views.generic.detail import BaseDetailView
 from django.views.generic.edit import FormMixin, ProcessFormView, UpdateView
 
 from signup.auth import validate_redirect
+from signup.backends import get_email_backend
 from signup.decorators import check_user_active, _send_verification_email
 from signup.compat import User
 from signup.forms import NameEmailForm, PasswordChangeForm, UserForm
@@ -81,6 +84,7 @@ class RedirectFormView(TemplateResponseMixin, RedirectFormMixin,
     """
     Redirects on form valid.
     """
+    success_url = settings.LOGIN_REDIRECT_URL
 
 
 class PasswordResetView(RedirectFormView):
@@ -89,17 +93,57 @@ class PasswordResetView(RedirectFormView):
     """
 
     form_class = PasswordResetForm
-    success_url = settings.LOGIN_REDIRECT_URL
     template_name = 'accounts/password_reset_form.html'
+    token_generator = default_token_generator
 
     def form_valid(self, form):
+        users = User.objects.filter(email__iexact=form.cleaned_data['email'])
+        if users.exists():
+            user = users.get()
+            if user.is_active and user.has_usable_password():
+                # Make sure that no email is sent to a user that actually has
+                # a password marked as unusable
+                site = get_current_site(self.request)
+                uid = urlsafe_base64_encode(force_bytes(user.pk))
+                token = self.token_generator.make_token(user)
+                back_url = self.request.build_absolute_uri(
+                    reverse('password_reset_confirm', args=(uid, token)))
+                get_email_backend().send([user.email],
+                    'accounts/password_reset.eml',
+                    {'user': user, 'site': site,
+                     'back_url': back_url,
+                     'expiration_days': settings.KEY_EXPIRATION,
+                     # XXX Reason for a redirect after password reset?
+                     # redirect_field_name: next_url
+                     })
+        return super(PasswordResetView, self).form_valid(form)
+
+    def get_success_url(self):
         messages.info(self.request, "Please follow the instructions "\
             "in the email that has just been sent to you to reset"\
             " your password.")
-        return password_reset(
-            self.request, template_name=self.template_name,
-            password_reset_form=self.form_class,
-            post_reset_redirect=self.get_success_url())
+        return super(PasswordResetView, self).get_success_url()
+
+
+class PasswordResetConfirmView(RedirectFormView):
+    """
+    Clicked on the link sent in the reset e-mail.
+    """
+    template_name = 'accounts/password_reset_confirm.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        #pylint: disable=unused-argument
+        return password_reset_confirm(request,
+            uidb64=self.kwargs.get('uidb64'), token=self.kwargs.get('token'),
+            template_name=self.template_name,
+            token_generator=default_token_generator,
+            set_password_form=SetPasswordForm,
+            post_reset_redirect=self.get_success_url(),
+            current_app=None, extra_context=None)
+
+    def get_success_url(self):
+        messages.info(self.request, "Your password has been reset sucessfully.")
+        return super(PasswordResetConfirmView, self).get_success_url()
 
 
 class SignupView(RedirectFormView):
@@ -110,7 +154,6 @@ class SignupView(RedirectFormView):
 
     form_class = NameEmailForm
     template_name = 'accounts/registration_form.html'
-    success_url = settings.LOGIN_REDIRECT_URL
     fail_url = ('registration_register', (), {})
 
     def post(self, request, *args, **kwargs):
@@ -227,10 +270,7 @@ class SendActivationView(BaseDetailView):
 
     def get(self, request, *args, **kwargs):
         user = self.get_object()
-        if Site._meta.installed: #pylint: disable=protected-access
-            site = Site.objects.get_current()
-        else:
-            site = RequestSite(request)
+        site = get_current_site(request)
         _send_verification_email(user, site)
         messages.info(self.request, "Activation e-mail sent.")
         return HttpResponseRedirect(
