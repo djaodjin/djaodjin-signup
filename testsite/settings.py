@@ -90,6 +90,8 @@ DEFAULT_FROM_EMAIL = "admin@example.com"
 EMAIL_HOST_USER = ""
 EMAIL_HOST_PASSWORD = ""
 
+LOGIN_REDIRECT_URL = '/users/'
+
 # Application definition
 
 INSTALLED_APPS = (

@@ -32,18 +32,22 @@ from django.contrib.auth import REDIRECT_FIELD_NAME, authenticate
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import PasswordResetForm, SetPasswordForm
 from django.contrib.auth.tokens import default_token_generator
-from django.contrib.auth.views import password_reset
+from django.contrib.auth.views import password_reset, login, logout
+from django.contrib.sites.models import RequestSite, Site
 from django.shortcuts import render, redirect
 from django.utils.safestring import mark_safe
 from django.utils.translation import ugettext_lazy as _
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.cache import never_cache
 from django.views.generic.base import TemplateResponseMixin, TemplateView
-from django.views.generic.edit import FormMixin, ProcessFormView
+from django.views.generic.detail import BaseDetailView
+from django.views.generic.edit import FormMixin, ProcessFormView, UpdateView
 
 from signup.auth import validate_redirect
-from signup.decorators import check_user_active
+from signup.decorators import check_user_active, _send_verification_email
 from signup.compat import User
+from signup.forms import NameEmailForm, PasswordChangeForm, UserForm
+from signup.backends.auth import UsernameOrEmailAuthenticationForm
 from signup import signals
 from signup import settings
 
@@ -54,24 +58,6 @@ def _redirect_to(url):
         return redirect(to_url, *args, **kwargs) #pylint: disable=star-args
     except ValueError:
         return redirect(url)
-
-
-class NameEmailForm(forms.Form):
-    """
-    Form for frictionless registration of a new account. Just supply
-    a full name and an email and you are in. We will ask for username
-    and password later.
-    """
-    full_name = forms.RegexField(
-        regex=r'^[\w\s]+$', max_length=60,
-        widget=forms.TextInput(attrs={'placeholder':'Full Name'}),
-        label=_("Full Name"),
-        error_messages={'invalid':
-            _("Sorry we do not recognize some characters in your full name.")})
-    email = forms.EmailField(
-        widget=forms.TextInput(attrs={'placeholder':'Email',
-                                      'maxlength': 75}),
-        label=_("E-mail"))
 
 
 class RedirectFormMixin(FormMixin):
@@ -104,7 +90,7 @@ class PasswordResetView(RedirectFormView):
 
     form_class = PasswordResetForm
     success_url = settings.LOGIN_REDIRECT_URL
-    template_name = 'registration/password_reset_form.html'
+    template_name = 'accounts/password_reset_form.html'
 
     def form_valid(self, form):
         messages.info(self.request, "Please follow the instructions "\
@@ -123,7 +109,7 @@ class SignupView(RedirectFormView):
     """
 
     form_class = NameEmailForm
-    template_name = 'registration/registration_form.html'
+    template_name = 'accounts/registration_form.html'
     success_url = settings.LOGIN_REDIRECT_URL
     fail_url = ('registration_register', (), {})
 
@@ -201,7 +187,7 @@ class ActivationView(TemplateView):
     It is time to activate the account.
     """
     http_method_names = ['get']
-    template_name = 'registration/activate.html'
+    template_name = 'accounts/activate.html'
     token_generator = default_token_generator
 
     def get(self, request, *args, **kwargs):
@@ -231,11 +217,88 @@ class ActivationView(TemplateView):
             return _redirect_to(success_url)
         return super(ActivationView, self).get(self.request, *args, **kwargs)
 
+
+class SendActivationView(BaseDetailView):
+    """Send an account activation code to the user."""
+
+    model = User
+    slug_field = 'username'
+    slug_url_kwarg = 'username'
+
+    def get(self, request, *args, **kwargs):
+        user = self.get_object()
+        if Site._meta.installed: #pylint: disable=protected-access
+            site = Site.objects.get_current()
+        else:
+            site = RequestSite(request)
+        _send_verification_email(user, site)
+        messages.info(self.request, "Activation e-mail sent.")
+        return HttpResponseRedirect(
+            reverse('users_profile', args=(self.object,)))
+
+
+class SigninView(TemplateView):
+    """Log out the authenticated user."""
+
+    form_class = UsernameOrEmailAuthenticationForm
+    template_name = 'accounts/login.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        return login(
+            request, template_name=self.template_name,
+            redirect_field_name=REDIRECT_FIELD_NAME,
+            authentication_form=self.form_class,
+            current_app=None, extra_context=None)
+
+
+class SignoutView(TemplateView):
+    """Log out the authenticated user."""
+
+    template_name = 'accounts/logout.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        return logout(request, next_page=None,
+                      template_name=self.template_name,
+                      redirect_field_name=REDIRECT_FIELD_NAME,
+                      current_app=None, extra_context=None)
+
+
+class UserProfileView(UpdateView):
+    """
+    If a user is manager for an Organization, she can access the Organization
+    profile. If a user is manager for an Organization subscribed to another
+    Organization, she can access the product provided by that organization.
+    """
+
+    model = User
+    form_class = UserForm
+    slug_url_kwarg = 'username'
+    slug_field = 'username'
+    template_name = 'accounts/user_form.html'
+
+    def get_success_url(self):
+        messages.info(self.request, 'Profile Updated.')
+        return reverse('users_profile', args=(self.object,))
+
+
+class PasswordChangeView(UserProfileView):
+    """
+    Update password for a User
+    """
+
+    form_class = PasswordChangeForm
+    template_name = 'accounts/password_change_form.html'
+
+    def get_success_url(self):
+        messages.info(self.request, "Password has been updated successfuly.")
+        return reverse('users_profile', args=(self.object,))
+
+
 #pylint: disable=too-many-arguments
 @sensitive_post_parameters()
 @never_cache
 def registration_password_confirm(request, verification_key, token=None,
-        template_name='registration/password_reset_confirm.html',
+        template_name='accounts/password_reset_confirm.html',
         token_generator=default_token_generator,
         set_password_form=SetPasswordForm,
         extra_context=None,

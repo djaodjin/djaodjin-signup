@@ -34,15 +34,15 @@ for registration::
 
 from django.conf.urls import patterns, include, url
 
-from signup.backends.auth import UsernameOrEmailAuthenticationForm
 from signup.views import (
-    SignupView, ActivationView, PasswordResetView,
-    registration_password_confirm, redirect_to_user_profile)
+    ActivationView, PasswordChangeView, PasswordResetView,
+    SendActivationView, SigninView, SignoutView, SignupView,
+    UserProfileView, registration_password_confirm, redirect_to_user_profile)
 from signup import settings
 
-urlpatterns = patterns('',
-    url(r'^profile/$', redirect_to_user_profile, name='accounts_profile'),
+USERNAME_PAT = r'[\w.@+-]+'
 
+urlpatterns = patterns('',
     # When the key and/or token are wrong we don't want to give any clue
     # as to why that is so. Less information communicated to an attacker,
     # the better.
@@ -52,16 +52,22 @@ urlpatterns = patterns('',
         name='registration_password_confirm'),
     url(r'^activate/(?P<verification_key>%s)/$'
         % settings.EMAIL_VERIFICATION_PAT,
-        ActivationView.as_view(),
-        name='registration_activate'),
+        ActivationView.as_view(), name='registration_activate'),
     url(r'^register/$',
-        SignupView.as_view(),
-        name='registration_register'),
-    url(r'^login/$', 'django.contrib.auth.views.login',
-        {'authentication_form': UsernameOrEmailAuthenticationForm},
-        name='login'),
-    url(r'^password_reset/$',
+        SignupView.as_view(), name='registration_register'),
+    url(r'^login/$',
+        SigninView.as_view(), name='login'),
+    url(r'^logout/$',
+        SignoutView.as_view(), name='logout'),
+    url(r'^recover/$',
         PasswordResetView.as_view(), name='password_reset'),
-    (r'', include('django.contrib.auth.urls')),
+    # XXX These three URLs must be protected.
+    url(r'^users/(?P<username>%s)/activate/' % USERNAME_PAT,
+        SendActivationView.as_view(), name='users_activate'),
+    url(r'^users/(?P<username>%s)/password/' % USERNAME_PAT,
+        PasswordChangeView.as_view(), name='password_change'),
+    url(r'^users/(?P<username>%s)/' % USERNAME_PAT,
+        UserProfileView.as_view(), name='users_profile'),
+    url(r'^users/', redirect_to_user_profile, name='accounts_profile'),
 )
 

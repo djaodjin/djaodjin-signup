@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div>
+  <h1>User Profile</h1>
+  <div>
+    <form method="post" action=".">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <button type="submit">Update</button>
+    </form>
+  </div>
+  <a href="{% url 'password_change' user %}">Change Password</a>
+  <a href="{% url 'users_activate' user %}">Activate</a>
+</div>
+{% endblock %}

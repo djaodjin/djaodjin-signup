@@ -36,6 +36,7 @@ class TemplateEmailBackend(object):
              from_email=settings.DEFAULT_FROM_EMAIL):
         multi_part = get_template(template_name)
         context = Context(context)
+        plain = 'error: No plain content in e-mail template'
         for node in multi_part:
             if isinstance(node, BlockNode):
                 if node.name == 'subject':

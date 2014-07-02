@@ -22,26 +22,46 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from django.conf.urls import patterns, include, url
-from django.views.generic.base import RedirectView
-from django.views.generic.detail import DetailView
-from django.core.urlresolvers import reverse_lazy
-from django.contrib.auth import get_user_model
-from django.contrib.auth.decorators import login_required
+"""Forms for the signup app"""
 
-from signup.decorators import active_required
-from signup.views import PasswordChangeView, SendActivationView, UserProfileView
+from django import forms
+from django.contrib.auth.forms import SetPasswordForm
+from django.utils.translation import ugettext_lazy as _
 
-def users(urlpat):
-    return urlpat % {'username': r'(?P<username>[\w.@+-]+)'}
+from signup.compat import User
 
-urlpatterns = patterns('',
-    url(users('^users/%(username)s/activate/'),
-        login_required(SendActivationView.as_view()), name='users_activate'),
-    url(users('^users/%(username)s/password/'),
-        login_required(PasswordChangeView.as_view()), name='password_change'),
-    url(users('^users/%(username)s/'),
-        login_required(UserProfileView.as_view()), name='users_profile'),
-    url(r'^', include('signup.urls')),
-    url(r'^$', RedirectView.as_view(url=reverse_lazy('registration_register'))),
-)
+
+class NameEmailForm(forms.Form):
+    """
+    Form for frictionless registration of a new account. Just supply
+    a full name and an email and you are in. We will ask for username
+    and password later.
+    """
+    full_name = forms.RegexField(
+        regex=r'^[\w\s]+$', max_length=60,
+        widget=forms.TextInput(attrs={'placeholder':'Full Name'}),
+        label=_("Full Name"),
+        error_messages={'invalid':
+            _("Sorry we do not recognize some characters in your full name.")})
+    email = forms.EmailField(
+        widget=forms.TextInput(attrs={'placeholder':'Email',
+                                      'maxlength': 75}),
+        label=_("E-mail"))
+
+
+class PasswordChangeForm(SetPasswordForm):
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('instance')
+        super(PasswordChangeForm, self).__init__(user, *args, **kwargs)
+
+
+class UserForm(forms.ModelForm):
+    """
+    Form to update a ``User`` profile.
+    """
+
+    class Meta:
+        model = User
+        fields = ['username', 'email', 'first_name', 'last_name']
+
