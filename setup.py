@@ -32,6 +32,7 @@ setup(
     author_email='support@djaodjin.com',
     packages=['signup',
               'signup.backends',
+              'signup.urls',
               ],
     url='https://github.com/djaodjin/djaodjin-signup/',
     download_url='https://github.com/djaodjin/djaodjin-signup/tarball/%s' \
