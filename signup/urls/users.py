@@ -31,11 +31,11 @@ USERNAME_PAT = r'[\w.@+-]+'
 
 urlpatterns = patterns('',
     # These three URLs must be protected.
-    url(r'^(?P<username>%s)/activate/' % USERNAME_PAT,
+    url(r'^(?P<user>%s)/activate/' % USERNAME_PAT,
         SendActivationView.as_view(), name='users_activate'),
-    url(r'^(?P<username>%s)/password/' % USERNAME_PAT,
+    url(r'^(?P<user>%s)/password/' % USERNAME_PAT,
         PasswordChangeView.as_view(), name='password_change'),
-    url(r'^(?P<username>%s)/' % USERNAME_PAT,
+    url(r'^(?P<user>%s)/' % USERNAME_PAT,
         UserProfileView.as_view(), name='users_profile'),
     url(r'^', redirect_to_user_profile, name='accounts_profile'),
 )

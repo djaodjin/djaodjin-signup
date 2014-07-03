@@ -93,7 +93,7 @@ class PasswordResetView(RedirectFormView):
     """
 
     form_class = PasswordResetForm
-    template_name = 'accounts/password_reset_form.html'
+    template_name = 'accounts/recover.html'
     token_generator = default_token_generator
 
     def form_valid(self, form):
@@ -142,7 +142,9 @@ class PasswordResetConfirmView(RedirectFormView):
             current_app=None, extra_context=None)
 
     def get_success_url(self):
-        messages.info(self.request, "Your password has been reset sucessfully.")
+        # XXX can't display message until re-write
+        # of dispatch/password_reset_confirm otherwise it shows up on GET.
+        #messages.info(self.request, "Your password has been reset sucessfully.")
         return super(PasswordResetConfirmView, self).get_success_url()
 
 
@@ -153,7 +155,7 @@ class SignupView(RedirectFormView):
     """
 
     form_class = NameEmailForm
-    template_name = 'accounts/registration_form.html'
+    template_name = 'accounts/register.html'
     fail_url = ('registration_register', (), {})
 
     def post(self, request, *args, **kwargs):
@@ -266,7 +268,7 @@ class SendActivationView(BaseDetailView):
 
     model = User
     slug_field = 'username'
-    slug_url_kwarg = 'username'
+    slug_url_kwarg = 'user'
 
     def get(self, request, *args, **kwargs):
         user = self.get_object()
@@ -314,9 +316,9 @@ class UserProfileView(UpdateView):
 
     model = User
     form_class = UserForm
-    slug_url_kwarg = 'username'
     slug_field = 'username'
-    template_name = 'accounts/user_form.html'
+    slug_url_kwarg = 'user'
+    template_name = 'users/user_form.html'
 
     def get_success_url(self):
         messages.info(self.request, 'Profile Updated.')
@@ -329,7 +331,7 @@ class PasswordChangeView(UserProfileView):
     """
 
     form_class = PasswordChangeForm
-    template_name = 'accounts/password_change_form.html'
+    template_name = 'users/password_change_form.html'
 
     def get_success_url(self):
         messages.info(self.request, "Password has been updated successfuly.")
