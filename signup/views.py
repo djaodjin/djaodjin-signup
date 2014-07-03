@@ -144,7 +144,7 @@ class PasswordResetConfirmView(RedirectFormView):
     def get_success_url(self):
         # XXX can't display message until re-write
         # of dispatch/password_reset_confirm otherwise it shows up on GET.
-        #messages.info(self.request, "Your password has been reset sucessfully.")
+       #messages.info(self.request, "Your password has been reset sucessfully.")
         return super(PasswordResetConfirmView, self).get_success_url()
 
 
