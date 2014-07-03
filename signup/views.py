@@ -129,7 +129,7 @@ class PasswordResetConfirmView(RedirectFormView):
     """
     Clicked on the link sent in the reset e-mail.
     """
-    template_name = 'accounts/password_reset_confirm.html'
+    template_name = 'accounts/reset.html'
 
     def dispatch(self, request, *args, **kwargs):
         #pylint: disable=unused-argument
@@ -342,7 +342,7 @@ class PasswordChangeView(UserProfileView):
 @sensitive_post_parameters()
 @never_cache
 def registration_password_confirm(request, verification_key, token=None,
-        template_name='accounts/password_reset_confirm.html',
+        template_name='accounts/reset.html',
         token_generator=default_token_generator,
         set_password_form=SetPasswordForm,
         extra_context=None,
