@@ -79,15 +79,14 @@ class RedirectFormMixin(FormMixin):
         return context
 
 
-class RedirectFormView(TemplateResponseMixin, RedirectFormMixin,
-                       ProcessFormView):
+class RedirectFormView(RedirectFormMixin, ProcessFormView):
     """
     Redirects on form valid.
     """
     success_url = settings.LOGIN_REDIRECT_URL
 
 
-class PasswordResetView(RedirectFormView):
+class PasswordResetView(TemplateResponseMixin, RedirectFormView):
     """
     Enter email address to reset password.
     """
@@ -125,7 +124,7 @@ class PasswordResetView(RedirectFormView):
         return super(PasswordResetView, self).get_success_url()
 
 
-class PasswordResetConfirmView(RedirectFormView):
+class PasswordResetConfirmView(TemplateResponseMixin, RedirectFormView):
     """
     Clicked on the link sent in the reset e-mail.
     """
@@ -148,7 +147,7 @@ class PasswordResetConfirmView(RedirectFormView):
         return super(PasswordResetConfirmView, self).get_success_url()
 
 
-class SignupView(RedirectFormView):
+class SignupView(TemplateResponseMixin, RedirectFormView):
     """
     A frictionless registration backend With a full name and email
     address, the user is immediately signed up and logged in.
@@ -279,19 +278,17 @@ class SendActivationView(BaseDetailView):
             reverse('users_profile', args=(self.object,)))
 
 
-class SigninView(TemplateView):
-    """Log out the authenticated user."""
+class SigninView(TemplateResponseMixin, RedirectFormView):
+    """
+    Check credentials and sign in the authenticated user.
+    """
 
     form_class = UsernameOrEmailAuthenticationForm
     template_name = 'accounts/login.html'
 
-    def dispatch(self, request, *args, **kwargs):
-        #pylint: disable=unused-argument
-        return login(
-            request, template_name=self.template_name,
-            redirect_field_name=REDIRECT_FIELD_NAME,
-            authentication_form=self.form_class,
-            current_app=None, extra_context=None)
+    def form_valid(self, form):
+        auth_login(self.request, form.get_user())
+        return super(SigninView, self).form_valid(form)
 
 
 class SignoutView(TemplateView):
