@@ -26,18 +26,18 @@
 
 from django.core.urlresolvers import reverse
 from django.contrib import messages
-from django.contrib.auth import login as auth_login
+from django.contrib.auth import login as auth_login, logout as auth_logout
+
 from django.contrib.auth import REDIRECT_FIELD_NAME, authenticate
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import PasswordResetForm, SetPasswordForm
 from django.contrib.auth.tokens import default_token_generator
-from django.contrib.auth.views import password_reset_confirm, logout
 from django.contrib.sites.models import get_current_site
 from django.http import HttpResponseRedirect
-from django.shortcuts import render, redirect
+from django.shortcuts import redirect
 from django.utils.decorators import method_decorator
 from django.utils.encoding import force_bytes
-from django.utils.http import urlsafe_base64_encode
+from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.utils.safestring import mark_safe
 from django.utils.translation import ugettext_lazy as _
 from django.views.decorators.debug import sensitive_post_parameters
@@ -127,21 +127,29 @@ class PasswordResetConfirmBaseView(RedirectFormMixin, ProcessFormView):
     """
     Clicked on the link sent in the reset e-mail.
     """
+    token_generator = default_token_generator
 
-    def dispatch(self, request, *args, **kwargs):
-        #pylint: disable=unused-argument
-        return password_reset_confirm(request,
-            uidb64=self.kwargs.get('uidb64'), token=self.kwargs.get('token'),
-            template_name=self.template_name,
-            token_generator=default_token_generator,
-            set_password_form=SetPasswordForm,
-            post_reset_redirect=self.get_success_url(),
-            current_app=None, extra_context=None)
+    def post(self, request, *args, **kwargs):
+        """
+        Handles POST requests, instantiating a form instance with the passed
+        POST variables and then checked for validity.
+        """
+        form_class = self.get_form_class()
+        form = self.get_form(form_class)
+        try:
+            uid = urlsafe_base64_decode(self.kwargs.get('uidb64'))
+            user = User.objects.get(pk=uid)
+        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+            user = None
+
+        if user is not None and self.token_generator.check_token(
+                                    user, self.kwargs.get('token')):
+            if form.is_valid():
+                return self.form_valid(form)
+        return self.form_invalid(form)
 
     def get_success_url(self):
-        # XXX can't display message until re-write
-        # of dispatch/password_reset_confirm otherwise it shows up on GET.
-       #messages.info(self.request, "Your password has been reset sucessfully.")
+        messages.info(self.request, "Your password has been reset sucessfully.")
         return super(PasswordResetConfirmBaseView, self).get_success_url()
 
 
@@ -153,20 +161,6 @@ class SignupBaseView(RedirectFormMixin, ProcessFormView):
 
     form_class = NameEmailForm
     fail_url = ('registration_register', (), {})
-
-    def post(self, request, *args, **kwargs):
-        # Pass request to get_form_class and get_form for per-request
-        # form control.
-        form_class = self.get_form_class()
-        form = self.get_form(form_class)
-        if form.is_valid():
-            # Pass request to form_valid.
-            return self.form_valid(form)
-        else:
-            return self.form_invalid(form)
-
-    def form_invalid(self, form):
-        return self.render_to_response(self.get_context_data(form=form))
 
     def form_valid(self, form):
         new_user = self.register(**form.cleaned_data)
@@ -255,8 +249,7 @@ class ActivationBaseView(ContextMixin, View):
             else:
                 success_url = url
             return _redirect_to(success_url)
-        return super(ActivationBaseView, self).get(
-            self.request, *args, **kwargs)
+        return super(ActivationBaseView, self).get(request, *args, **kwargs)
 
 
 class SendActivationView(BaseDetailView):
@@ -357,27 +350,28 @@ class RegistrationPasswordConfirmBaseView(RedirectFormMixin, ProcessFormView):
         # to make sure both the *verification_key* and *token* are valid
         # before doing any modification of the underlying models.
         #pylint: disable=maybe-no-member
-        user = User.objects.find_user(verification_key)
-        if user is not None and token_generator.check_token(user,
+        user = User.objects.find_user(self.kwargs.get('verification_key'))
+        if user is not None and self.token_generator.check_token(user,
                                                    self.kwargs.get('token')):
             if form.is_valid():
                 return self.form_valid(form)
         return self.form_invalid(form)
 
     def form_valid(self, form):
-        user = User.objects.activate_user(verification_key)
+        #pylint: disable=maybe-no-member
+        user = User.objects.activate_user(self.kwargs.get('verification_key'))
         signals.user_activated.send(
-            sender=__name__, user=user, request=request)
-        messages.info(request,
+            sender=__name__, user=user, request=self.request)
+        messages.info(self.request,
                       _("Thank you. Your account is now active."))
 
         # Okay, security check complete. Log the user in.
         user_with_backend = authenticate(
             username=user.username,
             password=form.cleaned_data.get('new_password1'))
-        auth_login(request, user_with_backend)
-        if request.session.test_cookie_worked():
-            request.session.delete_test_cookie()
+        auth_login(self.request, user_with_backend)
+        if self.request.session.test_cookie_worked():
+            self.request.session.delete_test_cookie()
 
         return super(RegistrationPasswordConfirmBaseView, self).form_valid(form)
 
@@ -416,59 +410,7 @@ class SignoutView(TemplateResponseMixin, SignoutBaseView):
 class RegistrationPasswordConfirmView(TemplateResponseMixin,
                                       RegistrationPasswordConfirmBaseView):
 
-    template_name='accounts/reset.html'
-
-
-def registration_password_confirm(request, verification_key, token=None,
-        template_name='accounts/reset.html',
-        token_generator=default_token_generator,
-        set_password_form=SetPasswordForm,
-        extra_context=None,
-        redirect_field_name=REDIRECT_FIELD_NAME):
-    redirect_to = request.REQUEST.get(redirect_field_name, None)
-
-    # We use *find_user* instead of *activate_user* because we want
-    # to make sure both the *verification_key* and *token* are valid
-    # before doing any modification of the underlying models.
-    #pylint: disable=maybe-no-member
-    user = User.objects.find_user(verification_key)
-    if user is not None and token_generator.check_token(user, token):
-        validlink = True
-        if request.method == 'POST':
-            form = set_password_form(user, request.POST)
-            if form.is_valid():
-                form.save()
-                user = User.objects.activate_user(verification_key)
-                signals.user_activated.send(
-                    sender=__name__, user=user, request=request)
-                messages.info(request,
-                    _("Thank you. Your account is now active."))
-
-                # Okay, security check complete. Log the user in.
-                user_with_backend = authenticate(
-                    username=user.username,
-                    password=form.cleaned_data.get('new_password1'))
-                auth_login(request, user_with_backend)
-                if request.session.test_cookie_worked():
-                    request.session.delete_test_cookie()
-
-                if redirect_to is None:
-                    redirect_to = reverse('accounts_profile')
-                return redirect(redirect_to)
-        else:
-            form = set_password_form(None)
-    else:
-        validlink = False
-        form = None
-    context = {
-        'form': form,
-        'validlink': validlink,
-    }
-    if redirect_to:
-        context.update({redirect_field_name: redirect_to})
-    if extra_context is not None:
-        context.update(extra_context)
-    return render(request, template_name, context)
+    template_name = 'accounts/reset.html'
 
 
 @login_required
