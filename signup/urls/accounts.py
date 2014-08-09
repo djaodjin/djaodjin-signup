@@ -26,7 +26,7 @@ from django.conf.urls import patterns, url
 
 from signup.views import (ActivationView, PasswordResetView,
     PasswordResetConfirmView, SigninView, SignoutView, SignupView,
-    registration_password_confirm)
+    RegistrationPasswordConfirmView)
 from signup import settings
 
 urlpatterns = patterns('',
@@ -35,7 +35,7 @@ urlpatterns = patterns('',
     # the better.
     url(r'^activate/(?P<verification_key>%s)/password/(?P<token>.+)/$'
         % settings.EMAIL_VERIFICATION_PAT,
-        registration_password_confirm,
+        RegistrationPasswordConfirmView.as_view(),
         name='registration_password_confirm'),
     url(r'^activate/(?P<verification_key>%s)/$'
         % settings.EMAIL_VERIFICATION_PAT,

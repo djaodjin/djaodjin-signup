@@ -35,13 +35,14 @@ from django.contrib.auth.views import password_reset_confirm, logout
 from django.contrib.sites.models import get_current_site
 from django.http import HttpResponseRedirect
 from django.shortcuts import render, redirect
+from django.utils.decorators import method_decorator
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 from django.utils.safestring import mark_safe
 from django.utils.translation import ugettext_lazy as _
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.cache import never_cache
-from django.views.generic.base import TemplateResponseMixin, TemplateView
+from django.views.generic.base import ContextMixin, TemplateResponseMixin, View
 from django.views.generic.detail import BaseDetailView
 from django.views.generic.edit import FormMixin, ProcessFormView, UpdateView
 
@@ -64,6 +65,7 @@ def _redirect_to(url):
 
 
 class RedirectFormMixin(FormMixin):
+    success_url = settings.LOGIN_REDIRECT_URL
 
     def get_success_url(self):
         next_url = validate_redirect(self.request)
@@ -83,16 +85,13 @@ class RedirectFormView(RedirectFormMixin, ProcessFormView):
     """
     Redirects on form valid.
     """
-    success_url = settings.LOGIN_REDIRECT_URL
 
 
-class PasswordResetView(TemplateResponseMixin, RedirectFormView):
+class PasswordResetBaseView(RedirectFormMixin, ProcessFormView):
     """
     Enter email address to reset password.
     """
-
     form_class = PasswordResetForm
-    template_name = 'accounts/recover.html'
     token_generator = default_token_generator
 
     def form_valid(self, form):
@@ -115,20 +114,19 @@ class PasswordResetView(TemplateResponseMixin, RedirectFormView):
                      # XXX Reason for a redirect after password reset?
                      # redirect_field_name: next_url
                      })
-        return super(PasswordResetView, self).form_valid(form)
+        return super(PasswordResetBaseView, self).form_valid(form)
 
     def get_success_url(self):
         messages.info(self.request, "Please follow the instructions "\
             "in the email that has just been sent to you to reset"\
             " your password.")
-        return super(PasswordResetView, self).get_success_url()
+        return super(PasswordResetBaseView, self).get_success_url()
 
 
-class PasswordResetConfirmView(TemplateResponseMixin, RedirectFormView):
+class PasswordResetConfirmBaseView(RedirectFormMixin, ProcessFormView):
     """
     Clicked on the link sent in the reset e-mail.
     """
-    template_name = 'accounts/reset.html'
 
     def dispatch(self, request, *args, **kwargs):
         #pylint: disable=unused-argument
@@ -144,17 +142,16 @@ class PasswordResetConfirmView(TemplateResponseMixin, RedirectFormView):
         # XXX can't display message until re-write
         # of dispatch/password_reset_confirm otherwise it shows up on GET.
        #messages.info(self.request, "Your password has been reset sucessfully.")
-        return super(PasswordResetConfirmView, self).get_success_url()
+        return super(PasswordResetConfirmBaseView, self).get_success_url()
 
 
-class SignupView(TemplateResponseMixin, RedirectFormView):
+class SignupBaseView(RedirectFormMixin, ProcessFormView):
     """
     A frictionless registration backend With a full name and email
     address, the user is immediately signed up and logged in.
     """
 
     form_class = NameEmailForm
-    template_name = 'accounts/register.html'
     fail_url = ('registration_register', (), {})
 
     def post(self, request, *args, **kwargs):
@@ -225,13 +222,12 @@ class SignupView(TemplateResponseMixin, RedirectFormView):
         return user
 
 
-class ActivationView(TemplateView):
+class ActivationBaseView(ContextMixin, View):
     """
     The user is now on the activation url that was sent in an email.
     It is time to activate the account.
     """
     http_method_names = ['get']
-    template_name = 'accounts/activate.html'
     token_generator = default_token_generator
 
     def get(self, request, *args, **kwargs):
@@ -259,7 +255,8 @@ class ActivationView(TemplateView):
             else:
                 success_url = url
             return _redirect_to(success_url)
-        return super(ActivationView, self).get(self.request, *args, **kwargs)
+        return super(ActivationBaseView, self).get(
+            self.request, *args, **kwargs)
 
 
 class SendActivationView(BaseDetailView):
@@ -278,30 +275,29 @@ class SendActivationView(BaseDetailView):
             reverse('users_profile', args=(self.object,)))
 
 
-class SigninView(TemplateResponseMixin, RedirectFormView):
+class SigninBaseView(RedirectFormMixin, ProcessFormView):
     """
     Check credentials and sign in the authenticated user.
     """
 
     form_class = UsernameOrEmailAuthenticationForm
-    template_name = 'accounts/login.html'
 
     def form_valid(self, form):
         auth_login(self.request, form.get_user())
-        return super(SigninView, self).form_valid(form)
+        return super(SigninBaseView, self).form_valid(form)
 
 
-class SignoutView(TemplateView):
-    """Log out the authenticated user."""
+class SignoutBaseView(RedirectFormMixin, View):
+    """
+    Log out the authenticated user.
+    """
 
-    template_name = 'accounts/logout.html'
-
-    def dispatch(self, request, *args, **kwargs):
-        #pylint: disable=unused-argument
-        return logout(request, next_page=None,
-                      template_name=self.template_name,
-                      redirect_field_name=REDIRECT_FIELD_NAME,
-                      current_app=None, extra_context=None)
+    def get(self, request, *args, **kwargs):
+        auth_logout(request)
+        next_url = self.get_success_url()
+        if next_url:
+            return HttpResponseRedirect(next_url)
+        return super(SignoutBaseView, self).get(request, *args, **kwargs)
 
 
 class UserProfileView(UpdateView):
@@ -335,20 +331,100 @@ class PasswordChangeView(UserProfileView):
         return reverse('users_profile', args=(self.object,))
 
 
-#pylint: disable=too-many-arguments
-@sensitive_post_parameters()
-@never_cache
+class RegistrationPasswordConfirmBaseView(RedirectFormMixin, ProcessFormView):
+    """
+    View that checks the hash in a password activation link and presents a
+    form for entering a new password. We can activate the account for real
+    once we know the email is valid and a password has been set.
+    """
+    token_generator = default_token_generator
+    form_class = SetPasswordForm
+
+    @method_decorator(sensitive_post_parameters)
+    @method_decorator(never_cache)
+    def dispatch(self, request, *args, **kwargs):
+        return super(RegistrationPasswordConfirmBaseView, self).dispatch(
+            request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        """
+        Handles POST requests, instantiating a form instance with the passed
+        POST variables and then checked for validity.
+        """
+        form_class = self.get_form_class()
+        form = self.get_form(form_class)
+        # We use *find_user* instead of *activate_user* because we want
+        # to make sure both the *verification_key* and *token* are valid
+        # before doing any modification of the underlying models.
+        #pylint: disable=maybe-no-member
+        user = User.objects.find_user(verification_key)
+        if user is not None and token_generator.check_token(user,
+                                                   self.kwargs.get('token')):
+            if form.is_valid():
+                return self.form_valid(form)
+        return self.form_invalid(form)
+
+    def form_valid(self, form):
+        user = User.objects.activate_user(verification_key)
+        signals.user_activated.send(
+            sender=__name__, user=user, request=request)
+        messages.info(request,
+                      _("Thank you. Your account is now active."))
+
+        # Okay, security check complete. Log the user in.
+        user_with_backend = authenticate(
+            username=user.username,
+            password=form.cleaned_data.get('new_password1'))
+        auth_login(request, user_with_backend)
+        if request.session.test_cookie_worked():
+            request.session.delete_test_cookie()
+
+        return super(RegistrationPasswordConfirmBaseView, self).form_valid(form)
+
+
+class PasswordResetView(TemplateResponseMixin, PasswordResetBaseView):
+
+    template_name = 'accounts/recover.html'
+
+
+class PasswordResetConfirmView(TemplateResponseMixin,
+                               PasswordResetConfirmBaseView):
+
+    template_name = 'accounts/reset.html'
+
+
+class SignupView(TemplateResponseMixin, SignupBaseView):
+
+    template_name = 'accounts/register.html'
+
+
+class ActivationView(TemplateResponseMixin, ActivationBaseView):
+
+    template_name = 'accounts/activate.html'
+
+
+class SigninView(TemplateResponseMixin, SigninBaseView):
+
+    template_name = 'accounts/login.html'
+
+
+class SignoutView(TemplateResponseMixin, SignoutBaseView):
+
+    template_name = 'accounts/logout.html'
+
+
+class RegistrationPasswordConfirmView(TemplateResponseMixin,
+                                      RegistrationPasswordConfirmBaseView):
+
+    template_name='accounts/reset.html'
+
+
 def registration_password_confirm(request, verification_key, token=None,
         template_name='accounts/reset.html',
         token_generator=default_token_generator,
         set_password_form=SetPasswordForm,
         extra_context=None,
         redirect_field_name=REDIRECT_FIELD_NAME):
-    """
-    View that checks the hash in a password activation link and presents a
-    form for entering a new password. We can activate the account for real
-    once we know the email is valid and a password has been set.
-    """
     redirect_to = request.REQUEST.get(redirect_field_name, None)
 
     # We use *find_user* instead of *activate_user* because we want
