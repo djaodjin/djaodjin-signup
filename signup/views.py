@@ -431,6 +431,7 @@ class AuthTemplateResponseMixin(TemplateResponseMixin):
                 context = {}
                 response_kwargs = {}
                 response_kwargs.setdefault('content_type', self.content_type)
+                #pylint:disable=star-args
                 return TemplateResponse(
                     request=request, template='accounts/disabled.html',
                     context=context, **response_kwargs)
