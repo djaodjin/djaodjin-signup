@@ -35,6 +35,7 @@ from django.contrib.auth.tokens import default_token_generator
 from django.contrib.sites.models import get_current_site
 from django.http import HttpResponseRedirect
 from django.shortcuts import redirect
+from django.template.response import TemplateResponse
 from django.utils.decorators import method_decorator
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
@@ -418,28 +419,48 @@ class RegistrationPasswordConfirmBaseView(RedirectFormMixin, ProcessFormView):
         return kwargs
 
 
-class PasswordResetView(TemplateResponseMixin, PasswordResetBaseView):
+class AuthTemplateResponseMixin(TemplateResponseMixin):
+    """
+    Returns a *disabled* page regardless when DISABLED_AUTHENTICATION
+    is True.
+    """
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.method.lower() in self.http_method_names:
+            if settings.DISABLED_AUTHENTICATION:
+                context = {}
+                response_kwargs = {}
+                response_kwargs.setdefault('content_type', self.content_type)
+                return TemplateResponse(
+                    request=request, template='accounts/disabled.html',
+                    context=context, **response_kwargs)
+        return super(AuthTemplateResponseMixin, self).dispatch(
+            request, *args, **kwargs)
+
+
+class ActivationView(AuthTemplateResponseMixin, ActivationBaseView):
+
+    template_name = 'accounts/activate.html'
+
+
+class PasswordResetView(AuthTemplateResponseMixin, PasswordResetBaseView):
 
     template_name = 'accounts/recover.html'
 
 
-class PasswordResetConfirmView(TemplateResponseMixin,
+class PasswordResetConfirmView(AuthTemplateResponseMixin,
                                PasswordResetConfirmBaseView):
 
     template_name = 'accounts/reset.html'
 
 
-class SignupView(TemplateResponseMixin, SignupBaseView):
+class RegistrationPasswordConfirmView(AuthTemplateResponseMixin,
+                                      RegistrationPasswordConfirmBaseView):
 
-    template_name = 'accounts/register.html'
-
-
-class ActivationView(TemplateResponseMixin, ActivationBaseView):
-
-    template_name = 'accounts/activate.html'
+    template_name = 'accounts/reset.html'
 
 
-class SigninView(TemplateResponseMixin, SigninBaseView):
+class SigninView(AuthTemplateResponseMixin, SigninBaseView):
 
     template_name = 'accounts/login.html'
 
@@ -449,10 +470,9 @@ class SignoutView(TemplateResponseMixin, SignoutBaseView):
     template_name = 'accounts/logout.html'
 
 
-class RegistrationPasswordConfirmView(TemplateResponseMixin,
-                                      RegistrationPasswordConfirmBaseView):
+class SignupView(AuthTemplateResponseMixin, SignupBaseView):
 
-    template_name = 'accounts/reset.html'
+    template_name = 'accounts/register.html'
 
 
 @login_required

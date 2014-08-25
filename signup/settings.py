@@ -29,6 +29,8 @@ the appropriate settings.
 """
 from django.conf import settings
 
+DISABLED_AUTHENTICATION = getattr(settings, 'DISABLED_AUTHENTICATION', False)
+
 DEFAULT_FROM_EMAIL = getattr(settings, 'DEFAULT_FROM_EMAIL')
 LOGIN_URL = getattr(settings, 'LOGIN_URL')
 LOGIN_REDIRECT_URL = getattr(settings, 'LOGIN_REDIRECT_URL')
