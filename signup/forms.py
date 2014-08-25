@@ -30,6 +30,7 @@ from django.utils.translation import ugettext_lazy as _
 
 from signup.compat import User
 
+#pylint: disable=old-style-class,no-init
 
 class NameEmailForm(forms.Form):
     """

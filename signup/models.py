@@ -130,6 +130,6 @@ class ActivatedUser(AbstractUser):
     def __unicode__(self):
         return self.username
 
-    class Meta:
+    class Meta: #pylint: disable=old-style-class,no-init
         db_table = u'auth_user'
         swappable = 'AUTH_USER_MODEL'

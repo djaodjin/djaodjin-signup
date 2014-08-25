@@ -30,7 +30,7 @@ from django.contrib.auth import login as auth_login, logout as auth_logout
 
 from django.contrib.auth import REDIRECT_FIELD_NAME, authenticate
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.forms import PasswordResetForm, SetPasswordForm
+from django.contrib.auth.forms import PasswordResetForm
 from django.contrib.auth.tokens import default_token_generator
 from django.contrib.sites.models import get_current_site
 from django.http import HttpResponseRedirect
@@ -127,7 +127,17 @@ class PasswordResetConfirmBaseView(RedirectFormMixin, ProcessFormView):
     """
     Clicked on the link sent in the reset e-mail.
     """
+    form_class = PasswordChangeForm
     token_generator = default_token_generator
+
+    def get_context_data(self, **kwargs):
+        context = super(PasswordResetConfirmBaseView,
+                        self).get_context_data(**kwargs)
+        user = self.object
+        if user is not None and self.token_generator.check_token(
+                                    user, self.kwargs.get('token')):
+            context.update({'validlink': True})
+        return context
 
     def post(self, request, *args, **kwargs):
         """
@@ -136,21 +146,30 @@ class PasswordResetConfirmBaseView(RedirectFormMixin, ProcessFormView):
         """
         form_class = self.get_form_class()
         form = self.get_form(form_class)
-        try:
-            uid = urlsafe_base64_decode(self.kwargs.get('uidb64'))
-            user = User.objects.get(pk=uid)
-        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
-            user = None
-
+        user = self.object
         if user is not None and self.token_generator.check_token(
                                     user, self.kwargs.get('token')):
             if form.is_valid():
+                form.save()
                 return self.form_valid(form)
         return self.form_invalid(form)
 
     def get_success_url(self):
         messages.info(self.request, "Your password has been reset sucessfully.")
         return super(PasswordResetConfirmBaseView, self).get_success_url()
+
+    def get_form_kwargs(self):
+        """
+        Returns the keyword arguments for instantiating the form.
+        """
+        kwargs = super(PasswordResetConfirmBaseView, self).get_form_kwargs()
+        try:
+            uid = urlsafe_base64_decode(self.kwargs.get('uidb64'))
+            self.object = User.objects.get(pk=uid)
+        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+            self.object = None
+        kwargs.update({'instance': self.object})
+        return kwargs
 
 
 class SignupBaseView(RedirectFormMixin, ProcessFormView):
@@ -330,8 +349,8 @@ class RegistrationPasswordConfirmBaseView(RedirectFormMixin, ProcessFormView):
     form for entering a new password. We can activate the account for real
     once we know the email is valid and a password has been set.
     """
+    form_class = PasswordChangeForm
     token_generator = default_token_generator
-    form_class = SetPasswordForm
 
     @method_decorator(sensitive_post_parameters)
     @method_decorator(never_cache)
@@ -374,6 +393,29 @@ class RegistrationPasswordConfirmBaseView(RedirectFormMixin, ProcessFormView):
             self.request.session.delete_test_cookie()
 
         return super(RegistrationPasswordConfirmBaseView, self).form_valid(form)
+
+    def get_context_data(self, **kwargs):
+        context = super(RegistrationPasswordConfirmBaseView,
+                        self).get_context_data(**kwargs)
+        user = self.object
+        if user is not None and self.token_generator.check_token(
+                                    user, self.kwargs.get('token')):
+            context.update({'validlink': True})
+        return context
+
+    def get_form_kwargs(self):
+        """
+        Returns the keyword arguments for instantiating the form.
+        """
+        kwargs = super(RegistrationPasswordConfirmBaseView,
+                       self).get_form_kwargs()
+        try:
+            uid = urlsafe_base64_decode(self.kwargs.get('uidb64'))
+            self.object = User.objects.get(pk=uid)
+        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+            self.object = None
+        kwargs.update({'instance': self.object})
+        return kwargs
 
 
 class PasswordResetView(TemplateResponseMixin, PasswordResetBaseView):
