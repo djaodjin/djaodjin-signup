@@ -25,7 +25,8 @@
 """Forms for the signup app"""
 
 from django import forms
-from django.contrib.auth.forms import SetPasswordForm
+from django.contrib.auth.forms import (
+    PasswordResetForm as PasswordResetBaseForm, SetPasswordForm)
 from django.utils.translation import ugettext_lazy as _
 
 from signup.compat import User
@@ -57,10 +58,21 @@ class PasswordChangeForm(SetPasswordForm):
         super(PasswordChangeForm, self).__init__(user, *args, **kwargs)
 
 
+class PasswordResetForm(PasswordResetBaseForm):
+
+    pass
+
+
 class UserForm(forms.ModelForm):
     """
     Form to update a ``User`` profile.
     """
+
+    username = forms.CharField(widget=forms.TextInput(
+        attrs={'placeholder': 'Username'}),
+        max_length=254, label=_("Username"),
+        error_messages={'invalid': _("username may only contain letters,"\
+" digits and -/_ characters.")})
 
     class Meta:
         model = User

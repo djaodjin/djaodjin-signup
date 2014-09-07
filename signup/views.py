@@ -30,7 +30,6 @@ from django.contrib.auth import login as auth_login, logout as auth_logout
 
 from django.contrib.auth import REDIRECT_FIELD_NAME, authenticate
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.forms import PasswordResetForm
 from django.contrib.auth.tokens import default_token_generator
 from django.contrib.sites.models import get_current_site
 from django.http import HttpResponseRedirect
@@ -51,7 +50,8 @@ from signup.auth import validate_redirect
 from signup.backends import get_email_backend
 from signup.decorators import check_user_active, _send_verification_email
 from signup.compat import User
-from signup.forms import NameEmailForm, PasswordChangeForm, UserForm
+from signup.forms import (NameEmailForm, PasswordChangeForm, PasswordResetForm,
+    UserForm)
 from signup.backends.auth import UsernameOrEmailAuthenticationForm
 from signup import signals
 from signup import settings

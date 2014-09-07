@@ -54,8 +54,11 @@ from signup.compat import User
 
 class UsernameOrEmailAuthenticationForm(AuthenticationForm):
 
-    username = forms.CharField(label=_("Username or Email"), max_length=254)
-    password = forms.CharField(label=_("Password"), widget=forms.PasswordInput)
+    username = forms.CharField(widget=forms.TextInput(
+        attrs={'placeholder': 'Username or Email'}),
+        max_length=254, label=_("Username or Email"))
+    password = forms.CharField(widget=forms.PasswordInput(
+        attrs={'placeholder': 'Password'}), label=_("Password"))
 
 
 class UsernameOrEmailModelBackend(object):
