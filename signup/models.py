@@ -31,6 +31,7 @@ import datetime, hashlib, logging, random, re
 from django.db import models
 from django.db import transaction
 from django.contrib.auth.models import AbstractUser, UserManager
+from django.utils.decorators import method_decorator
 from django.utils.translation import ugettext_lazy as _
 from django.utils.timezone import now as datetime_now
 
@@ -42,6 +43,7 @@ EMAIL_VERIFICATION_RE = re.compile('^%s$' % settings.EMAIL_VERIFICATION_PAT)
 
 class ActivatedUserManager(UserManager):
 
+    @method_decorator(transaction.atomic)
     def create_inactive_user(self, email, **kwargs):
         """
         Create an inactive user with a default username.
@@ -69,7 +71,6 @@ class ActivatedUserManager(UserManager):
         user.email_verification_key = hashlib.sha1(salt+username).hexdigest()
         user.save()
         return user
-    create_inactive_user = transaction.commit_on_success(create_inactive_user)
 
     def find_user(self, email_verification_key):
         """
