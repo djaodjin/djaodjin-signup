@@ -3,7 +3,7 @@
 
 {% block content %}
 <div>
-    <form method="post" action="./?next={{ next }}">
+    <form method="post" action="./?next={{next}}">
         {% csrf_token %}
         {{ form }}
         <input type="submit" name="submit" value="Submit">

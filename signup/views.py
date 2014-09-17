@@ -478,4 +478,4 @@ class SignupView(AuthTemplateResponseMixin, SignupBaseView):
 
 @login_required
 def redirect_to_user_profile(request):
-    return redirect(request.user.get_absolute_url())
+    return redirect(reverse('users_profile', args=(request.user,)))

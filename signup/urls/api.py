@@ -22,24 +22,11 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""
-URLconf for frictionless signup.
+from django.conf.urls import patterns, url
 
-If the default behavior of these views is acceptable to you, simply
-use a line like this in your root URLconf to set up the default URLs
-for registration:
-
-    (r'^accounts/', include('signup.urls.accounts')),
-
-Optionally add URLs for User profiles:
-
-    (r'^users/', include('signup.urls.users')),
-"""
-
-from django.conf.urls import patterns, include, url
+from signup.api import UserListAPIView
 
 urlpatterns = patterns('',
-    url(r'^api/', include('signup.urls.api')),
-    url(r'^users/', include('signup.urls.users')),
-    url(r'^', include('signup.urls.accounts')),
+    url(r'^users/?',
+        UserListAPIView.as_view(), name='saas_api_user_list'),
 )
