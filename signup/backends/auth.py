@@ -60,6 +60,12 @@ class UsernameOrEmailAuthenticationForm(AuthenticationForm):
     password = forms.CharField(widget=forms.PasswordInput(
         attrs={'placeholder': 'Password'}), label=_("Password"))
 
+    def clean_username(self):
+        if self.cleaned_data.has_key('username'):
+            self.cleaned_data['username'] \
+                = self.cleaned_data['username'].lower()
+        return self.cleaned_data['username']
+
 
 class UsernameOrEmailModelBackend(object):
     """
