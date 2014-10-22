@@ -1,0 +1,15 @@
+{% load i18n %}
+
+{% block subject %}
+{% trans "A user has registered for " %} {{ site.slug }}
+{% endblock %}
+
+{% block plain_content %}
+New registered user {{registered.get_full_name}} with email {{registered.email}}.
+{% endblock %}
+
+{% block html_content %}
+<p>
+New registered user {{registered.get_full_name}} with email {{registered.email}}.
+</p>
+{% endblock %}
