@@ -198,12 +198,12 @@ class SignupBaseView(RedirectFormMixin, ProcessFormView):
             user = users.get()
             if check_user_active(self.request, user,
                                  next_url=self.get_success_url()):
-                messages.info(self.request, mark_safe(_(
+                messages.warning(self.request, mark_safe(_(
                     'This email address has already been registered!'\
 ' Please <a href="%s">login</a> with your credentials. Thank you.'
                     % reverse('login'))))
             else:
-                messages.info(self.request, mark_safe(_(
+                messages.warning(self.request, mark_safe(_(
                     "This email address has already been registered!"\
 " You should now secure and activate your account following "\
 " the instructions we just emailed you. Thank you.")))
