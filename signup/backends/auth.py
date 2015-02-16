@@ -60,6 +60,15 @@ class UsernameOrEmailAuthenticationForm(AuthenticationForm):
     password = forms.CharField(widget=forms.PasswordInput(
         attrs={'placeholder': 'Password'}), label=_("Password"))
 
+    def __init__(self, *args, **kwargs):
+        super(UsernameOrEmailAuthenticationForm, self).__init__(*args, **kwargs)
+        username_label = self.initial.get('username_label', None)
+        if username_label:
+            placeholder_label = '%s or Email' % username_label
+            self.fields['username'].label = placeholder_label
+            self.fields['username'].widget.attrs['placeholder'] \
+                = placeholder_label
+
 
 class UsernameOrEmailModelBackend(object):
     """
