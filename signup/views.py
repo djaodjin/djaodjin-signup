@@ -1,4 +1,4 @@
-# Copyright (c) 2014, Djaodjin Inc.
+# Copyright (c) 2015, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -35,13 +35,11 @@ from django.contrib.sites.models import get_current_site
 from django.http import HttpResponseRedirect
 from django.shortcuts import redirect
 from django.template.response import TemplateResponse
-from django.utils.decorators import method_decorator
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.utils.safestring import mark_safe
 from django.utils.translation import ugettext_lazy as _
-from django.views.decorators.debug import sensitive_post_parameters
-from django.views.decorators.cache import never_cache
+from django.views.decorators.cache import add_never_cache_headers
 from django.views.generic.base import ContextMixin, TemplateResponseMixin, View
 from django.views.generic.detail import BaseDetailView
 from django.views.generic.edit import FormMixin, ProcessFormView, UpdateView
@@ -245,7 +243,7 @@ class ActivationBaseView(ContextMixin, View):
     token_generator = default_token_generator
 
     def get(self, request, *args, **kwargs):
-        verification_key = kwargs['verification_key']
+        verification_key = self.kwargs.get('verification_key')
         #pylint: disable=maybe-no-member
         user = User.objects.find_user(verification_key)
         if user:
@@ -353,11 +351,14 @@ class RegistrationPasswordConfirmBaseView(RedirectFormMixin, ProcessFormView):
     form_class = PasswordChangeForm
     token_generator = default_token_generator
 
-    @method_decorator(sensitive_post_parameters)
-    @method_decorator(never_cache)
     def dispatch(self, request, *args, **kwargs):
-        return super(RegistrationPasswordConfirmBaseView, self).dispatch(
+        # We put the code inline instead of using method_decorator() otherwise
+        # kwargs is interpreted as parameters in sensitive_post_parameters.
+        request.sensitive_post_parameters = '__ALL__'
+        response = super(RegistrationPasswordConfirmBaseView, self).dispatch(
             request, *args, **kwargs)
+        add_never_cache_headers(response)
+        return response
 
     def post(self, request, *args, **kwargs):
         """
@@ -370,15 +371,18 @@ class RegistrationPasswordConfirmBaseView(RedirectFormMixin, ProcessFormView):
         # to make sure both the *verification_key* and *token* are valid
         # before doing any modification of the underlying models.
         #pylint: disable=maybe-no-member
-        user = User.objects.find_user(self.kwargs.get('verification_key'))
-        if user is not None and self.token_generator.check_token(user,
-                                                   self.kwargs.get('token')):
+        user = self.object
+        if (user is not None
+            and self.token_generator.check_token(
+                user, self.kwargs.get('token'))):
             if form.is_valid():
                 return self.form_valid(form)
         return self.form_invalid(form)
 
     def form_valid(self, form):
         #pylint: disable=maybe-no-member
+        self.object = form.save() # If we don't save the ``User`` model here,
+                                  # we won't be able to authenticate later.
         user = User.objects.activate_user(self.kwargs.get('verification_key'))
         signals.user_activated.send(
             sender=__name__, user=user, request=self.request)
@@ -392,8 +396,7 @@ class RegistrationPasswordConfirmBaseView(RedirectFormMixin, ProcessFormView):
         auth_login(self.request, user_with_backend)
         if self.request.session.test_cookie_worked():
             self.request.session.delete_test_cookie()
-
-        return super(RegistrationPasswordConfirmBaseView, self).form_valid(form)
+        return HttpResponseRedirect(self.get_success_url())
 
     def get_context_data(self, **kwargs):
         context = super(RegistrationPasswordConfirmBaseView,
@@ -408,13 +411,11 @@ class RegistrationPasswordConfirmBaseView(RedirectFormMixin, ProcessFormView):
         """
         Returns the keyword arguments for instantiating the form.
         """
-        kwargs = super(RegistrationPasswordConfirmBaseView,
-                       self).get_form_kwargs()
-        try:
-            uid = urlsafe_base64_decode(self.kwargs.get('uidb64'))
-            self.object = User.objects.get(pk=uid)
-        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
-            self.object = None
+        kwargs = super(
+            RegistrationPasswordConfirmBaseView, self).get_form_kwargs()
+        #pylint: disable=no-member
+        self.object = User.objects.find_user(
+            self.kwargs.get('verification_key'))
         kwargs.update({'instance': self.object})
         return kwargs
 
