@@ -1,4 +1,4 @@
-# Copyright (c) 2014, Djaodjin Inc.
+# Copyright (c) 2015, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -81,7 +81,7 @@ class ActivatedUserManager(UserManager):
                 user = self.get(email_verification_key=email_verification_key)
                 if not user.email_verification_key_expired():
                     return user
-            except self.model.DoesNotExist:
+            except ActivatedUser.DoesNotExist:
                 pass # We return None instead here.
         return None
 
@@ -93,7 +93,7 @@ class ActivatedUserManager(UserManager):
         if user:
             LOGGER.info('user #%d activated through code: %s',
                         user.id, user.email_verification_key)
-            user.email_verification_key = self.model.VERIFIED
+            user.email_verification_key = ActivatedUser.VERIFIED
             user.is_active = True
             user.save()
         return user
