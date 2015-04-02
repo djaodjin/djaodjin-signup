@@ -36,7 +36,8 @@ setup(
               ],
     package_data={'signup': ['templates/accounts/*.html',
                              'templates/notification/*.eml',
-                             'templates/users/*.html']},
+                             'templates/users/*.html',
+                             'static/js/*.js']},
     url='https://github.com/djaodjin/djaodjin-signup/',
     download_url='https://github.com/djaodjin/djaodjin-signup/tarball/%s' \
         % signup.__version__,
