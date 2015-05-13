@@ -83,7 +83,7 @@ class UsernameOrEmailModelBackend(object):
         else:
             kwargs = {'username': username}
         try:
-            user = User.objects.get(**kwargs) #pylint: disable=star-args
+            user = User.objects.get(**kwargs)
             if user.check_password(password):
                 return user
         except User.DoesNotExist:

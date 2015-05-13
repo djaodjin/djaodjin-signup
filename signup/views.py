@@ -57,8 +57,8 @@ from signup import settings
 
 def _redirect_to(url):
     try:
-        to_url, args, kwargs = url #(cast to tuple) pylint: disable=star-args
-        return redirect(to_url, *args, **kwargs) #pylint: disable=star-args
+        to_url, args, kwargs = url #(cast to tuple)
+        return redirect(to_url, *args, **kwargs)
     except ValueError:
         return redirect(url)
 
@@ -432,7 +432,6 @@ class AuthTemplateResponseMixin(TemplateResponseMixin):
                 context = {}
                 response_kwargs = {}
                 response_kwargs.setdefault('content_type', self.content_type)
-                #pylint:disable=star-args
                 return TemplateResponse(
                     request=request, template='accounts/disabled.html',
                     context=context, **response_kwargs)
