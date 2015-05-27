@@ -24,10 +24,11 @@
 
 """Extra Forms and Views that might prove useful to register users."""
 
+import logging
+
 from django.core.urlresolvers import reverse
 from django.contrib import messages
 from django.contrib.auth import login as auth_login, logout as auth_logout
-
 from django.contrib.auth import REDIRECT_FIELD_NAME, authenticate
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.tokens import default_token_generator
@@ -53,6 +54,9 @@ from signup.forms import (NameEmailForm, PasswordChangeForm, PasswordResetForm,
 from signup.backends.auth import UsernameOrEmailAuthenticationForm
 from signup import signals
 from signup import settings
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 def _redirect_to(url):
@@ -150,6 +154,7 @@ class PasswordResetConfirmBaseView(RedirectFormMixin, ProcessFormView):
                                     user, self.kwargs.get('token')):
             if form.is_valid():
                 form.save()
+                LOGGER.info("%s reset her/his password.", self.request.user)
                 return self.form_valid(form)
         return self.form_invalid(form)
 
@@ -183,6 +188,7 @@ class SignupBaseView(RedirectFormMixin, ProcessFormView):
     def form_valid(self, form):
         new_user = self.register(**form.cleaned_data)
         if new_user:
+            LOGGER.info("%s registered.", self.request.user)
             success_url = self.get_success_url()
         else:
             success_url = self.request.META['PATH_INFO']
@@ -255,6 +261,7 @@ class ActivationBaseView(ContextMixin, View):
                                     self.token_generator.make_token(user)))
             else:
                 user = User.objects.activate_user(verification_key)
+                # XXX Should we directly login user here?
                 signals.user_activated.send(
                     sender=__name__, user=user, request=self.request)
                 messages.info(self.request,
@@ -295,6 +302,7 @@ class SigninBaseView(RedirectFormMixin, ProcessFormView):
 
     def form_valid(self, form):
         auth_login(self.request, form.get_user())
+        LOGGER.info("%s signed in.", self.request.user)
         return super(SigninBaseView, self).form_valid(form)
 
 
@@ -304,6 +312,7 @@ class SignoutBaseView(RedirectFormMixin, View):
     """
 
     def get(self, request, *args, **kwargs):
+        LOGGER.info("%s signed out.", self.request.user)
         auth_logout(request)
         next_url = self.get_success_url()
         if next_url:
