@@ -1,4 +1,4 @@
-# Copyright (c) 2014, Djaodjin Inc.
+# Copyright (c) 2015, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -29,7 +29,16 @@ the appropriate settings.
 """
 from django.conf import settings
 
-DISABLED_AUTHENTICATION = getattr(settings, 'DISABLED_AUTHENTICATION', False)
+_SETTINGS = {
+    'DISABLED_AUTHENTICATION': False,
+    'AWS_REGION': 'us-west-2',
+    'AWS_UPLOAD_ROLE': None
+}
+_SETTINGS.update(getattr(settings, 'SIGNUP', {}))
+
+DISABLED_AUTHENTICATION = _SETTINGS.get('DISABLED_AUTHENTICATION')
+AWS_REGION = _SETTINGS.get('AWS_REGION')
+AWS_UPLOAD_ROLE = _SETTINGS.get('AWS_UPLOAD_ROLE')
 
 DEFAULT_FROM_EMAIL = getattr(settings, 'DEFAULT_FROM_EMAIL')
 LOGIN_URL = getattr(settings, 'LOGIN_URL')
