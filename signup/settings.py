@@ -31,7 +31,7 @@ from django.conf import settings
 
 _SETTINGS = {
     'DISABLED_AUTHENTICATION': False,
-    'AWS_REGION': 'us-west-2',
+    'AWS_REGION': None,
     'AWS_UPLOAD_ROLE': None
 }
 _SETTINGS.update(getattr(settings, 'SIGNUP', {}))
