@@ -315,10 +315,7 @@ class SignoutBaseView(RedirectFormMixin, View):
         LOGGER.info("%s signed out.", self.request.user)
         auth_logout(request)
         next_url = self.get_success_url()
-        if next_url:
-            response = HttpResponseRedirect(next_url)
-        else:
-            response = super(SignoutBaseView, self).get(request, *args, **kwargs)
+        response = HttpResponseRedirect(next_url)
         if settings.LOGOUT_CLEAR_COOKIES:
             for cookie in settings.LOGOUT_CLEAR_COOKIES:
                 response.delete_cookie(cookie)
