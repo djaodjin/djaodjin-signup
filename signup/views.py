@@ -188,7 +188,9 @@ class SignupBaseView(RedirectFormMixin, ProcessFormView):
     def form_valid(self, form):
         new_user = self.register(**form.cleaned_data)
         if new_user:
-            LOGGER.info("%s registered.", self.request.user)
+            LOGGER.info('%s registered {"first_name": %s, "last_name": %s,'\
+' "email": %s}.', self.request.user, self.request.user.first_name,
+                self.request.user.last_name, self.request.user.email)
             success_url = self.get_success_url()
         else:
             success_url = self.request.META['PATH_INFO']
