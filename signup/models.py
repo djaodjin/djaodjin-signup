@@ -117,6 +117,9 @@ class ActivatedUser(AbstractUser):
                (self.last_login + expiration_date <= datetime_now())
     email_verification_key_expired.boolean = True
 
+    def __unicode__(self):
+        return self.username
+
     @property
     def has_invalid_password(self):
         return self.password.startswith('!')
@@ -128,7 +131,10 @@ class ActivatedUser(AbstractUser):
         """
         return self.email_verification_key == ActivatedUser.VERIFIED
 
-    def __unicode__(self):
+    @property
+    def printable_name(self):
+        if self.first_name:
+            return self.first_name
         return self.username
 
     class Meta: #pylint: disable=old-style-class,no-init
