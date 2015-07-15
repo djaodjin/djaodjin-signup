@@ -188,7 +188,9 @@ class SignupBaseView(RedirectFormMixin, ProcessFormView):
     def form_valid(self, form):
         new_user = self.register(**form.cleaned_data)
         if new_user:
-            LOGGER.info("%s registered.", self.request.user)
+            LOGGER.info('%s registered {"first_name": "%s", "last_name": "%s",'\
+' "email": "%s"}.', self.request.user, self.request.user.first_name,
+                self.request.user.last_name, self.request.user.email)
             success_url = self.get_success_url()
         else:
             success_url = self.request.META['PATH_INFO']
@@ -315,9 +317,11 @@ class SignoutBaseView(RedirectFormMixin, View):
         LOGGER.info("%s signed out.", self.request.user)
         auth_logout(request)
         next_url = self.get_success_url()
-        if next_url:
-            return HttpResponseRedirect(next_url)
-        return super(SignoutBaseView, self).get(request, *args, **kwargs)
+        response = HttpResponseRedirect(next_url)
+        if settings.LOGOUT_CLEAR_COOKIES:
+            for cookie in settings.LOGOUT_CLEAR_COOKIES:
+                response.delete_cookie(cookie)
+        return response
 
 
 class UserProfileView(UpdateView):
