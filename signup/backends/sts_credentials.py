@@ -32,22 +32,26 @@ from signup import settings
 LOGGER = logging.getLogger(__name__)
 
 
-def temporary_security_token(request):
+def temporary_security_token(request, aws_upload_role=None, aws_region=None):
     """
     Create temporary security credentials on AWS. This typically needed
     to allow uploads from the browser directly to S3.
     """
     if (request.user.is_authenticated()
         and not request.session.has_key('access_key')):
-        conn = boto.sts.connect_to_region(settings.AWS_REGION)
+        if not aws_upload_role:
+            aws_upload_role = settings.AWS_UPLOAD_ROLE
+        if not aws_region:
+            aws_region = settings.AWS_REGION
+        conn = boto.sts.connect_to_region(aws_region)
         assumed_role = conn.assume_role(
-            settings.AWS_UPLOAD_ROLE, request.session.session_key)
+            aws_upload_role, request.session.session_key)
         request.session['access_key'] = assumed_role.credentials.access_key
         request.session['secret_key'] = assumed_role.credentials.secret_key
         request.session['security_token'] \
             = assumed_role.credentials.session_token
         LOGGER.info('AWS temporary credentials for %s to assume role %s {'\
-            '"aws_access_key": "%s"}', request.user, settings.AWS_UPLOAD_ROLE,
+            '"aws_access_key": "%s"}', request.user, aws_upload_role,
             request.session['access_key'])
 
 
@@ -103,7 +107,9 @@ class AWSContextMixin(object):
         if self.request.user.is_authenticated():
             if not 'access_key' in self.request.session:
                 # Lazy creation of temporary credentials.
-                temporary_security_token(self.request)
+                temporary_security_token(self.request,
+                    kwargs.get('aws_upload_role'),
+                    kwargs.get('aws_region'))
             context.update(self._signed_policy(
                 settings.AWS_REGION, "s3",
                 datetime.datetime.now(),
