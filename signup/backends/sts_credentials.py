@@ -105,12 +105,12 @@ class AWSContextMixin(object):
         #pylint: disable=unused-argument
         context = {}
         if self.request.user.is_authenticated():
-            aws_region = settings.AWS_REGION
+            aws_region = kwargs.get('aws_region', settings.AWS_REGION)
             if not 'access_key' in self.request.session:
                 # Lazy creation of temporary credentials.
                 temporary_security_token(self.request,
                     kwargs.get('aws_upload_role', settings.AWS_UPLOAD_ROLE),
-                    kwargs.get('aws_region', aws_region))
+                    aws_region)
             context.update(self._signed_policy(
                 aws_region, "s3",
                 datetime.datetime.now(),
