@@ -39,6 +39,10 @@ def temporary_security_token(request, aws_upload_role=None, aws_region=None):
     """
     if (request.user.is_authenticated()
         and not request.session.has_key('access_key')):
+        if not aws_upload_role:
+            aws_upload_role = settings.AWS_UPLOAD_ROLE
+        if not aws_region:
+            aws_region = settings.AWS_REGION
         conn = boto.sts.connect_to_region(aws_region)
         assumed_role = conn.assume_role(
             aws_upload_role, request.session.session_key)
@@ -101,13 +105,14 @@ class AWSContextMixin(object):
         #pylint: disable=unused-argument
         context = {}
         if self.request.user.is_authenticated():
+            aws_region = settings.AWS_REGION
             if not 'access_key' in self.request.session:
                 # Lazy creation of temporary credentials.
                 temporary_security_token(self.request,
                     kwargs.get('aws_upload_role', settings.AWS_UPLOAD_ROLE),
-                    kwargs.get('aws_region', settings.AWS_REGION))
+                    kwargs.get('aws_region', aws_region))
             context.update(self._signed_policy(
-                settings.AWS_REGION, "s3",
+                aws_region, "s3",
                 datetime.datetime.now(),
                 self.request.session['access_key'],
                 self.request.session['secret_key'],
