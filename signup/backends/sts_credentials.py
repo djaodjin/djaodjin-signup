@@ -58,7 +58,8 @@ def temporary_security_token(request, aws_upload_role=None, aws_region=None):
 class AWSContextMixin(object):
 
 
-    def _signed_policy(self, region, service, requested_at,
+    @staticmethod
+    def _signed_policy(region, service, requested_at,
                        access_key, secret_key, security_token,
                        bucket=None):
         #pylint:disable=too-many-arguments,too-many-locals
