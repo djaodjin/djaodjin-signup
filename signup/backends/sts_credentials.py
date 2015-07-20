@@ -59,7 +59,8 @@ class AWSContextMixin(object):
 
 
     def _signed_policy(self, region, service, requested_at,
-                       access_key, secret_key, security_token):
+                       access_key, secret_key, security_token,
+                       bucket=None):
         #pylint:disable=too-many-arguments,too-many-locals
         signature_date = requested_at.strftime("%Y%m%d")
         x_amz_credential = '/'.join([
@@ -69,7 +70,7 @@ class AWSContextMixin(object):
             "expiration": (requested_at + datetime.timedelta(
                 hours=24)).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
             "conditions":[
-                {"bucket": self.get_bucket()},
+                {"bucket": bucket},
                 {"x-amz-algorithm": "AWS4-HMAC-SHA256"},
                 {"x-amz-credential": x_amz_credential},
                 {"x-amz-date": x_amz_date},
@@ -116,5 +117,6 @@ class AWSContextMixin(object):
                 datetime.datetime.now(),
                 self.request.session['access_key'],
                 self.request.session['secret_key'],
-                security_token=self.request.session['security_token']))
+                security_token=self.request.session['security_token'],
+                bucket=kwargs.get('bucket', None)))
         return context

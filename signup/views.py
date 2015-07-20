@@ -46,7 +46,6 @@ from django.views.generic.detail import BaseDetailView
 from django.views.generic.edit import FormMixin, ProcessFormView, UpdateView
 
 from signup.auth import validate_redirect
-from signup.backends import get_email_backend
 from signup.decorators import check_user_active, _send_verification_email
 from signup.compat import User
 from signup.forms import (NameEmailForm, PasswordChangeForm, PasswordResetForm,
@@ -104,19 +103,13 @@ class PasswordResetBaseView(RedirectFormMixin, ProcessFormView):
             if user.is_active and user.has_usable_password():
                 # Make sure that no email is sent to a user that actually has
                 # a password marked as unusable
-                site = get_current_site(self.request)
                 uid = urlsafe_base64_encode(force_bytes(user.pk))
                 token = self.token_generator.make_token(user)
                 back_url = self.request.build_absolute_uri(
                     reverse('password_reset_confirm', args=(uid, token)))
-                get_email_backend().send([user.email],
-                    'accounts/password_reset.eml',
-                    {'user': user, 'site': site,
-                     'back_url': back_url,
-                     'expiration_days': settings.KEY_EXPIRATION,
-                     # XXX Reason for a redirect after password reset?
-                     # redirect_field_name: next_url
-                     })
+                signals.user_reset_password.send(
+                    sender=__name__, user=user, request=self.request,
+                    back_url=back_url, expiration_days=settings.KEY_EXPIRATION)
         return super(PasswordResetBaseView, self).form_valid(form)
 
     def get_success_url(self):
