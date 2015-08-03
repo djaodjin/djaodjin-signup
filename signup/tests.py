@@ -43,7 +43,7 @@ class SignUpTests(TestCase):
 
     def setUp(self):
         # By default it will end-up being '*' which breaks multitier tests.
-        settings.ALLOWED_HOSTS  = ('localhost',)
+        settings.ALLOWED_HOSTS = ('localhost',)
         # Every test needs access to the request factory.
         self.factory = RequestFactory()
 
