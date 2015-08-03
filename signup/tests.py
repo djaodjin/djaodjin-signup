@@ -42,6 +42,8 @@ class SignUpTests(TestCase):
     """
 
     def setUp(self):
+        # By default it will end-up being '*' which breaks multitier tests.
+        settings.ALLOWED_HOSTS  = ('localhost',)
         # Every test needs access to the request factory.
         self.factory = RequestFactory()
 
@@ -102,5 +104,5 @@ class SignUpTests(TestCase):
         # XXX Haven't found out how to get this assertion to pass,
         # status_code 302 vs 200 expected.
         # self.assertRedirects(response, settings.LOGIN_REDIRECT_URL)
-        self.assertTrue(re.match(r'\S+/users/[\w.@+-]+/',
+        self.assertTrue(re.match(r'\S+/app/[\w.@+-]+/',
                                  response.redirect_chain[-1][0]))

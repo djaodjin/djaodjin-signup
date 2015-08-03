@@ -269,7 +269,8 @@ class ActivationBaseView(ContextMixin, View):
             else:
                 success_url = url
             return _redirect_to(success_url)
-        return super(ActivationBaseView, self).get(request, *args, **kwargs)
+        context = self.get_context_data(**kwargs)
+        return self.render_to_response(context)
 
 
 class SendActivationView(BaseDetailView):
