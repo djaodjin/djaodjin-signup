@@ -47,5 +47,6 @@ def validate_redirect_url(next_url):
         allowed_hosts = ['*'] if settings.DEBUG else settings.ALLOWED_HOSTS
         if not (domain and validate_host(domain, allowed_hosts)):
             return None
-    return parts.path
+    return urlparse.urlunparse((parts.scheme, '', parts.path,
+        parts.params, parts.query, parts.fragment))
 
