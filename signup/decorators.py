@@ -68,7 +68,7 @@ def _send_verification_email(user, site,
     workflow once verification is completed.
     """
     get_email_backend().send([user.email],
-        'accounts/verification.eml',
+        'notification/verification.eml',
         {'user': user, 'site': site,
          'verification_key': user.email_verification_key,
          'expiration_days': settings.KEY_EXPIRATION,
