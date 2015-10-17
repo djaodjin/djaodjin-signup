@@ -32,6 +32,12 @@ to the settings AUTHENTICATION_BACKENDS.
             'django.contrib.auth.backends.ModelBackend'
         )
 
+To make the application useable accross a variety of websites, ``signup`` never
+sends any e-mails directly. It relies on triggering ``signals`` whenever
+a notification must be generated. As a result, to verify a user email address
+and activate her account, you will need to implement a listener for the
+``user_verification`` signal and send the e-mail from there.
+
 Development
 ===========
 

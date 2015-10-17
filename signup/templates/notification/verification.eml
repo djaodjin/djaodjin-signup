@@ -1,19 +1,11 @@
 {% block subject %}
-Account activation on {{ site.name }}
-{% endblock %}
-
-{% block plain_content %}
-Activate your account at {{ site.name }} by visiting the following url:
-
-http://{{ site.domain }}{% url 'registration_activate' verification_key %}{% if next %}?next={{next}}{% endif %}
-
-Link is valid for {{ expiration_days }} days.
+Account activation on {{site.name}}
 {% endblock %}
 
 {% block html_content %}
-Activate your account at {{ site.name }} by visiting the following url:
+Activate your account at {{site.name}} by visiting the following url:
 
-http://{{ site.domain }}{% url 'registration_activate' verification_key %}{% if next %}?next={{next}}{% endif %}
+{{back_url}}
 
-Link is valid for {{ expiration_days }} days.
+Link is valid for {{expiration_days}} days.
 {% endblock %}

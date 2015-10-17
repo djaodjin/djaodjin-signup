@@ -32,7 +32,6 @@ from django.contrib.auth import login as auth_login, logout as auth_logout
 from django.contrib.auth import REDIRECT_FIELD_NAME, authenticate
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.tokens import default_token_generator
-from django.contrib.sites.models import get_current_site
 from django.http import HttpResponseRedirect
 from django.shortcuts import redirect
 from django.template.response import TemplateResponse
@@ -46,7 +45,7 @@ from django.views.generic.detail import BaseDetailView
 from django.views.generic.edit import FormMixin, ProcessFormView, UpdateView
 
 from signup.auth import validate_redirect
-from signup.decorators import check_user_active, _send_verification_email
+from signup.decorators import check_user_active, send_verification_email
 from signup.compat import User
 from signup.forms import (NameEmailForm, PasswordChangeForm, PasswordResetForm,
     UserForm)
@@ -107,6 +106,9 @@ class PasswordResetBaseView(RedirectFormMixin, ProcessFormView):
                 token = self.token_generator.make_token(user)
                 back_url = self.request.build_absolute_uri(
                     reverse('password_reset_confirm', args=(uid, token)))
+                next_url = validate_redirect(self.request)
+                if next_url:
+                    back_url += '?%s=%s' % (REDIRECT_FIELD_NAME, next_url)
                 signals.user_reset_password.send(
                     sender=__name__, user=user, request=self.request,
                     back_url=back_url, expiration_days=settings.KEY_EXPIRATION)
@@ -191,7 +193,7 @@ class SignupBaseView(RedirectFormMixin, ProcessFormView):
 
     def register(self, **cleaned_data):
         #pylint: disable=maybe-no-member
-        full_name, email = cleaned_data['full_name'], cleaned_data['email']
+        email = cleaned_data['email']
         users = User.objects.filter(email=email)
         if users.exists():
             user = users.get()
@@ -208,23 +210,29 @@ class SignupBaseView(RedirectFormMixin, ProcessFormView):
 " the instructions we just emailed you. Thank you.")))
             return None
 
-        name_parts = full_name.split(' ')
-        if len(name_parts) > 0:
-            first_name = name_parts[0]
-            last_name = ' '.join(name_parts[1:])
-        else:
-            first_name = full_name
-            last_name = ''
-        username = None
-        if cleaned_data.has_key('username'):
-            username = cleaned_data['username']
-        if username and cleaned_data.has_key('password'):
+        first_name = cleaned_data.get('first_name', None)
+        last_name = cleaned_data.get('last_name', None)
+        if not first_name:
+            # If the form does not contain a first_name/last_name pair,
+            # we assume a full_name was passed instead.
+            full_name = cleaned_data['full_name']
+            name_parts = full_name.split(' ')
+            if len(name_parts) > 0:
+                first_name = name_parts[0]
+                last_name = ' '.join(name_parts[1:])
+            else:
+                first_name = full_name
+                last_name = ''
+        username = cleaned_data.get('username', None)
+        password = cleaned_data.get('password', None)
+        if username and password:
             user = User.objects.create_user(
-                username=username, password=cleaned_data['password'],
+                username=username, password=password,
                 email=email, first_name=first_name, last_name=last_name)
         else:
             user = User.objects.create_inactive_user(email,
-                username=username, first_name=first_name, last_name=last_name)
+                username=username, password=password,
+                first_name=first_name, last_name=last_name)
         signals.user_registered.send(
             sender=__name__, user=user, request=self.request)
 
@@ -282,11 +290,9 @@ class SendActivationView(BaseDetailView):
 
     def get(self, request, *args, **kwargs):
         user = self.get_object()
-        site = get_current_site(request)
-        _send_verification_email(user, site)
-        messages.info(self.request, "Activation e-mail sent.")
+        send_verification_email(user, request)
         return HttpResponseRedirect(
-            reverse('users_profile', args=(self.object,)))
+            reverse('users_profile', args=(user,)))
 
 
 class SigninBaseView(RedirectFormMixin, ProcessFormView):

@@ -1,11 +1,10 @@
 {% extends "base.html" %}
-{% load i18n %}
 
 {% block content %}
 <div>
     <form method="post" action="./?next={{next}}">
         {% csrf_token %}
-        {{ form }}
+        {{form}}
         <input type="submit" name="submit" value="Submit">
     </form>
     <p>

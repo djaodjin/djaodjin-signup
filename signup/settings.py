@@ -33,7 +33,9 @@ _SETTINGS = {
     'DISABLED_AUTHENTICATION': False,
     'AWS_REGION': None,
     'AWS_UPLOAD_ROLE': None,
-    'LOGOUT_CLEAR_COOKIES' : None
+    'LOGOUT_CLEAR_COOKIES' : None,
+    'ACCOUNT_ACTIVATION_DAYS': getattr(settings, 'ACCOUNT_ACTIVATION_DAYS', 2),
+    'DEFAULT_FROM_EMAIL': getattr(settings, 'DEFAULT_FROM_EMAIL')
 }
 _SETTINGS.update(getattr(settings, 'SIGNUP', {}))
 
@@ -42,11 +44,9 @@ AWS_REGION = _SETTINGS.get('AWS_REGION')
 AWS_UPLOAD_ROLE = _SETTINGS.get('AWS_UPLOAD_ROLE')
 LOGOUT_CLEAR_COOKIES = _SETTINGS.get('LOGOUT_CLEAR_COOKIES')
 
-DEFAULT_FROM_EMAIL = getattr(settings, 'DEFAULT_FROM_EMAIL')
+DEFAULT_FROM_EMAIL = _SETTINGS.get('DEFAULT_FROM_EMAIL')
 LOGIN_URL = getattr(settings, 'LOGIN_URL')
 LOGIN_REDIRECT_URL = getattr(settings, 'LOGIN_REDIRECT_URL')
 
-KEY_EXPIRATION = getattr(settings, 'ACCOUNT_ACTIVATION_DAYS', 2)
+KEY_EXPIRATION = _SETTINGS.get('ACCOUNT_ACTIVATION_DAYS')
 EMAIL_VERIFICATION_PAT = r'[a-f0-9]{40}'
-EMAILER_BACKEND = getattr(settings, 'EMAILER_BACKEND',
-                          'signup.backends.django_emailer.TemplateEmailBackend')
