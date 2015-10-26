@@ -34,6 +34,7 @@ from django.contrib.auth.models import AbstractUser, UserManager
 from django.utils.decorators import method_decorator
 from django.utils.translation import ugettext_lazy as _
 from django.utils.timezone import now as datetime_now
+from django.template.defaultfilters import slugify
 
 from signup import settings
 
@@ -58,8 +59,14 @@ class ActivatedUserManager(UserManager):
         """
         username = kwargs.pop('username', None)
         if not username:
-            username = email.split('@')[0] \
-                + ''.join(random.choice('0123456789') for count in range(3))
+            username = email
+        if '@' in username:
+            username_base = slugify(username.split('@')[0])
+            username = username_base
+            while self.filter(username=username).count() > 0:
+                suffix = ''.join(
+                    random.choice('0123456789') for count in range(3))
+                username = "%s-%s" % (username_base, suffix)
         user = self.create_user(username, email=email, **kwargs)
 
         # Force is_active to True and create an email verification key
