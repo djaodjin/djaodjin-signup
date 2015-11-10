@@ -55,69 +55,83 @@ def temporary_security_token(request, aws_upload_role=None, aws_region=None):
             request.session['access_key'])
 
 
+def _signed_policy(region, service, requested_at,
+                   access_key, secret_key, security_token,
+                   bucket=None):
+    #pylint:disable=too-many-arguments,too-many-locals
+    signature_date = requested_at.strftime("%Y%m%d")
+    x_amz_credential = '/'.join([
+        access_key, signature_date, region, service, 'aws4_request'])
+    x_amz_date = '%sT000000Z' % signature_date
+    policy = json.dumps({
+        "expiration": (requested_at + datetime.timedelta(
+            hours=24)).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+        "conditions":[
+            {"bucket": bucket},
+            {"x-amz-algorithm": "AWS4-HMAC-SHA256"},
+            {"x-amz-credential": x_amz_credential},
+            {"x-amz-date": x_amz_date},
+            {"x-amz-security-token": security_token},
+            ["starts-with", "$key", ""]
+        ]
+    }).encode("utf-8")
+    policy_base64 = base64.b64encode(policy).replace('\n', '')
+    date_key = hmac.new(("AWS4%s" % secret_key).encode("utf-8"),
+        signature_date.encode("utf-8"),
+        hashlib.sha256).digest()
+    date_region_key = hmac.new(
+        date_key, region.encode("utf-8"),
+        hashlib.sha256).digest()
+    date_region_service_key = hmac.new(
+        date_region_key, service.encode("utf-8"),
+        hashlib.sha256).digest()
+    signing_key = hmac.new(
+        date_region_service_key, "aws4_request".encode("utf-8"),
+        hashlib.sha256).digest()
+    policy_signature = hmac.new(
+        signing_key, policy_base64,
+        hashlib.sha256).hexdigest()
+    return {
+        'access_key': access_key,
+        'security_token': security_token,
+        'aws_policy': policy_base64,
+        'aws_policy_signature': policy_signature,
+        'x_amz_credential': x_amz_credential,
+        'x_amz_date': x_amz_date}
+
+
+def aws_bucket_context(request, bucket=None, aws_upload_role=None,
+                       aws_region=None):
+    """
+    Context to use in templates to upload from the client brower
+    to the bucket directly.
+    """
+    context = {}
+    if request.user.is_authenticated():
+        if not aws_upload_role:
+            aws_upload_role = settings.AWS_UPLOAD_ROLE
+        if not aws_region:
+            aws_region = settings.AWS_REGION
+        if not 'access_key' in request.session:
+            # Lazy creation of temporary credentials.
+            temporary_security_token(
+                request, aws_upload_role=aws_upload_role, aws_region=aws_region)
+        context.update(_signed_policy(
+            aws_region, "s3",
+            datetime.datetime.now(),
+            request.session['access_key'],
+            request.session['secret_key'],
+            security_token=request.session['security_token'],
+            bucket=bucket))
+    return context
+
+
 class AWSContextMixin(object):
-
-
-    @staticmethod
-    def _signed_policy(region, service, requested_at,
-                       access_key, secret_key, security_token,
-                       bucket=None):
-        #pylint:disable=too-many-arguments,too-many-locals
-        signature_date = requested_at.strftime("%Y%m%d")
-        x_amz_credential = '/'.join([
-            access_key, signature_date, region, service, 'aws4_request'])
-        x_amz_date = '%sT000000Z' % signature_date
-        policy = json.dumps({
-            "expiration": (requested_at + datetime.timedelta(
-                hours=24)).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
-            "conditions":[
-                {"bucket": bucket},
-                {"x-amz-algorithm": "AWS4-HMAC-SHA256"},
-                {"x-amz-credential": x_amz_credential},
-                {"x-amz-date": x_amz_date},
-                {"x-amz-security-token": security_token},
-                ["starts-with", "$key", ""]
-            ]
-        }).encode("utf-8")
-        policy_base64 = base64.b64encode(policy).replace('\n', '')
-        date_key = hmac.new(("AWS4%s" % secret_key).encode("utf-8"),
-            signature_date.encode("utf-8"),
-            hashlib.sha256).digest()
-        date_region_key = hmac.new(
-            date_key, region.encode("utf-8"),
-            hashlib.sha256).digest()
-        date_region_service_key = hmac.new(
-            date_region_key, service.encode("utf-8"),
-            hashlib.sha256).digest()
-        signing_key = hmac.new(
-            date_region_service_key, "aws4_request".encode("utf-8"),
-            hashlib.sha256).digest()
-        policy_signature = hmac.new(
-            signing_key, policy_base64,
-            hashlib.sha256).hexdigest()
-        return {
-            'access_key': access_key,
-            'security_token': security_token,
-            'aws_policy': policy_base64,
-            'aws_policy_signature': policy_signature,
-            'x_amz_credential': x_amz_credential,
-            'x_amz_date': x_amz_date}
 
     def get_context_data(self, *args, **kwargs):
         #pylint: disable=unused-argument
-        context = {}
-        if self.request.user.is_authenticated():
-            aws_region = kwargs.get('aws_region', settings.AWS_REGION)
-            if not 'access_key' in self.request.session:
-                # Lazy creation of temporary credentials.
-                temporary_security_token(self.request,
-                    kwargs.get('aws_upload_role', settings.AWS_UPLOAD_ROLE),
-                    aws_region)
-            context.update(self._signed_policy(
-                aws_region, "s3",
-                datetime.datetime.now(),
-                self.request.session['access_key'],
-                self.request.session['secret_key'],
-                security_token=self.request.session['security_token'],
-                bucket=kwargs.get('bucket', None)))
-        return context
+        return aws_bucket_context(self.request,
+            bucket=kwargs.get('bucket', None),
+            aws_upload_role=kwargs.get('aws_upload_role',
+                settings.AWS_UPLOAD_ROLE),
+            aws_region=kwargs.get('aws_region', settings.AWS_REGION))
