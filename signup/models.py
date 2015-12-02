@@ -29,9 +29,8 @@ User Model for the signup app
 import datetime, hashlib, logging, random, re
 
 from django.db import models
-from django.db import transaction
+from django.db import transaction, IntegrityError
 from django.contrib.auth.models import AbstractUser, UserManager
-from django.utils.decorators import method_decorator
 from django.utils.translation import ugettext_lazy as _
 from django.utils.timezone import now as datetime_now
 from django.template.defaultfilters import slugify
@@ -44,7 +43,6 @@ EMAIL_VERIFICATION_RE = re.compile('^%s$' % settings.EMAIL_VERIFICATION_PAT)
 
 class ActivatedUserManager(UserManager):
 
-    @method_decorator(transaction.atomic)
     def create_inactive_user(self, email, **kwargs):
         """
         Create an inactive user with a default username.
@@ -57,27 +55,38 @@ class ActivatedUserManager(UserManager):
         login. Our definition of inactive is thus a user that has an invalid
         password.
         """
+        username_max_length = self.model._meta.get_field('username').max_length
         username = kwargs.pop('username', None)
         if not username:
             username = email
         if '@' in username:
-            username_base = slugify(username.split('@')[0])
-            username = username_base
-            while self.filter(username=username).count() > 0:
+            username = slugify(username.split('@')[0])
+        if len(username) > username_max_length:
+            username = username[:username_max_length]
+
+        username_base = username
+        if len(username_base) > username_max_length - 3:
+            username_base = username_base[:username_max_length-3]
+
+        while True:
+            try:
+                with transaction.atomic():
+                    user = self.create_user(username, email=email, **kwargs)
+                    # Force is_active to True and create an email
+                    # verification key (see above definition of active user).
+                    user.is_active = True
+                    salt = hashlib.sha1(str(random.random())).hexdigest()[:5]
+                    if isinstance(username, unicode):
+                        username = username.encode('utf-8')
+                    user.email_verification_key = hashlib.sha1(
+                        salt+username).hexdigest()
+                    user.save()
+                    return user
+            except IntegrityError:
                 suffix = ''.join(
                     random.choice('0123456789') for count in range(3))
                 username = "%s-%s" % (username_base, suffix)
-        user = self.create_user(username, email=email, **kwargs)
 
-        # Force is_active to True and create an email verification key
-        # (see above definition of active user).
-        user.is_active = True
-        salt = hashlib.sha1(str(random.random())).hexdigest()[:5]
-        if isinstance(username, unicode):
-            username = username.encode('utf-8')
-        user.email_verification_key = hashlib.sha1(salt+username).hexdigest()
-        user.save()
-        return user
 
     def find_user(self, email_verification_key):
         """
