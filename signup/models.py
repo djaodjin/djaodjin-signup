@@ -65,8 +65,8 @@ class ActivatedUserManager(UserManager):
             username = username[:username_max_length]
 
         username_base = username
-        if len(username_base) > username_max_length - 3:
-            username_base = username_base[:username_max_length-3]
+        if len(username_base) > username_max_length - 4:
+            username_base = username_base[:username_max_length-4]
 
         while True:
             try:
