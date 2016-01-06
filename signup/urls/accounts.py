@@ -1,4 +1,4 @@
-# Copyright (c) 2015, Djaodjin Inc.
+# Copyright (c) 2016, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,14 +22,14 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from django.conf.urls import patterns, url
+from django.conf.urls import url
 
 from signup.views import (ActivationView, PasswordResetView,
     PasswordResetConfirmView, SigninView, SignoutView, SignupView,
     RegistrationPasswordConfirmView)
 from signup import settings
 
-urlpatterns = patterns('',
+urlpatterns = [
     # When the key and/or token are wrong we don't want to give any clue
     # as to why that is so. Less information communicated to an attacker,
     # the better.
@@ -50,5 +50,5 @@ urlpatterns = patterns('',
         SignoutView.as_view(), name='logout'),
     url(r'^reset/(?P<uidb64>[0-9A-Za-z_\-]+)/(?P<token>[0-9A-Za-z]{1,13}-[0-9A-Za-z]{1,20})/$', #pylint: disable=line-too-long
         PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
-)
+]
 

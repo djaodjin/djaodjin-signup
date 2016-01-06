@@ -1,4 +1,4 @@
-# Copyright (c) 2015, Djaodjin Inc.
+# Copyright (c) 2016, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -36,10 +36,10 @@ Optionally add URLs for User profiles:
     (r'^users/', include('signup.urls.users')),
 """
 
-from django.conf.urls import patterns, include, url
+from django.conf.urls import include, url
 
-urlpatterns = patterns('',
+urlpatterns = [
     url(r'^api/', include('signup.urls.api')),
     url(r'^users/', include('signup.urls.users')),
     url(r'^', include('signup.urls.accounts')),
-)
+]

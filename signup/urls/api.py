@@ -1,4 +1,4 @@
-# Copyright (c) 2014, Djaodjin Inc.
+# Copyright (c) 2016, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,11 +22,11 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from django.conf.urls import patterns, url
+from django.conf.urls import url
 
 from signup.api import UserListAPIView
 
-urlpatterns = patterns('',
+urlpatterns = [
     url(r'^users/?',
         UserListAPIView.as_view(), name='saas_api_user_list'),
-)
+]

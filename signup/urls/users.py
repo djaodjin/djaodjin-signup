@@ -1,4 +1,4 @@
-# Copyright (c) 2014, Djaodjin Inc.
+# Copyright (c) 2016, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,14 +22,14 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from django.conf.urls import patterns, url
+from django.conf.urls import url
 
 from signup.views import (PasswordChangeView, SendActivationView,
     UserProfileView, redirect_to_user_profile)
 
 USERNAME_PAT = r'[\w.@+-]+'
 
-urlpatterns = patterns('',
+urlpatterns = [
     # These three URLs must be protected.
     url(r'^(?P<user>%s)/activate/' % USERNAME_PAT,
         SendActivationView.as_view(), name='users_activate'),
@@ -38,5 +38,5 @@ urlpatterns = patterns('',
     url(r'^(?P<user>%s)/' % USERNAME_PAT,
         UserProfileView.as_view(), name='users_profile'),
     url(r'^', redirect_to_user_profile, name='accounts_profile'),
-)
+]
 
