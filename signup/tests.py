@@ -84,7 +84,8 @@ class SignUpTests(TestCase):
             self.assertTrue(url is None)
 
     def test_activate_password(self):
-        user = ActivatedUser.objects.create_inactive_user(REGISTRATION_EMAIL)
+        user = ActivatedUser.objects.create_user(REGISTRATION_EMAIL,
+            email=REGISTRATION_EMAIL, is_active=False)
         client = Client()
         response = client.get(reverse('registration_activate',
                                       args=(user.email_verification_key,)),

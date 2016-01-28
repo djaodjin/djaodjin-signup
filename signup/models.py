@@ -44,7 +44,7 @@ EMAIL_VERIFICATION_RE = re.compile('^%s$' % settings.EMAIL_VERIFICATION_PAT)
 class ActivatedUserManager(UserManager):
 
     @method_decorator(transaction.atomic)
-    def create_inactive_user(self, email, **kwargs):
+    def create_user(self, username, email=None, is_active=False, **kwargs):
         """
         Create an inactive user with a default username.
 
@@ -56,20 +56,23 @@ class ActivatedUserManager(UserManager):
         login. Our definition of inactive is thus a user that has an invalid
         password.
         """
-        username = kwargs.pop('username', None)
-        if not username:
-            username = email.split('@')[0] \
-                + ''.join(random.choice('0123456789') for count in range(3))
-        user = self.create_user(username, email=email, **kwargs)
-
-        # Force is_active to True and create an email verification key
-        # (see above definition of active user).
-        user.is_active = True
-        salt = hashlib.sha1(str(random.random())).hexdigest()[:5]
-        if isinstance(username, unicode):
-            username = username.encode('utf-8')
-        user.email_verification_key = hashlib.sha1(salt+username).hexdigest()
-        user.save()
+        if not is_active:
+            if not username:
+                username = email.split('@')[0] \
+                    + ''.join(random.choice('0123456789') for count in range(3))
+            # Force is_active to True and create an email verification key
+            # (see above definition of active user).
+            user = super(ActivatedUserManager, self).create_user(
+                username, email=email, is_active=True, **kwargs)
+            salt = hashlib.sha1(str(random.random())).hexdigest()[:5]
+            if isinstance(username, unicode):
+                username = username.encode('utf-8')
+            user.email_verification_key = hashlib.sha1(
+                salt+username).hexdigest()
+            user.save()
+        else:
+            user = super(ActivatedUserManager, self).create_user(
+                username, email=email, is_active=is_active, **kwargs)
         return user
 
     def find_user(self, email_verification_key):
