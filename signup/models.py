@@ -63,7 +63,7 @@ class ActivatedUserManager(UserManager):
             # Force is_active to True and create an email verification key
             # (see above definition of active user).
             user = super(ActivatedUserManager, self).create_user(
-                username, email=email, is_active=True, **kwargs)
+                username, email=email, **kwargs) # Django 1.7 is_active=True
             salt = hashlib.sha1(str(random.random())).hexdigest()[:5]
             if isinstance(username, unicode):
                 username = username.encode('utf-8')
