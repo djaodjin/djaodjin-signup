@@ -67,6 +67,7 @@ class ActivatedUserManager(UserManager):
             salt = hashlib.sha1(str(random.random())).hexdigest()[:5]
             if isinstance(username, unicode):
                 username = username.encode('utf-8')
+            user.is_active = True
             user.email_verification_key = hashlib.sha1(
                 salt+username).hexdigest()
             user.save()
