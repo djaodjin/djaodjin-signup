@@ -72,7 +72,7 @@ class ActivatedUserManager(UserManager):
             user.save()
         else:
             user = super(ActivatedUserManager, self).create_user(
-                username, email=email, is_active=is_active, **kwargs)
+                username, email=email, **kwargs)
         return user
 
     def find_user(self, email_verification_key):
