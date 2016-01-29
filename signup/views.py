@@ -225,14 +225,9 @@ class SignupBaseView(RedirectFormMixin, ProcessFormView):
                 last_name = ''
         username = cleaned_data.get('username', None)
         password = cleaned_data.get('password', None)
-        if username and password:
-            user = User.objects.create_user(
-                username=username, password=password,
-                email=email, first_name=first_name, last_name=last_name)
-        else:
-            user = User.objects.create_inactive_user(email,
-                username=username, password=password,
-                first_name=first_name, last_name=last_name)
+        user = User.objects.create_user(username,
+            email=email, password=password,
+            first_name=first_name, last_name=last_name)
         signals.user_registered.send(
             sender=__name__, user=user, request=self.request)
 
