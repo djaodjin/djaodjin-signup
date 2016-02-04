@@ -17,9 +17,49 @@
             var self = this;
             self.DEBUG = false; // Allow to log score of each tests
 
+            self.$checkConfirmationTemplate = $(self.options.checkConfirmationTemplate);
+
             self.$el.keyup(function(){
                 self.calculateStrength($(this).val());
+                if (self.options.checkConfirmationTemplate){
+                    self.checkPasswordConfirmation($(this).val());
+                }
             });
+
+            if (self.options.checkConfirmationTemplate){
+                $("[type=\"password\"]").not(self.$el).keyup(function(event) {
+                    self.checkPasswordConfirmation(self.$el.val());
+                });
+            }
+        },
+
+        checkPasswordConfirmation: function(value){
+            var self = this;
+            if (value && value !== ""){
+                $.each($("[type=\"password\"]"), function(index, element){
+                    if (!self.$el.is($(element))){
+                        if ($(element).val() !== "" && $(element).val() !== value){
+                            if ($(element).parent().children(".password-unmatch").length == 0){
+                                $(element).parent().append(self.$checkConfirmationTemplate);
+                            }
+                            self.$checkConfirmationTemplate.toggleClass(self.options.checkConfirmationClass.match, false)
+                            self.$checkConfirmationTemplate.toggleClass(self.options.checkConfirmationClass.unmatch, true)
+                            self.$checkConfirmationTemplate.text(self.options.checkConfirmationText.unmatch);
+                        }else if ($(element).val() !== "" && $(element).val() === value){
+                            if ($(element).parent().children(".password-unmatch").length == 0){
+                                $(element).parent().append(self.$checkConfirmationTemplate);
+                            }
+                            self.$checkConfirmationTemplate.text(self.options.checkConfirmationText.match);
+                            self.$checkConfirmationTemplate.toggleClass(self.options.checkConfirmationClass.match, true)
+                            self.$checkConfirmationTemplate.toggleClass(self.options.checkConfirmationClass.unmatch, false)
+                        }else if($(element).val() === "" ) {
+                            $(".password-unmatch").remove();
+                        }
+                    }
+                })
+            }else{
+                $(".password-unmatch").remove();
+            }
         },
 
         calculateStrength: function(value){
@@ -103,6 +143,10 @@
                 strengthInfo.readableScore = self.options.infoText.level3;
             }else if (globalStrength >= 80){
                 strengthInfo.readableScore = self.options.infoText.level4;
+            }
+
+            if (!value){
+                strengthInfo.readableScore = self.options.infoText.none;
             }
 
             if (self.DEBUG){
@@ -289,6 +333,15 @@
             return true;
         },
         minLengthPassword: 8,
+        checkConfirmationClass: {
+            match: "text-success",
+            unmatch: "text-danger"
+        },
+        checkConfirmationText: {
+            match: "Password matches",
+            unmatch: "Password doesn't match"
+        },
+        checkConfirmationTemplate: "<div class=\"password-unmatch\"></div>",
         additions: [
             {tester: "charactersStrength", cond: []},
             {tester: "uppercasesStrength", cond: []},
@@ -321,6 +374,7 @@
             "qwerty", "baseball", "football"],
         infoText: {
             blacklist: "Too common",
+            none: "",
             level0: "Very weak",
             level1: "Weak",
             level2: "Good",
