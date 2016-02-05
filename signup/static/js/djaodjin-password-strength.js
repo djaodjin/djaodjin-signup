@@ -338,8 +338,8 @@
             unmatch: "text-danger"
         },
         checkConfirmationText: {
-            match: "Password matches",
-            unmatch: "Password doesn't match"
+            match: "Password confirmed.",
+            unmatch: "Password and confirmation do not match."
         },
         checkConfirmationTemplate: "<div class=\"password-unmatch\"></div>",
         additions: [
