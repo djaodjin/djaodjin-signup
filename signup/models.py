@@ -1,4 +1,4 @@
-# Copyright (c) 2015, Djaodjin Inc.
+# Copyright (c) 2016, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -28,9 +28,9 @@ User Model for the signup app
 
 import datetime, hashlib, logging, random, re
 
-from django.db import models
-from django.db import transaction
+from django.core.exceptions import ValidationError
 from django.contrib.auth.models import AbstractUser, UserManager
+from django.db import models, transaction, IntegrityError
 from django.utils.decorators import method_decorator
 from django.utils.translation import ugettext_lazy as _
 from django.utils.timezone import now as datetime_now
@@ -42,6 +42,36 @@ LOGGER = logging.getLogger(__name__)
 EMAIL_VERIFICATION_RE = re.compile('^%s$' % settings.EMAIL_VERIFICATION_PAT)
 
 class ActivatedUserManager(UserManager):
+
+    def create_user_from_email(self, email, password=None, **kwargs):
+        #pylint:disable=protected-access
+        field = ActivatedUser._meta.get_field('username')
+        max_length = field.max_length
+        username = email.split('@')[0]
+        try:
+            field.run_validators(username)
+        except ValidationError:
+            username = 'user'
+        err = IntegrityError()
+        trials = 0
+        username_base = username
+        while trials < 10:
+            try:
+                return super(ActivatedUserManager, self).create_user(
+                    username, email=email, password=password,
+                    last_login=datetime.datetime.now(), **kwargs)
+            except IntegrityError, exp:
+                err = exp
+                suffix = '-%s' % ''.join(
+                    random.choice('0123456789') for count in range(3))
+                if len(username_base) + len(suffix) > max_length:
+                    username = '%s%s' % (
+                        username_base[:(max_length - len(suffix))],
+                        suffix)
+                else:
+                    username = '%s%s' % (username_base, suffix)
+                trials = trials + 1
+        raise err
 
     @method_decorator(transaction.atomic)
     def create_user(self, username, email=None, password=None, **kwargs):
@@ -56,24 +86,21 @@ class ActivatedUserManager(UserManager):
         login. Our definition of inactive is thus a user that has an invalid
         password.
         """
-        if not password:
-            if not username:
-                username = email.split('@')[0] \
-                    + ''.join(random.choice('0123456789') for count in range(3))
-            # Force is_active to True and create an email verification key
-            # (see above definition of active user).
-            user = super(ActivatedUserManager, self).create_user(
-                username, email=email, password=password, **kwargs)
-            salt = hashlib.sha1(str(random.random())).hexdigest()[:5]
-            if isinstance(username, unicode):
-                username = username.encode('utf-8')
-            user.is_active = True
-            user.email_verification_key = hashlib.sha1(
-                salt+username).hexdigest()
-            user.save()
+        if not password and not username:
+            user = self.create_user_from_email(
+                email, password=password, **kwargs)
+            username = user.username
         else:
             user = super(ActivatedUserManager, self).create_user(
                 username, email=email, password=password, **kwargs)
+        # Force is_active to True and create an email verification key
+        # (see above definition of active user).
+        salt = hashlib.sha1(str(random.random())).hexdigest()[:5]
+        if isinstance(username, unicode):
+            username = username.encode('utf-8')
+        user.is_active = True
+        user.email_verification_key = hashlib.sha1(salt+username).hexdigest()
+        user.save()
         return user
 
     def find_user(self, email_verification_key):
