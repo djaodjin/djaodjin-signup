@@ -58,8 +58,7 @@ class ActivatedUserManager(UserManager):
         while trials < 10:
             try:
                 return super(ActivatedUserManager, self).create_user(
-                    username, email=email, password=password,
-                    last_login=datetime.datetime.now(), **kwargs)
+                    username, email=email, password=password, **kwargs)
             except IntegrityError, exp:
                 err = exp
                 suffix = '-%s' % ''.join(
