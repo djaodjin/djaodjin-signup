@@ -29,6 +29,7 @@ User Model for the signup app
 import datetime, hashlib, logging, random, re
 
 from django.core.exceptions import ValidationError
+from django.core.urlresolvers import NoReverseMatch, reverse
 from django.contrib.auth.models import AbstractUser, UserManager
 from django.db import models, transaction, IntegrityError
 from django.utils.decorators import method_decorator
@@ -134,6 +135,10 @@ class ActivatedUser(AbstractUser):
     A user model that requires activation. We use it to verify
     the email address.
     """
+    class Meta: #pylint: disable=old-style-class,no-init
+        db_table = u'auth_user'
+        swappable = 'AUTH_USER_MODEL'
+
     VERIFIED = "VERIFIED"
 
     objects = ActivatedUserManager()
@@ -167,6 +172,15 @@ class ActivatedUser(AbstractUser):
             return self.first_name
         return self.username
 
-    class Meta: #pylint: disable=old-style-class,no-init
-        db_table = u'auth_user'
-        swappable = 'AUTH_USER_MODEL'
+    @property
+    def urls(self):
+        urls_user = {
+            'logout': reverse('logout'),
+            'profile': reverse('users_profile', args=(self,)),
+            'profile_redirect': reverse('accounts_profile')}
+        try:
+            # optional
+            urls_user.update({'app': reverse('product_default_start')})
+        except NoReverseMatch:
+            pass
+        return urls_user

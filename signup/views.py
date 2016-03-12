@@ -1,4 +1,4 @@
-# Copyright (c) 2015, Djaodjin Inc.
+# Copyright (c) 2016, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -80,6 +80,45 @@ class RedirectFormMixin(FormMixin):
         if next_url:
             context.update({REDIRECT_FIELD_NAME: next_url})
         return context
+
+
+class AuthTemplateResponseMixin(TemplateResponseMixin):
+    """
+    Returns a *disabled* page regardless when DISABLED_AUTHENTICATION
+    is True.
+    """
+
+    def get_context_data(self, **kwargs):
+        context = super(AuthTemplateResponseMixin, self).get_context_data(
+            **kwargs)
+        # URLs for user
+        user_urls = {}
+        if not self.request.user.is_authenticated():
+            user_urls = {
+               'login': reverse('login'),
+               'password_reset': reverse('password_reset'),
+               'register': reverse('registration_register'),
+            }
+        if 'urls' in context:
+            if 'user' in context['urls']:
+                context['urls']['user'].update(user_urls)
+            else:
+                context['urls'].update({'user': user_urls})
+        else:
+            context.update({'urls': {'user': user_urls}})
+        return context
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.method.lower() in self.http_method_names:
+            if settings.DISABLED_AUTHENTICATION:
+                context = {}
+                response_kwargs = {}
+                response_kwargs.setdefault('content_type', self.content_type)
+                return TemplateResponse(
+                    request=request, template='accounts/disabled.html',
+                    context=context, **response_kwargs)
+        return super(AuthTemplateResponseMixin, self).dispatch(
+            request, *args, **kwargs)
 
 
 class RedirectFormView(RedirectFormMixin, ProcessFormView):
@@ -319,7 +358,9 @@ class SignoutBaseView(RedirectFormMixin, View):
         return response
 
 
-class UserProfileView(UpdateView):
+# Actual views to instantiate start here:
+
+class UserProfileView(AuthTemplateResponseMixin, UpdateView):
     """
     If a user is manager for an Organization, she can access the Organization
     profile. If a user is manager for an Organization subscribed to another
@@ -331,6 +372,25 @@ class UserProfileView(UpdateView):
     slug_field = 'username'
     slug_url_kwarg = 'user'
     template_name = 'users/user_form.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(UserProfileView, self).get_context_data(**kwargs)
+        # URLs for user
+        if self.request.user.is_authenticated():
+            user_urls = {
+                'password_change': reverse(
+                    'password_change', args=(self.object,)),
+                'profile': reverse('users_profile', args=(self.object,)),
+                'profile_redirect': reverse('accounts_profile')
+            }
+        if 'urls' in context:
+            if 'user' in context['urls']:
+                context['urls']['user'].update(user_urls)
+            else:
+                context['urls'].update({'user': user_urls})
+        else:
+            context.update({'urls': {'user': user_urls}})
+        return context
 
     def get_success_url(self):
         messages.info(self.request, 'Profile Updated.')
@@ -428,25 +488,6 @@ class RegistrationPasswordConfirmBaseView(RedirectFormMixin, ProcessFormView):
         return kwargs
 
 
-class AuthTemplateResponseMixin(TemplateResponseMixin):
-    """
-    Returns a *disabled* page regardless when DISABLED_AUTHENTICATION
-    is True.
-    """
-
-    def dispatch(self, request, *args, **kwargs):
-        if request.method.lower() in self.http_method_names:
-            if settings.DISABLED_AUTHENTICATION:
-                context = {}
-                response_kwargs = {}
-                response_kwargs.setdefault('content_type', self.content_type)
-                return TemplateResponse(
-                    request=request, template='accounts/disabled.html',
-                    context=context, **response_kwargs)
-        return super(AuthTemplateResponseMixin, self).dispatch(
-            request, *args, **kwargs)
-
-
 class ActivationView(AuthTemplateResponseMixin, ActivationBaseView):
 
     template_name = 'accounts/activate.html'
@@ -474,7 +515,7 @@ class SigninView(AuthTemplateResponseMixin, SigninBaseView):
     template_name = 'accounts/login.html'
 
 
-class SignoutView(TemplateResponseMixin, SignoutBaseView):
+class SignoutView(AuthTemplateResponseMixin, SignoutBaseView):
 
     template_name = 'accounts/logout.html'
 
