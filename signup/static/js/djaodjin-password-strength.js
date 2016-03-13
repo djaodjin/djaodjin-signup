@@ -391,7 +391,7 @@
                         .toggleClass(
                             self.options.checkConfirmationClass.match, false)
                         .toggleClass(
-                            self.options.checkConfirmationClass.unmatch, true);
+                            self.options.checkConfirmationClass.unmatch, true)
                         .text(self.options.checkConfirmationText.match);
                 }
             } else {
