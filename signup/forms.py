@@ -53,6 +53,8 @@ class NameEmailForm(forms.Form):
 
 class PasswordChangeForm(SetPasswordForm):
 
+    submit_title = 'Update'
+
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('instance')
         super(PasswordChangeForm, self).__init__(user, *args, **kwargs)

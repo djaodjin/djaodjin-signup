@@ -19,47 +19,15 @@
 
             self.$checkConfirmationTemplate = $(self.options.checkConfirmationTemplate);
 
+            var progressbar = $(
+"<div class=\"progress\" style=\"margin-bottom:0;border-radius:0;height:4px;\">"
++ "<div class=\"progress-bar password-strength\" role=\"progressbar\" aria-valuenow=\"60\" aria-valuemin=\"0\" aria-valuemax=\"100\" style=\"width: 0%;\">"
++ "</div></div><div><small class=\"strength-info text-muted\"></small></div>");
+            progressbar.insertAfter(self.$el);
+
             self.$el.keyup(function(){
                 self.calculateStrength($(this).val());
-                if (self.options.checkConfirmationTemplate){
-                    self.checkPasswordConfirmation($(this).val());
-                }
             });
-
-            if (self.options.checkConfirmationTemplate){
-                $("[type=\"password\"]").not(self.$el).keyup(function(event) {
-                    self.checkPasswordConfirmation(self.$el.val());
-                });
-            }
-        },
-
-        checkPasswordConfirmation: function(value){
-            var self = this;
-            if (value && value !== ""){
-                $.each($("[type=\"password\"]"), function(index, element){
-                    if (!self.$el.is($(element))){
-                        if ($(element).val() !== "" && $(element).val() !== value){
-                            if ($(element).parent().children(".password-unmatch").length == 0){
-                                $(element).parent().append(self.$checkConfirmationTemplate);
-                            }
-                            self.$checkConfirmationTemplate.toggleClass(self.options.checkConfirmationClass.match, false)
-                            self.$checkConfirmationTemplate.toggleClass(self.options.checkConfirmationClass.unmatch, true)
-                            self.$checkConfirmationTemplate.text(self.options.checkConfirmationText.unmatch);
-                        }else if ($(element).val() !== "" && $(element).val() === value){
-                            if ($(element).parent().children(".password-unmatch").length == 0){
-                                $(element).parent().append(self.$checkConfirmationTemplate);
-                            }
-                            self.$checkConfirmationTemplate.text(self.options.checkConfirmationText.match);
-                            self.$checkConfirmationTemplate.toggleClass(self.options.checkConfirmationClass.match, true)
-                            self.$checkConfirmationTemplate.toggleClass(self.options.checkConfirmationClass.unmatch, false)
-                        }else if($(element).val() === "" ) {
-                            $(".password-unmatch").remove();
-                        }
-                    }
-                })
-            }else{
-                $(".password-unmatch").remove();
-            }
         },
 
         calculateStrength: function(value){
@@ -154,6 +122,19 @@
                 console.log(strengthInfo, requirements);
                 console.log("--------------------------------");
             }
+
+            var progressClass = "progress-bar-danger";
+            if (strength.score >= 40 && strength.score < 60){
+                progressClass = "progress-bar-warning";
+            }else if (strength.score >= 60 && strength.score < 80){
+                progressClass = "progress-bar-success";
+            }else if (strength.score >= 80){
+                progressClass = "progress-bar-success";
+            }
+            self.$el.find(".password-strength").removeClass(
+                "progress-bar-danger progress-bar-warning progress-bar-success").addClass(progressClass).attr("style", "width:" + strength.score + "%");
+            self.$el.find(".strength-info").text(strength.readableScore);
+
             self.options.passwordStrengthCallback(strengthInfo, requirements);
         },
 
@@ -329,19 +310,9 @@
 
     $.fn.passwordStrength.defaults = {
         passwordStrengthCallback: function(strength, requirements){
-            console.log(strength, requirements);
             return true;
         },
         minLengthPassword: 8,
-        checkConfirmationClass: {
-            match: "text-success",
-            unmatch: "text-danger"
-        },
-        checkConfirmationText: {
-            match: "Password confirmed.",
-            unmatch: "Password and confirmation do not match."
-        },
-        checkConfirmationTemplate: "<div class=\"password-unmatch\"></div>",
         additions: [
             {tester: "charactersStrength", cond: []},
             {tester: "uppercasesStrength", cond: []},
@@ -382,5 +353,76 @@
             level4: "Very strong"
         }
     };
+
+    function PasswordMatch(element, options){
+        var self = this;
+        self.$el = $(element);
+        self.options = options;
+        self.init();
+        return self;
+    }
+
+    PasswordMatch.prototype = {
+        init: function(){
+            var self = this;
+            self.options.checkConfirmationTemplate.insertAfter(self.$el);
+
+            self.$el.keyup(function(){
+                self.checkPasswordConfirmation($(self.options.reference).val());
+            });
+            $(self.options.reference).keyup(function(){
+                self.checkPasswordConfirmation($(self.options.reference).val());
+            });
+
+        },
+
+        checkPasswordConfirmation: function(value){
+            var self = this;
+            if( value && value !== "" && self.$el.val() !== "" ) {
+                if( self.$el.val() === value ) {
+                    self.$el.find('.password-match')
+                        .toggleClass(
+                            self.options.checkConfirmationClass.match, true)
+                        .toggleClass(
+                            self.options.checkConfirmationClass.unmatch, false)
+                        .text(self.options.checkConfirmationText.match);
+                } else {
+                    self.$el.find('.password-match')
+                        .toggleClass(
+                            self.options.checkConfirmationClass.match, false)
+                        .toggleClass(
+                            self.options.checkConfirmationClass.unmatch, true);
+                        .text(self.options.checkConfirmationText.match);
+                }
+            } else {
+                self.$el.find('.password-match').text("");
+            }
+        },
+    };
+
+    $.fn.passwordMatch = function(options){
+        var opts = $.extend( {}, $.fn.passwordMatch.defaults, options );
+        if (!$.data($(this), "djpassword")) {
+            $(this).data("djpassword", new PasswordMatch($(this), opts));
+        }
+    };
+
+    $.fn.passwordMatch.defaults = {
+        checkConfirmationClass: {
+            match: "text-success",
+            unmatch: "text-danger"
+        },
+        checkConfirmationText: {
+            match: "Password confirmed.",
+            unmatch: "Password and confirmation do not match."
+        },
+        checkConfirmationTemplate: "<div class=\"password-match\"></div>"
+    };
+
+    $(document).ready(function(){
+        $("[name='password']").passwordStrength();
+        $("[name='password2']").passwordMatch({
+            reference: $("[name='password']").first()});
+    });
 
 }(jQuery));
