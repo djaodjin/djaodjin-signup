@@ -263,7 +263,7 @@ class SignupBaseView(RedirectFormMixin, ProcessFormView):
                 first_name = full_name
                 last_name = ''
         username = cleaned_data.get('username', None)
-        password = cleaned_data.get('password', None)
+        password = cleaned_data.get('new_password1', None)
         user = User.objects.create_user(username,
             email=email, password=password,
             first_name=first_name, last_name=last_name)

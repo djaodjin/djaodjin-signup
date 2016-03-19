@@ -148,8 +148,11 @@ class ActivatedUser(AbstractUser):
 
     def email_verification_key_expired(self):
         expiration_date = datetime.timedelta(days=settings.KEY_EXPIRATION)
+        start_at = self.last_login
+        if start_at is None:
+            start_at = self.date_joined
         return self.email_verification_key == self.VERIFIED or \
-               (self.last_login + expiration_date <= datetime_now())
+               (start_at + expiration_date <= datetime_now())
     email_verification_key_expired.boolean = True
 
     def __unicode__(self):

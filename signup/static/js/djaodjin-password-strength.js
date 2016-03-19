@@ -15,9 +15,6 @@
     PasswordStrength.prototype = {
         init: function(){
             var self = this;
-            self.DEBUG = false; // Allow to log score of each tests
-
-            self.$checkConfirmationTemplate = $(self.options.checkConfirmationTemplate);
 
             var progressbar = $(
 "<div class=\"progress\" style=\"margin-bottom:0;border-radius:0;height:4px;\">"
@@ -51,17 +48,11 @@
                         strength = 0;
                     }
                 }
-                if (self.DEBUG){
-                    console.log(element.tester + " : " + strength);
-                }
                 globalStrength += strength;
             });
 
             $.each(self.options.deductions, function(index, element){
                 var strength = self[element](value);
-                if (self.DEBUG){
-                    console.log(element + " : -" + strength);
-                }
                 globalStrength -= self[element](value);
             });
 
@@ -78,9 +69,6 @@
                     if (!condition){
                         strength = 0;
                     }
-                }
-                if (self.DEBUG){
-                    console.log(element.tester + " : " + strength);
                 }
                 globalStrength += strength;
             });
@@ -117,23 +105,17 @@
                 strengthInfo.readableScore = self.options.infoText.none;
             }
 
-            if (self.DEBUG){
-                console.log("================================");
-                console.log(strengthInfo, requirements);
-                console.log("--------------------------------");
-            }
-
             var progressClass = "progress-bar-danger";
-            if (strength.score >= 40 && strength.score < 60){
+            if (strengthInfo.score >= 40 && strengthInfo.score < 60){
                 progressClass = "progress-bar-warning";
-            }else if (strength.score >= 60 && strength.score < 80){
+            }else if (strengthInfo.score >= 60 && strengthInfo.score < 80){
                 progressClass = "progress-bar-success";
-            }else if (strength.score >= 80){
+            }else if (strengthInfo.score >= 80){
                 progressClass = "progress-bar-success";
             }
-            self.$el.find(".password-strength").removeClass(
-                "progress-bar-danger progress-bar-warning progress-bar-success").addClass(progressClass).attr("style", "width:" + strength.score + "%");
-            self.$el.find(".strength-info").text(strength.readableScore);
+            self.$el.parent().find(".password-strength").removeClass(
+                "progress-bar-danger progress-bar-warning progress-bar-success").addClass(progressClass).attr("style", "width:" + strengthInfo.score + "%");
+            self.$el.parent().find(".strength-info").text(strengthInfo.readableScore);
 
             self.options.passwordStrengthCallback(strengthInfo, requirements);
         },
@@ -303,8 +285,9 @@
 
     $.fn.passwordStrength = function(options){
         var opts = $.extend( {}, $.fn.passwordStrength.defaults, options );
-        if (!$.data($(this), "djpassword")) {
-            $(this).data("djpassword", new PasswordStrength($(this), opts));
+        if (!$.data($(this), "djpasswordstrength")) {
+            $(this).data("djpasswordstrength",
+                new PasswordStrength($(this), opts));
         }
     };
 
@@ -365,7 +348,7 @@
     PasswordMatch.prototype = {
         init: function(){
             var self = this;
-            self.options.checkConfirmationTemplate.insertAfter(self.$el);
+            $(self.options.checkConfirmationTemplate).insertAfter(self.$el);
 
             self.$el.keyup(function(){
                 self.checkPasswordConfirmation($(self.options.reference).val());
@@ -380,30 +363,30 @@
             var self = this;
             if( value && value !== "" && self.$el.val() !== "" ) {
                 if( self.$el.val() === value ) {
-                    self.$el.find('.password-match')
+                    self.$el.parent().find('.password-match')
                         .toggleClass(
                             self.options.checkConfirmationClass.match, true)
                         .toggleClass(
                             self.options.checkConfirmationClass.unmatch, false)
                         .text(self.options.checkConfirmationText.match);
                 } else {
-                    self.$el.find('.password-match')
+                    self.$el.parent().find('.password-match')
                         .toggleClass(
                             self.options.checkConfirmationClass.match, false)
                         .toggleClass(
                             self.options.checkConfirmationClass.unmatch, true)
-                        .text(self.options.checkConfirmationText.match);
+                        .text(self.options.checkConfirmationText.unmatch);
                 }
             } else {
-                self.$el.find('.password-match').text("");
+                self.$el.parent().find('.password-match').text("");
             }
         },
     };
 
     $.fn.passwordMatch = function(options){
         var opts = $.extend( {}, $.fn.passwordMatch.defaults, options );
-        if (!$.data($(this), "djpassword")) {
-            $(this).data("djpassword", new PasswordMatch($(this), opts));
+        if (!$.data($(this), "djpasswordmatch")) {
+            $(this).data("djpasswordmatch", new PasswordMatch($(this), opts));
         }
     };
 
@@ -420,9 +403,9 @@
     };
 
     $(document).ready(function(){
-        $("[name='password']").passwordStrength();
-        $("[name='password2']").passwordMatch({
-            reference: $("[name='password']").first()});
+        $("[name='new_password1']").passwordStrength();
+        $("[name='new_password2']").passwordMatch({
+            reference: $("[name='new_password1']").first()});
     });
 
 }(jQuery));
