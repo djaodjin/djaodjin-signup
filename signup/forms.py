@@ -41,14 +41,14 @@ class NameEmailForm(forms.Form):
     """
     full_name = forms.RegexField(
         regex=r'^[\w\s]+$', max_length=60,
-        widget=forms.TextInput(attrs={'placeholder':'Full Name'}),
-        label=_("Full Name"),
+        widget=forms.TextInput(attrs={'placeholder':'Full name'}),
+        label=_("Full name"),
         error_messages={'invalid':
             _("Sorry we do not recognize some characters in your full name.")})
     email = forms.EmailField(
         widget=forms.TextInput(attrs={'placeholder':'Email',
                                       'maxlength': 75}),
-        label=_("E-mail"))
+        label=_("Email address"))
 
 
 class PasswordChangeForm(SetPasswordForm):

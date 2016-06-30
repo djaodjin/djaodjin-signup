@@ -178,6 +178,7 @@ class ActivatedUser(AbstractUser):
     @property
     def urls(self):
         urls_user = {
+            'logout': reverse('logout'),
             'profile': reverse('users_profile', args=(self,)),
             'profile_redirect': reverse('accounts_profile')}
         try:
