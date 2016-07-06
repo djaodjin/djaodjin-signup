@@ -32,7 +32,8 @@ from signup import settings
 LOGGER = logging.getLogger(__name__)
 
 
-def temporary_security_token(request, aws_upload_role=None, aws_region=None):
+def temporary_security_token(request, aws_upload_role=None, aws_region=None,
+                             bucket=None):
     """
     Create temporary security credentials on AWS. This typically needed
     to allow uploads from the browser directly to S3.
@@ -41,6 +42,9 @@ def temporary_security_token(request, aws_upload_role=None, aws_region=None):
         and not request.session.has_key('access_key')):
         if not aws_upload_role:
             aws_upload_role = settings.AWS_UPLOAD_ROLE
+        if not aws_upload_role:
+            aws_upload_role = "arn:aws:iam::%s:role/%s" % (
+                settings.AWS_ACCOUNT_ID, bucket)
         if not aws_region:
             aws_region = settings.AWS_REGION
         conn = boto.sts.connect_to_region(aws_region)
@@ -100,22 +104,20 @@ def _signed_policy(region, service, requested_at,
         'x_amz_date': x_amz_date}
 
 
-def aws_bucket_context(request, bucket=None, aws_upload_role=None,
-                       aws_region=None):
+def aws_bucket_context(request, bucket, aws_upload_role=None, aws_region=None):
     """
     Context to use in templates to upload from the client brower
     to the bucket directly.
     """
     context = {}
     if request.user.is_authenticated():
-        if not aws_upload_role:
-            aws_upload_role = settings.AWS_UPLOAD_ROLE
         if not aws_region:
             aws_region = settings.AWS_REGION
         if not 'access_key' in request.session:
             # Lazy creation of temporary credentials.
-            temporary_security_token(
-                request, aws_upload_role=aws_upload_role, aws_region=aws_region)
+            temporary_security_token(request,
+                aws_upload_role=aws_upload_role, aws_region=aws_region,
+                bucket=bucket)
         context.update(_signed_policy(
             aws_region, "s3",
             datetime.datetime.now(),
@@ -123,6 +125,8 @@ def aws_bucket_context(request, bucket=None, aws_upload_role=None,
             request.session['secret_key'],
             security_token=request.session['security_token'],
             bucket=bucket))
+        context.update({"location": "https://%s.s3-%s.amazonaws.com/" % (
+                bucket, aws_region)})
     return context
 
 
@@ -130,8 +134,6 @@ class AWSContextMixin(object):
 
     def get_context_data(self, *args, **kwargs):
         #pylint: disable=unused-argument
-        return aws_bucket_context(self.request,
-            bucket=kwargs.get('bucket', None),
-            aws_upload_role=kwargs.get('aws_upload_role',
-                settings.AWS_UPLOAD_ROLE),
-            aws_region=kwargs.get('aws_region', settings.AWS_REGION))
+        return aws_bucket_context(self.request, kwargs.get('bucket', None),
+            aws_upload_role=kwargs.get('aws_upload_role', None),
+            aws_region=kwargs.get('aws_region', None))
