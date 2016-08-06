@@ -61,24 +61,27 @@ def temporary_security_token(request, aws_upload_role=None, aws_region=None,
 
 def _signed_policy(region, service, requested_at,
                    access_key, secret_key, security_token,
-                   bucket=None):
+                   bucket=None, acl=None):
     #pylint:disable=too-many-arguments,too-many-locals
     signature_date = requested_at.strftime("%Y%m%d")
     x_amz_credential = '/'.join([
         access_key, signature_date, region, service, 'aws4_request'])
     x_amz_date = '%sT000000Z' % signature_date
+    conditions = [
+        {"bucket": bucket},
+        {"x-amz-algorithm": "AWS4-HMAC-SHA256"},
+        {"x-amz-credential": x_amz_credential},
+        {"x-amz-date": x_amz_date},
+        {"x-amz-security-token": security_token},
+        ["starts-with", "$key", ""],
+        ["starts-with", "$Content-Type", ""]
+    ]
+    if acl is not None:
+        conditions += [{"acl": acl}]
     policy = json.dumps({
         "expiration": (requested_at + datetime.timedelta(
             hours=24)).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
-        "conditions":[
-            {"bucket": bucket},
-            {"x-amz-algorithm": "AWS4-HMAC-SHA256"},
-            {"x-amz-credential": x_amz_credential},
-            {"x-amz-date": x_amz_date},
-            {"x-amz-security-token": security_token},
-            ["starts-with", "$key", ""]
-        ]
-    }).encode("utf-8")
+        "conditions": conditions}).encode("utf-8")
     policy_base64 = base64.b64encode(policy).replace('\n', '')
     date_key = hmac.new(("AWS4%s" % secret_key).encode("utf-8"),
         signature_date.encode("utf-8"),
@@ -95,16 +98,20 @@ def _signed_policy(region, service, requested_at,
     policy_signature = hmac.new(
         signing_key, policy_base64,
         hashlib.sha256).hexdigest()
-    return {
+    context = {
         'access_key': access_key,
         'security_token': security_token,
         'aws_policy': policy_base64,
         'aws_policy_signature': policy_signature,
         'x_amz_credential': x_amz_credential,
         'x_amz_date': x_amz_date}
+    if acl is not None:
+        context.update({'acl': acl})
+    return context
 
 
-def aws_bucket_context(request, bucket, aws_upload_role=None, aws_region=None):
+def aws_bucket_context(request, bucket,
+                       acl=None, aws_upload_role=None, aws_region=None):
     """
     Context to use in templates to upload from the client brower
     to the bucket directly.
@@ -124,7 +131,7 @@ def aws_bucket_context(request, bucket, aws_upload_role=None, aws_region=None):
             request.session['access_key'],
             request.session['secret_key'],
             security_token=request.session['security_token'],
-            bucket=bucket))
+            bucket=bucket, acl=acl))
         context.update({"location": "https://%s.s3-%s.amazonaws.com/" % (
                 bucket, aws_region)})
     return context
@@ -135,5 +142,6 @@ class AWSContextMixin(object):
     def get_context_data(self, *args, **kwargs):
         #pylint: disable=unused-argument
         return aws_bucket_context(self.request, kwargs.get('bucket', None),
+            acl=kwargs.get('acl', None),
             aws_upload_role=kwargs.get('aws_upload_role', None),
             aws_region=kwargs.get('aws_region', None))
