@@ -56,7 +56,8 @@ def temporary_security_token(request, aws_upload_role=None, aws_region=None,
             = assumed_role.credentials.session_token
         LOGGER.info('AWS temporary credentials for %s to assume role %s: %s',
             request.user, aws_upload_role, request.session['access_key'],
-            extra={'request': request, 'aws_role': aws_upload_role,
+            extra={'event': 'create-aws-credentials',
+                'request': request, 'aws_role': aws_upload_role,
                 'aws_access_key': request.session['access_key']})
 
 
