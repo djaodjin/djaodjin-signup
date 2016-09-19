@@ -54,9 +54,10 @@ def temporary_security_token(request, aws_upload_role=None, aws_region=None,
         request.session['secret_key'] = assumed_role.credentials.secret_key
         request.session['security_token'] \
             = assumed_role.credentials.session_token
-        LOGGER.info('AWS temporary credentials for %s to assume role %s {'\
-            '"aws_access_key": "%s"}', request.user, aws_upload_role,
-            request.session['access_key'])
+        LOGGER.info('AWS temporary credentials for %s to assume role %s: %s',
+            request.user, aws_upload_role, request.session['access_key'],
+            extra={'request': request, 'aws_role': aws_upload_role,
+                'aws_access_key': request.session['access_key']})
 
 
 def _signed_policy(region, service, requested_at,

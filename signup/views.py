@@ -188,7 +188,8 @@ class PasswordResetConfirmBaseView(RedirectFormMixin, ProcessFormView):
                                     user, self.kwargs.get('token')):
             if form.is_valid():
                 form.save()
-                LOGGER.info("%s reset her/his password.", self.request.user)
+                LOGGER.info("%s reset her/his password.", self.request.user,
+                    extra={'event': 'resetpassword', 'request': request})
                 return self.form_valid(form)
         return self.form_invalid(form)
 
@@ -222,10 +223,12 @@ class SignupBaseView(RedirectFormMixin, ProcessFormView):
     def form_valid(self, form):
         new_user = self.register(**form.cleaned_data)
         if new_user:
-            LOGGER.info('%s registered {"first_name": "%s", "last_name": "%s",'\
-' "email": "%s"}.', self.request.user, self.request.user.first_name,
-                self.request.user.last_name, self.request.user.email)
             success_url = self.get_success_url()
+            LOGGER.info("'%s %s <%s>' registered with username '%s',"\
+                " redirected to %s",
+                self.request.user.first_name, self.request.user.last_name,
+                self.request.user.email, self.request.user, success_url,
+                    extra={'event': 'register', 'request': self.request})
         else:
             success_url = self.request.META['PATH_INFO']
         return _redirect_to(success_url)
@@ -338,7 +341,8 @@ class SigninBaseView(RedirectFormMixin, ProcessFormView):
 
     def form_valid(self, form):
         auth_login(self.request, form.get_user())
-        LOGGER.info("%s signed in.", self.request.user)
+        LOGGER.info("%s signed in.", self.request.user,
+            extra={'event': 'login', 'request': self.request})
         return super(SigninBaseView, self).form_valid(form)
 
 
@@ -348,7 +352,8 @@ class SignoutBaseView(RedirectFormMixin, View):
     """
 
     def get(self, request, *args, **kwargs):
-        LOGGER.info("%s signed out.", self.request.user)
+        LOGGER.info("%s signed out.", self.request.user,
+            extra={'event': 'logout', 'request': request})
         auth_logout(request)
         next_url = self.get_success_url()
         response = HttpResponseRedirect(next_url)
@@ -406,6 +411,10 @@ class PasswordChangeView(UserProfileView):
     template_name = 'users/password_change_form.html'
 
     def get_success_url(self):
+        LOGGER.info("%s updated password for %s.",
+            self.request.user, self.object, extra={
+            'event': 'update-password', 'request': self.request,
+            'modified': self.object.username})
         messages.info(self.request, "Password has been updated successfuly.")
         return reverse('users_profile', args=(self.object,))
 

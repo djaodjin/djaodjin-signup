@@ -122,8 +122,10 @@ class ActivatedUserManager(UserManager):
         """
         user = self.find_user(email_verification_key)
         if user:
-            LOGGER.info('user #%d activated through code: %s',
-                        user.id, user.email_verification_key)
+            LOGGER.info('user %s activated through code: %s',
+                user, user.email_verification_key,
+                extra={'event': 'activate', 'username': user.username,
+                    'email_verification_key': user.email_verification_key})
             user.email_verification_key = ActivatedUser.VERIFIED
             user.is_active = True
             user.save()
