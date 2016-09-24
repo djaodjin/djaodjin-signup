@@ -36,7 +36,7 @@ from django.utils.decorators import method_decorator
 from django.utils.translation import ugettext_lazy as _
 from django.utils.timezone import now as datetime_now
 
-from signup import settings
+from signup import settings, signals
 
 LOGGER = logging.getLogger(__name__)
 
@@ -101,6 +101,10 @@ class ActivatedUserManager(UserManager):
         user.is_active = True
         user.email_verification_key = hashlib.sha1(salt+username).hexdigest()
         user.save()
+        LOGGER.info("'%s %s <%s>' registered with username '%s'",
+            user.first_name, user.last_name, user.email, user,
+            extra={'event': 'register', 'user': user})
+        signals.user_registered.send(sender=__name__, user=user)
         return user
 
     def find_user(self, email_verification_key):

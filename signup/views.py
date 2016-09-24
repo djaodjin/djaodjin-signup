@@ -224,11 +224,6 @@ class SignupBaseView(RedirectFormMixin, ProcessFormView):
         new_user = self.register(**form.cleaned_data)
         if new_user:
             success_url = self.get_success_url()
-            LOGGER.info("'%s %s <%s>' registered with username '%s',"\
-                " redirected to %s",
-                self.request.user.first_name, self.request.user.last_name,
-                self.request.user.email, self.request.user, success_url,
-                    extra={'event': 'register', 'request': self.request})
         else:
             success_url = self.request.META['PATH_INFO']
         return _redirect_to(success_url)
@@ -270,8 +265,6 @@ class SignupBaseView(RedirectFormMixin, ProcessFormView):
         user = User.objects.create_user(username,
             email=email, password=password,
             first_name=first_name, last_name=last_name)
-        signals.user_registered.send(
-            sender=__name__, user=user, request=self.request)
 
         # Bypassing authentication here, we are doing frictionless registration
         # the first time around.
