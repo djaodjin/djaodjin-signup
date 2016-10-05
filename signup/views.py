@@ -220,6 +220,17 @@ class SignupBaseView(RedirectFormMixin, ProcessFormView):
     form_class = NameEmailForm
     fail_url = ('registration_register', (), {})
 
+    def dispatch(self, request, *args, **kwargs):
+        if request.method.lower() in self.http_method_names:
+            if settings.DISABLED_REGISTRATION:
+                context = {}
+                response_kwargs = {}
+                response_kwargs.setdefault('content_type', self.content_type)
+                return TemplateResponse(request=request,
+                    template='accounts/disabled_registration.html',
+                    context=context, **response_kwargs)
+        return super(SignupBaseView, self).dispatch(request, *args, **kwargs)
+
     def form_valid(self, form):
         new_user = self.register(**form.cleaned_data)
         if new_user:
