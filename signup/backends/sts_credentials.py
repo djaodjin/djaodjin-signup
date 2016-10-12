@@ -48,8 +48,14 @@ def temporary_security_token(request, aws_upload_role=None, aws_region=None,
         if not aws_region:
             aws_region = settings.AWS_REGION
         conn = boto.sts.connect_to_region(aws_region)
-        assumed_role = conn.assume_role(
-            aws_upload_role, request.session.session_key)
+        # AWS will fail if we don't sanetize and limit the length
+        # of the session key.
+        aws_session_key = request.session.session_key.replace('/', '')[:64]
+        if aws_session_key != request.session.session_key:
+            LOGGER.warning("sanetized session key %s to %s for %s in order to"\
+                " match AWS requirements", request.session.session_key,
+                aws_session_key, request.user, extra={'request': request})
+        assumed_role = conn.assume_role(aws_upload_role, aws_session_key)
         request.session['access_key'] = assumed_role.credentials.access_key
         request.session['secret_key'] = assumed_role.credentials.secret_key
         request.session['security_token'] \
