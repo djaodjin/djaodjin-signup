@@ -26,7 +26,8 @@ import datetime, base64, hashlib, hmac, json, logging
 
 import boto.sts
 
-from signup import settings
+from .. import settings
+from ..utils import datetime_or_now
 
 
 LOGGER = logging.getLogger(__name__)
@@ -38,33 +39,48 @@ def temporary_security_token(request, aws_upload_role=None, aws_region=None,
     Create temporary security credentials on AWS. This typically needed
     to allow uploads from the browser directly to S3.
     """
-    if (request.user.is_authenticated()
-        and not request.session.has_key('access_key')):
-        if not aws_upload_role:
-            aws_upload_role = settings.AWS_UPLOAD_ROLE
-        if not aws_upload_role:
-            aws_upload_role = "arn:aws:iam::%s:role/%s" % (
-                settings.AWS_ACCOUNT_ID, bucket)
-        if not aws_region:
-            aws_region = settings.AWS_REGION
-        conn = boto.sts.connect_to_region(aws_region)
-        # AWS will fail if we don't sanetize and limit the length
-        # of the session key.
-        aws_session_key = request.session.session_key.replace('/', '')[:64]
-        if aws_session_key != request.session.session_key:
-            LOGGER.warning("sanetized session key %s to %s for %s in order to"\
-                " match AWS requirements", request.session.session_key,
-                aws_session_key, request.user, extra={'request': request})
-        assumed_role = conn.assume_role(aws_upload_role, aws_session_key)
-        request.session['access_key'] = assumed_role.credentials.access_key
-        request.session['secret_key'] = assumed_role.credentials.secret_key
-        request.session['security_token'] \
-            = assumed_role.credentials.session_token
-        LOGGER.info('AWS temporary credentials for %s to assume role %s: %s',
-            request.user, aws_upload_role, request.session['access_key'],
-            extra={'event': 'create-aws-credentials',
-                'request': request, 'aws_role': aws_upload_role,
-                'aws_access_key': request.session['access_key']})
+    if not request.user.is_authenticated():
+        return
+
+    if (request.session.has_key('access_key_expires_at')
+        and datetime_or_now() + datetime.timedelta(
+            seconds=5) < datetime_or_now(
+                request.session['access_key_expires_at'])):
+        # +5s buffer, in case of clock drift.
+        return
+
+    # Lazy creation of temporary credentials.
+    if not aws_upload_role:
+        aws_upload_role = settings.AWS_UPLOAD_ROLE
+    if not aws_upload_role:
+        aws_upload_role = "arn:aws:iam::%s:role/%s" % (
+            settings.AWS_ACCOUNT_ID, bucket)
+    if not aws_region:
+        aws_region = settings.AWS_REGION
+    conn = boto.sts.connect_to_region(aws_region)
+    # AWS will fail if we don't sanetize and limit the length
+    # of the session key.
+    aws_session_key = request.session.session_key.replace('/', '')[:64]
+    if aws_session_key != request.session.session_key:
+        LOGGER.warning("sanetized session key %s to %s for %s in order to"\
+            " match AWS requirements", request.session.session_key,
+            aws_session_key, request.user, extra={'request': request})
+    # See http://boto.cloudhackers.com/en/latest/ref/sts.html#\
+    # boto.sts.STSConnection.assume_role
+    duration_seconds = 3600
+    access_key_expires_at = datetime_or_now() + datetime.timedelta(
+        seconds=duration_seconds)
+    assumed_role = conn.assume_role(aws_upload_role, aws_session_key)
+    request.session['access_key'] = assumed_role.credentials.access_key
+    request.session['secret_key'] = assumed_role.credentials.secret_key
+    request.session['security_token'] \
+        = assumed_role.credentials.session_token
+    request.session['access_key_expires_at'] = access_key_expires_at.isoformat()
+    LOGGER.info('AWS temporary credentials for %s to assume role %s: %s',
+        request.user, aws_upload_role, request.session['access_key'],
+        extra={'event': 'create-aws-credentials',
+            'request': request, 'aws_role': aws_upload_role,
+            'aws_access_key': request.session['access_key']})
 
 
 def _signed_policy(region, service, requested_at,
@@ -128,11 +144,10 @@ def aws_bucket_context(request, bucket,
     if request.user.is_authenticated():
         if not aws_region:
             aws_region = settings.AWS_REGION
-        if not 'access_key' in request.session:
-            # Lazy creation of temporary credentials.
-            temporary_security_token(request,
-                aws_upload_role=aws_upload_role, aws_region=aws_region,
-                bucket=bucket)
+        # Lazy creation of temporary credentials.
+        temporary_security_token(request, aws_upload_role=aws_upload_role,
+            aws_region=aws_region, bucket=bucket)
+
         context.update(_signed_policy(
             aws_region, "s3",
             datetime.datetime.now(),
