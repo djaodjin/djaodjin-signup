@@ -24,6 +24,7 @@
 
 import datetime
 
+from dateutil.parser import parse
 from django.utils.timezone import utc
 
 
@@ -31,7 +32,7 @@ def datetime_or_now(dtime_at=None):
     if not dtime_at:
         return datetime.datetime.utcnow().replace(tzinfo=utc)
     if isinstance(dtime_at, basestring):
-        dtime_at = datetime.datetime.strptime(dtime_at, "%Y-%m-%dT%H:%M:%S")
+        dtime_at = parse(dtime_at)
     if dtime_at.tzinfo is None:
         dtime_at = dtime_at.replace(tzinfo=utc)
     return dtime_at
