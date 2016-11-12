@@ -81,6 +81,9 @@ def temporary_security_token(request, aws_upload_role=None, aws_region=None,
         extra={'event': 'create-aws-credentials',
             'request': request, 'aws_role': aws_upload_role,
             'aws_access_key': request.session['access_key']})
+    LOGGER.debug('AWS Access Key %s, Secret Key=%s, Security Token=%s',
+        request.session['access_key'], request.session['secret_key'],
+        request.session['security_token'])
 
 
 def _signed_policy(region, service, requested_at,

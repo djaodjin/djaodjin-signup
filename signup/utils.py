@@ -36,3 +36,13 @@ def datetime_or_now(dtime_at=None):
     if dtime_at.tzinfo is None:
         dtime_at = dtime_at.replace(tzinfo=utc)
     return dtime_at
+
+
+def has_invalid_password(user):
+    return user.password.startswith('!')
+
+
+def printable_name(user):
+    if user.first_name:
+        return user.first_name
+    return user.username
