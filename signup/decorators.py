@@ -1,4 +1,4 @@
-# Copyright (c) 2014, Djaodjin Inc.
+# Copyright (c) 2016, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -35,7 +35,9 @@ from django.core.urlresolvers import reverse
 from django.utils.decorators import available_attrs
 from django.utils.translation import ugettext_lazy as _
 
-from signup import settings, signals
+from . import settings, signals
+from .models import EmailContact
+from .utils import has_invalid_password
 
 
 def _insert_url(request, redirect_field_name=REDIRECT_FIELD_NAME,
@@ -56,7 +58,7 @@ def _insert_url(request, redirect_field_name=REDIRECT_FIELD_NAME,
     return redirect_to_login(path, inserted_url, redirect_field_name)
 
 
-def send_verification_email(user, request,
+def send_verification_email(email_contact, request,
                            next_url=None,
                            redirect_field_name=REDIRECT_FIELD_NAME):
     """
@@ -66,12 +68,12 @@ def send_verification_email(user, request,
     the verification email was sent from so that the user stays on her
     workflow once verification is completed.
     """
-    back_url = request.build_absolute_uri(
-        reverse('registration_activate', args=(user.email_verification_key,)))
+    back_url = request.build_absolute_uri(reverse('registration_activate',
+        args=(email_contact.verification_key,)))
     if next_url:
         back_url += '?%s=%s' % (redirect_field_name, next_url)
     signals.user_verification.send(
-        sender=__name__, user=user, request=request,
+        sender=__name__, user=email_contact.user, request=request,
         back_url=back_url, expiration_days=settings.KEY_EXPIRATION)
     messages.info(request, "Activation e-mail sent.")
 
@@ -85,13 +87,15 @@ def check_user_active(request, user,
     Checks that a *user* is active. We won't activate the account of
     a user until we checked the email address is valid.
     """
-    if user.has_invalid_password:
+    if has_invalid_password(user):
         # Let's send e-mail again.
-        if not user.is_reachable:
+        first_unverified_email = EmailContact.objects.unverified_for_user(
+            user).first()
+        if first_unverified_email is not None:
             if not next_url:
                 next_url = request.META['PATH_INFO']
             send_verification_email(
-                user, request, next_url=next_url,
+                first_unverified_email, request, next_url=next_url,
                 redirect_field_name=redirect_field_name)
             return False
     return True
