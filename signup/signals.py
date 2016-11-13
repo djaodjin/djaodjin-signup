@@ -30,7 +30,8 @@ from django.dispatch import Signal
 
 #pylint: disable=invalid-name
 user_registered = Signal(providing_args=["user"])
-user_activated = Signal(providing_args=["user", "request"])
+user_activated = Signal(providing_args=[
+    "user", "verification_key", "request"])
 user_verification = Signal(providing_args=[
     "user", "request", "back_url", "expiration_days"])
 user_reset_password = Signal(providing_args=[

@@ -306,8 +306,9 @@ class ActivationBaseView(ContextMixin, View):
             else:
                 user = User.objects.activate_user(verification_key)
                 # XXX Should we directly login user here?
-                signals.user_activated.send(
-                    sender=__name__, user=user, request=self.request)
+                signals.user_activated.send(sender=__name__,
+                    user=user, verification_key=verification_key,
+                    request=self.request)
                 messages.info(self.request,
                     _("Thank you. Your account is now active." \
                           " You can sign in at your convienience."))
@@ -464,9 +465,10 @@ class RegistrationPasswordConfirmBaseView(RedirectFormMixin, ProcessFormView):
         #pylint: disable=maybe-no-member
         self.object = form.save() # If we don't save the ``User`` model here,
                                   # we won't be able to authenticate later.
-        user = User.objects.activate_user(self.kwargs.get('verification_key'))
-        signals.user_activated.send(
-            sender=__name__, user=user, request=self.request)
+        verification_key = self.kwargs.get('verification_key')
+        user = User.objects.activate_user(verification_key)
+        signals.user_activated.send(sender=__name__,
+            user=user, verification_key=verification_key, request=self.request)
         messages.info(self.request,
                       _("Thank you. Your account is now active."))
 
