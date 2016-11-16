@@ -29,8 +29,7 @@ User Model for the signup app
 import datetime, hashlib, logging, random, re
 
 from django.core.exceptions import ValidationError
-from django.core.urlresolvers import NoReverseMatch, reverse
-from django.contrib.auth.models import AbstractUser, UserManager
+from django.contrib.auth.models import UserManager
 from django.db import models, transaction, IntegrityError
 from django.utils.decorators import method_decorator
 from django.utils.translation import ugettext_lazy as _
@@ -46,7 +45,7 @@ class ActivatedUserManager(UserManager):
 
     def create_user_from_email(self, email, password=None, **kwargs):
         #pylint:disable=protected-access
-        field = ActivatedUser._meta.get_field('username')
+        field = self.model._meta.get_field('username')
         max_length = field.max_length
         username = email.split('@')[0]
         try:
@@ -97,7 +96,7 @@ class ActivatedUserManager(UserManager):
         # (see above definition of active user).
         if isinstance(username, unicode):
             username = username.encode('utf-8')
-        EmailContact.objects.create_token(user)
+        EmailContact.objects.get_or_create_token(user)
         user.is_active = True
         user.save()
         LOGGER.info("'%s %s <%s>' registered with username '%s'",
@@ -107,30 +106,16 @@ class ActivatedUserManager(UserManager):
         return user
 
 
-class ActivatedUser(AbstractUser):
-    """
-    A user model that requires activation. We use it to verify
-    the email address.
-    """
-    class Meta: #pylint: disable=old-style-class,no-init
-        db_table = u'auth_user'
-        swappable = 'AUTH_USER_MODEL'
-
-    objects = ActivatedUserManager()
-
-    def __unicode__(self):
-        return self.username
-
-
 class EmailContactManager(models.Manager):
 
     def _get_token(self, verification_key):
         return self.get(verification_key=verification_key)
 
-    def create_token(self, user):
-        salt = hashlib.sha1(str(random.random())).hexdigest()[:5]
-        return self.create(user=user,
-            verification_key=hashlib.sha1(salt+user.username).hexdigest())
+    def get_or_create_token(self, user, verification_key=None):
+        if verification_key is None:
+            salt = hashlib.sha1(str(random.random())).hexdigest()[:5]
+            verification_key = hashlib.sha1(salt+user.username).hexdigest()
+        return self.get_or_create(user=user, verification_key=verification_key)
 
     def find_user(self, verification_key):
         """
@@ -168,7 +153,7 @@ class EmailContactManager(models.Manager):
             pass # We return None instead here.
         return None
 
-    def unverified_for_user(user):
+    def unverified_for_user(self, user):
         return self.filter(user=user).exclude(
             verification_key=EmailContact.VERIFIED)
 
@@ -190,7 +175,7 @@ class EmailContact(models.Model):
     objects = EmailContactManager()
 
     created_at = models.DateTimeField(auto_now_add=True)
-    user = models.models.ForeignKey(settings.AUTH_USER_MODEL)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL)
     verification_key = models.CharField(
         _('email verification key'), max_length=40)
 

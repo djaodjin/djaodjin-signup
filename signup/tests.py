@@ -1,4 +1,4 @@
-# Copyright (c) 2014, Djaodjin Inc.
+# Copyright (c) 2016, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -25,13 +25,15 @@
 import re
 
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.core.urlresolvers import reverse
 from django.test import TestCase
 from django.test.client import Client, RequestFactory
 
 from signup import settings as signup_settings
 from signup.auth import validate_redirect, validate_redirect_url
-from signup.models import ActivatedUser
+from signup.models import ActivatedUserManager
+
 
 REGISTRATION_EMAIL = 'user@example.com'
 
@@ -84,7 +86,11 @@ class SignUpTests(TestCase):
             self.assertTrue(url is None)
 
     def test_activate_password(self):
-        user = ActivatedUser.objects.create_user(REGISTRATION_EMAIL,
+        # Hack to install our create_user method.
+        user_class = get_user_model()
+        user_class.objects = ActivatedUserManager()
+        user_class.objects.model = user_class
+        user = get_user_model().objects.create_user(REGISTRATION_EMAIL,
             email=REGISTRATION_EMAIL, is_active=False)
         client = Client()
         response = client.get(reverse('registration_activate',
