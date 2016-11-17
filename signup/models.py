@@ -29,8 +29,7 @@ User Model for the signup app
 import datetime, hashlib, logging, random, re
 
 from django.core.exceptions import ValidationError
-from django.core.urlresolvers import NoReverseMatch, reverse
-from django.contrib.auth.models import AbstractUser, UserManager
+from django.contrib.auth.models import UserManager
 from django.db import models, transaction, IntegrityError
 from django.utils.decorators import method_decorator
 from django.utils.translation import ugettext_lazy as _
@@ -46,7 +45,7 @@ class ActivatedUserManager(UserManager):
 
     def create_user_from_email(self, email, password=None, **kwargs):
         #pylint:disable=protected-access
-        field = ActivatedUser._meta.get_field('username')
+        field = self.model._meta.get_field('username')
         max_length = field.max_length
         username = email.split('@')[0]
         try:
@@ -95,11 +94,10 @@ class ActivatedUserManager(UserManager):
                 username, email=email, password=password, **kwargs)
         # Force is_active to True and create an email verification key
         # (see above definition of active user).
-        salt = hashlib.sha1(str(random.random())).hexdigest()[:5]
         if isinstance(username, unicode):
             username = username.encode('utf-8')
+        EmailContact.objects.get_or_create_token(user)
         user.is_active = True
-        user.email_verification_key = hashlib.sha1(salt+username).hexdigest()
         user.save()
         LOGGER.info("'%s %s <%s>' registered with username '%s'",
             user.first_name, user.last_name, user.email, user,
@@ -107,89 +105,86 @@ class ActivatedUserManager(UserManager):
         signals.user_registered.send(sender=__name__, user=user)
         return user
 
-    def find_user(self, email_verification_key):
+
+class EmailContactManager(models.Manager):
+
+    def _get_token(self, verification_key):
+        return self.get(verification_key=verification_key)
+
+    def get_or_create_token(self, user, verification_key=None):
+        if verification_key is None:
+            salt = hashlib.sha1(str(random.random())).hexdigest()[:5]
+            verification_key = hashlib.sha1(salt+user.username).hexdigest()
+        return self.get_or_create(user=user, verification_key=verification_key)
+
+    def find_user(self, verification_key):
         """
         Find a user based on a verification key but do not activate the user.
         """
-        if EMAIL_VERIFICATION_RE.search(email_verification_key):
+        if EMAIL_VERIFICATION_RE.search(verification_key):
             try:
-                user = self.get(email_verification_key=email_verification_key)
-                if not user.email_verification_key_expired():
-                    return user
-            except ActivatedUser.DoesNotExist:
+                token = self._get_token(
+                    verification_key=verification_key)
+                if not token.verification_key_expired():
+                    return token.user
+            except EmailContact.DoesNotExist:
                 pass # We return None instead here.
         return None
 
-    def activate_user(self, email_verification_key):
+    def activate_user(self, verification_key):
         """
         Activate a user whose email address has been verified.
         """
-        user = self.find_user(email_verification_key)
-        if user:
-            LOGGER.info('user %s activated through code: %s',
-                user, user.email_verification_key,
-                extra={'event': 'activate', 'username': user.username,
-                    'email_verification_key': user.email_verification_key})
-            user.email_verification_key = ActivatedUser.VERIFIED
-            user.is_active = True
-            user.save()
-        return user
+        try:
+            token = self._get_token(
+                verification_key=verification_key)
+            if not token.verification_key_expired():
+                LOGGER.info('user %s activated through code: %s',
+                    token.user, token.verification_key,
+                    extra={'event': 'activate', 'username': token.user.username,
+                        'email_verification_key': token.verification_key})
+                with transaction.atomic():
+                    token.verification_key = EmailContact.VERIFIED
+                    token.user.is_active = True
+                    token.user.save()
+                    token.save()
+                return token.user
+        except EmailContact.DoesNotExist:
+            pass # We return None instead here.
+        return None
 
+    def unverified_for_user(self, user):
+        return self.filter(user=user).exclude(
+            verification_key=EmailContact.VERIFIED)
 
-class ActivatedUser(AbstractUser):
-    """
-    A user model that requires activation. We use it to verify
-    the email address.
-    """
-    class Meta: #pylint: disable=old-style-class,no-init
-        db_table = u'auth_user'
-        swappable = 'AUTH_USER_MODEL'
-
-    VERIFIED = "VERIFIED"
-
-    objects = ActivatedUserManager()
-
-    email_verification_key = models.CharField(
-        _('email verification key'), max_length=40)
-
-    def email_verification_key_expired(self):
-        expiration_date = datetime.timedelta(days=settings.KEY_EXPIRATION)
-        start_at = self.last_login
-        if start_at is None:
-            start_at = self.date_joined
-        return self.email_verification_key == self.VERIFIED or \
-               (start_at + expiration_date <= datetime_now())
-    email_verification_key_expired.boolean = True
-
-    def __unicode__(self):
-        return self.username
-
-    @property
-    def has_invalid_password(self):
-        return self.password.startswith('!')
-
-    @property
-    def is_reachable(self):
+    def is_reachable(self, user):
         """
         Returns True if the user is reachable by email.
         """
-        return self.email_verification_key == ActivatedUser.VERIFIED
+        return self.filter(user=user,
+            verification_key=EmailContact.VERIFIED).exists()
 
-    @property
-    def printable_name(self):
-        if self.first_name:
-            return self.first_name
-        return self.username
 
-    @property
-    def urls(self):
-        urls_user = {
-            'logout': reverse('logout'),
-            'profile': reverse('users_profile', args=(self,)),
-            'profile_redirect': reverse('accounts_profile')}
-        try:
-            # optional
-            urls_user.update({'app': reverse('product_default_start')})
-        except NoReverseMatch:
-            pass
-        return urls_user
+class EmailContact(models.Model):
+    """
+    Used in workflow to verify the email address of a ``User``.
+    """
+
+    VERIFIED = "VERIFIED"
+
+    objects = EmailContactManager()
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL)
+    verification_key = models.CharField(
+        _('email verification key'), max_length=40)
+
+    def __unicode__(self):
+        return u"%s-%s" % (self.user.username, self.verification_key)
+
+    def verification_key_expired(self):
+        expiration_date = datetime.timedelta(days=settings.KEY_EXPIRATION)
+        start_at = self.created_at
+        return self.verification_key == self.VERIFIED or \
+               (start_at + expiration_date <= datetime_now())
+    verification_key_expired.boolean = True

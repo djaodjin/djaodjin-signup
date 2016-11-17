@@ -44,14 +44,15 @@ from django.views.generic.base import ContextMixin, TemplateResponseMixin, View
 from django.views.generic.detail import BaseDetailView
 from django.views.generic.edit import FormMixin, ProcessFormView, UpdateView
 
-from signup.auth import validate_redirect
-from signup.decorators import check_user_active, send_verification_email
-from signup.compat import User
-from signup.forms import (NameEmailForm, PasswordChangeForm, PasswordResetForm,
+from . import settings, signals
+from .auth import validate_redirect
+from .backends.auth import UsernameOrEmailAuthenticationForm
+from .compat import User
+from .decorators import check_user_active, send_verification_email
+from .forms import (NameEmailForm, PasswordChangeForm, PasswordResetForm,
     UserForm)
-from signup.backends.auth import UsernameOrEmailAuthenticationForm
-from signup import signals
-from signup import settings
+from .models import EmailContact
+from .utils import has_invalid_password
 
 
 LOGGER = logging.getLogger(__name__)
@@ -291,20 +292,20 @@ class ActivationBaseView(ContextMixin, View):
     """
     http_method_names = ['get']
     token_generator = default_token_generator
+    key_url_kwarg = 'verification_key'
 
     def get(self, request, *args, **kwargs):
-        verification_key = self.kwargs.get('verification_key')
+        verification_key = self.kwargs.get(self.key_url_kwarg)
         #pylint: disable=maybe-no-member
-        user = User.objects.find_user(verification_key)
+        user = EmailContact.objects.find_user(verification_key)
         if user:
-            if user.has_invalid_password:
+            if has_invalid_password(user):
                 messages.info(self.request,
                     _("Please set a password to protect your account."))
-                url = reverse('registration_password_confirm',
-                              args=(user.email_verification_key,
-                                    self.token_generator.make_token(user)))
+                url = reverse('registration_password_confirm', args=(
+                    verification_key, self.token_generator.make_token(user)))
             else:
-                user = User.objects.activate_user(verification_key)
+                user = EmailContact.objects.activate_user(verification_key)
                 # XXX Should we directly login user here?
                 signals.user_activated.send(sender=__name__,
                     user=user, verification_key=verification_key,
@@ -332,7 +333,13 @@ class SendActivationView(BaseDetailView):
 
     def get(self, request, *args, **kwargs):
         user = self.get_object()
-        send_verification_email(user, request)
+        unverified_email = EmailContact.objects.unverified_for_user(
+            self.get_object()).first()
+        if unverified_email is not None:
+            send_verification_email(unverified_email, request)
+        else:
+            messages.info(self.request,
+                _("This email address has already been verified."))
         return HttpResponseRedirect(
             reverse('users_profile', args=(user,)))
 
@@ -432,6 +439,7 @@ class RegistrationPasswordConfirmBaseView(RedirectFormMixin, ProcessFormView):
     """
     form_class = PasswordChangeForm
     token_generator = default_token_generator
+    key_url_kwarg = 'verification_key'
 
     def dispatch(self, request, *args, **kwargs):
         # We put the code inline instead of using method_decorator() otherwise
@@ -497,8 +505,8 @@ class RegistrationPasswordConfirmBaseView(RedirectFormMixin, ProcessFormView):
         kwargs = super(
             RegistrationPasswordConfirmBaseView, self).get_form_kwargs()
         #pylint: disable=no-member
-        self.object = User.objects.find_user(
-            self.kwargs.get('verification_key'))
+        self.object = EmailContact.objects.find_user(
+            self.kwargs.get(self.key_url_kwarg))
         kwargs.update({'instance': self.object})
         return kwargs
 

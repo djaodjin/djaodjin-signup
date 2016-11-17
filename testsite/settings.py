@@ -12,8 +12,6 @@ https://docs.djangoproject.com/en/1.6/ref/settings/
 import os
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
-AUTH_USER_MODEL = 'signup.ActivatedUser'
-
 AUTHENTICATION_BACKENDS = (
     'signup.backends.auth.UsernameOrEmailModelBackend',
     'django.contrib.auth.backends.ModelBackend'
