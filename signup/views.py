@@ -474,7 +474,7 @@ class RegistrationPasswordConfirmBaseView(RedirectFormMixin, ProcessFormView):
         self.object = form.save() # If we don't save the ``User`` model here,
                                   # we won't be able to authenticate later.
         verification_key = self.kwargs.get('verification_key')
-        user = User.objects.activate_user(verification_key)
+        user = EmailContact.objects.activate_user(verification_key)
         signals.user_activated.send(sender=__name__,
             user=user, verification_key=verification_key, request=self.request)
         messages.info(self.request,
