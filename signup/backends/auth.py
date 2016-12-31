@@ -79,9 +79,9 @@ class UsernameOrEmailModelBackend(object):
 
     def authenticate(self, username=None, password=None):
         if '@' in username:
-            kwargs = {'email': username}
+            kwargs = {'email__iexact': username}
         else:
-            kwargs = {'username': username}
+            kwargs = {'username__iexact': username}
         try:
             user = User.objects.get(**kwargs)
             if user.check_password(password):
