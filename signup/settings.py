@@ -1,4 +1,4 @@
-# Copyright (c) 2015, Djaodjin Inc.
+# Copyright (c) 2017, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -50,6 +50,7 @@ _SETTINGS = {
     'AWS_ACCOUNT_ID': None,
     'DISABLED_AUTHENTICATION': False,
     'DISABLED_REGISTRATION': False,
+    'EXTRA_FIELD': None,
     'LOGOUT_CLEAR_COOKIES' : None,
     'DEFAULT_FROM_EMAIL': getattr(settings, 'DEFAULT_FROM_EMAIL')
 }
@@ -69,3 +70,13 @@ LOGIN_REDIRECT_URL = getattr(settings, 'LOGIN_REDIRECT_URL')
 
 KEY_EXPIRATION = _SETTINGS.get('ACCOUNT_ACTIVATION_DAYS')
 EMAIL_VERIFICATION_PAT = r'[a-f0-9]{40}'
+
+def get_extra_field_class():
+    extra_class = _SETTINGS.get('EXTRA_FIELD')
+    if extra_class is None:
+        from django.db.models import TextField
+        extra_class = TextField
+    elif isinstance(extra_class, str):
+        from saas.compat import import_string
+        extra_class = import_string(extra_class)
+    return extra_class

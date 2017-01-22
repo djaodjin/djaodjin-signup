@@ -1,4 +1,4 @@
-# Copyright (c) 2016, Djaodjin Inc.
+# Copyright (c) 2017, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -221,6 +221,23 @@ class SignupBaseView(RedirectFormMixin, ProcessFormView):
     form_class = NameEmailForm
     fail_url = ('registration_register', (), {})
 
+    @staticmethod
+    def first_and_last_names(**cleaned_data):
+        first_name = cleaned_data.get('first_name', None)
+        last_name = cleaned_data.get('last_name', None)
+        if not first_name:
+            # If the form does not contain a first_name/last_name pair,
+            # we assume a full_name was passed instead.
+            full_name = cleaned_data['full_name']
+            name_parts = full_name.split(' ')
+            if len(name_parts) > 0:
+                first_name = name_parts[0]
+                last_name = ' '.join(name_parts[1:])
+            else:
+                first_name = full_name
+                last_name = ''
+        return first_name, last_name
+
     def dispatch(self, request, *args, **kwargs):
         if request.method.lower() in self.http_method_names:
             if settings.DISABLED_REGISTRATION:
@@ -259,19 +276,7 @@ class SignupBaseView(RedirectFormMixin, ProcessFormView):
 " the instructions we just emailed you. Thank you.")))
             return None
 
-        first_name = cleaned_data.get('first_name', None)
-        last_name = cleaned_data.get('last_name', None)
-        if not first_name:
-            # If the form does not contain a first_name/last_name pair,
-            # we assume a full_name was passed instead.
-            full_name = cleaned_data['full_name']
-            name_parts = full_name.split(' ')
-            if len(name_parts) > 0:
-                first_name = name_parts[0]
-                last_name = ' '.join(name_parts[1:])
-            else:
-                first_name = full_name
-                last_name = ''
+        first_name, last_name = self.first_and_last_names(**cleaned_data)
         username = cleaned_data.get('username', None)
         password = cleaned_data.get('new_password1', None)
         user = User.objects.create_user(username,

@@ -1,4 +1,4 @@
-# Copyright (c) 2016, Djaodjin Inc.
+# Copyright (c) 2017, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -178,6 +178,7 @@ class EmailContact(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL)
     verification_key = models.CharField(
         _('email verification key'), max_length=40)
+    extra = settings.get_extra_field_class()(null=True)
 
     def __unicode__(self):
         return u"%s-%s" % (self.user.username, self.verification_key)
