@@ -43,6 +43,7 @@ def has_invalid_password(user):
 
 
 def printable_name(user):
-    if user.first_name:
-        return user.first_name
+    full_name = user.get_full_name()
+    if full_name:
+        return full_name
     return user.username

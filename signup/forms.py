@@ -1,4 +1,4 @@
-# Copyright (c) 2014, Djaodjin Inc.
+# Copyright (c) 2017, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -24,12 +24,14 @@
 
 """Forms for the signup app"""
 
+from captcha.fields import ReCaptchaField
 from django import forms
 from django.contrib.auth.forms import (
     PasswordResetForm as PasswordResetBaseForm, SetPasswordForm)
 from django.utils.translation import ugettext_lazy as _
 
-from signup.compat import User
+from . import settings
+from .compat import User
 
 #pylint: disable=old-style-class,no-init
 
@@ -49,6 +51,11 @@ class NameEmailForm(forms.Form):
         widget=forms.TextInput(attrs={'placeholder':'Email',
                                       'maxlength': 75}),
         label=_("Email address"))
+
+    def __init__(self, *args, **kwargs):
+        super(NameEmailForm, self).__init__(*args, **kwargs)
+        if settings.REQUIRES_RECAPTCHA:
+            self.fields['captcha'] = ReCaptchaField()
 
 
 class PasswordChangeForm(SetPasswordForm):
