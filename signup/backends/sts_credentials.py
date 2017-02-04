@@ -1,4 +1,4 @@
-# Copyright (c) 2015, Djaodjin Inc.
+# Copyright (c) 2017, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -42,7 +42,7 @@ def temporary_security_token(request, aws_upload_role=None, aws_region=None,
     if not request.user.is_authenticated():
         return
 
-    if (request.session.has_key('access_key_expires_at')
+    if ('access_key_expires_at' in request.session
         and datetime_or_now() + datetime.timedelta(
             seconds=5) < datetime_or_now(
                 request.session['access_key_expires_at'])):

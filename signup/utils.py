@@ -1,4 +1,4 @@
-# Copyright (c) 2016, DjaoDjin inc.
+# Copyright (c) 2017, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -25,13 +25,14 @@
 import datetime
 
 from dateutil.parser import parse
+from django.utils import six
 from django.utils.timezone import utc
 
 
 def datetime_or_now(dtime_at=None):
     if not dtime_at:
         return datetime.datetime.utcnow().replace(tzinfo=utc)
-    if isinstance(dtime_at, basestring):
+    if isinstance(dtime_at, six.string_types):
         dtime_at = parse(dtime_at)
     if dtime_at.tzinfo is None:
         dtime_at = dtime_at.replace(tzinfo=utc)

@@ -1,4 +1,4 @@
-# Copyright (c) 2016, Djaodjin Inc.
+# Copyright (c) 2017, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -26,13 +26,13 @@
 Decorators that check a User a verified email address.
 """
 
-import urlparse
 from functools import wraps
 
 from django.contrib import messages
 from django.contrib.auth import REDIRECT_FIELD_NAME, logout as auth_logout
 from django.core.urlresolvers import reverse
 from django.utils.decorators import available_attrs
+from django.utils import six
 from django.utils.translation import ugettext_lazy as _
 
 from . import settings, signals
@@ -49,8 +49,9 @@ def _insert_url(request, redirect_field_name=REDIRECT_FIELD_NAME,
     path = request.build_absolute_uri()
     # If the login url is the same scheme and net location then just
     # use the path as the "next" url.
-    login_scheme, login_netloc = urlparse.urlparse(inserted_url)[:2]
-    current_scheme, current_netloc = urlparse.urlparse(path)[:2]
+    login_scheme, login_netloc = six.moves.urllib.parse.urlparse(
+        inserted_url)[:2]
+    current_scheme, current_netloc = six.moves.urllib.parse.urlparse(path)[:2]
     if ((not login_scheme or login_scheme == current_scheme) and
         (not login_netloc or login_netloc == current_netloc)):
         path = request.get_full_path()

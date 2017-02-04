@@ -32,8 +32,10 @@ from django.core.exceptions import ValidationError
 from django.contrib.auth.models import UserManager
 from django.db import models, transaction, IntegrityError
 from django.utils.decorators import method_decorator
-from django.utils.translation import ugettext_lazy as _
+from django.utils.encoding import python_2_unicode_compatible
+from django.utils import six
 from django.utils.timezone import now as datetime_now
+from django.utils.translation import ugettext_lazy as _
 
 from signup import settings, signals
 
@@ -59,7 +61,7 @@ class ActivatedUserManager(UserManager):
             try:
                 return super(ActivatedUserManager, self).create_user(
                     username, email=email, password=password, **kwargs)
-            except IntegrityError, exp:
+            except IntegrityError as exp:
                 err = exp
                 suffix = '-%s' % ''.join(
                     random.choice('0123456789') for count in range(3))
@@ -94,7 +96,7 @@ class ActivatedUserManager(UserManager):
                 username, email=email, password=password, **kwargs)
         # Force is_active to True and create an email verification key
         # (see above definition of active user).
-        if isinstance(username, unicode):
+        if isinstance(username, six.string_types):
             username = username.encode('utf-8')
         EmailContact.objects.get_or_create_token(user)
         user.is_active = True
@@ -165,6 +167,7 @@ class EmailContactManager(models.Manager):
             verification_key=EmailContact.VERIFIED).exists()
 
 
+@python_2_unicode_compatible
 class EmailContact(models.Model):
     """
     Used in workflow to verify the email address of a ``User``.
@@ -180,7 +183,7 @@ class EmailContact(models.Model):
         _('email verification key'), max_length=40)
     extra = settings.get_extra_field_class()(null=True)
 
-    def __unicode__(self):
+    def __str__(self):
         return u"%s-%s" % (self.user.username, self.verification_key)
 
     def verification_key_expired(self):
