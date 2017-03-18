@@ -34,17 +34,17 @@ LOGGER = logging.getLogger(__name__)
 
 
 def temporary_security_token(request, aws_upload_role=None, aws_region=None,
-                             bucket=None):
+                             bucket=None, at_time=None):
     """
     Create temporary security credentials on AWS. This typically needed
     to allow uploads from the browser directly to S3.
     """
     if not request.user.is_authenticated():
         return
+    at_time = datetime_or_now(at_time)
 
     if ('access_key_expires_at' in request.session
-        and datetime_or_now() + datetime.timedelta(
-            seconds=5) < datetime_or_now(
+        and at_time + datetime.timedelta(seconds=5) < datetime_or_now(
                 request.session['access_key_expires_at'])):
         # +5s buffer, in case of clock drift.
         return
@@ -68,7 +68,7 @@ def temporary_security_token(request, aws_upload_role=None, aws_region=None,
     # See http://boto.cloudhackers.com/en/latest/ref/sts.html#\
     # boto.sts.STSConnection.assume_role
     duration_seconds = 3600
-    access_key_expires_at = datetime_or_now() + datetime.timedelta(
+    access_key_expires_at = at_time + datetime.timedelta(
         seconds=duration_seconds)
     assumed_role = conn.assume_role(aws_upload_role, aws_session_key)
     request.session['access_key'] = assumed_role.credentials.access_key
@@ -125,20 +125,24 @@ def _signed_policy(region, service, requested_at,
     policy_signature = hmac.new(
         signing_key, policy_base64,
         hashlib.sha256).hexdigest()
-    context = {
+    if acl is not None:
+        acl_prefix = acl.replace('-', '_') + "_"
+        context = {'acl': acl}
+    else:
+        acl_prefix = ""
+        context = {}
+    context.update({
         'access_key': access_key,
         'security_token': security_token,
-        'aws_policy': policy_base64,
-        'aws_policy_signature': policy_signature,
+        "%saws_policy" % acl_prefix: policy_base64,
+        "%saws_policy_signature" % acl_prefix: policy_signature,
         'x_amz_credential': x_amz_credential,
-        'x_amz_date': x_amz_date}
-    if acl is not None:
-        context.update({'acl': acl})
+        'x_amz_date': x_amz_date})
     return context
 
 
 def aws_bucket_context(request, bucket,
-                       acl=None, aws_upload_role=None, aws_region=None):
+                       acls=None, aws_upload_role=None, aws_region=None):
     """
     Context to use in templates to upload from the client brower
     to the bucket directly.
@@ -147,17 +151,28 @@ def aws_bucket_context(request, bucket,
     if request.user.is_authenticated():
         if not aws_region:
             aws_region = settings.AWS_REGION
+
+        requested_at = datetime_or_now()
+
         # Lazy creation of temporary credentials.
         temporary_security_token(request, aws_upload_role=aws_upload_role,
-            aws_region=aws_region, bucket=bucket)
+            aws_region=aws_region, bucket=bucket, at_time=requested_at)
 
-        context.update(_signed_policy(
-            aws_region, "s3",
-            datetime.datetime.now(),
-            request.session['access_key'],
-            request.session['secret_key'],
-            security_token=request.session['security_token'],
-            bucket=bucket, acl=acl))
+        if acls is not None:
+            for acl in acls:
+                context.update(_signed_policy(
+                    aws_region, "s3", requested_at,
+                    request.session['access_key'],
+                    request.session['secret_key'],
+                    security_token=request.session['security_token'],
+                    bucket=bucket, acl=acl))
+        else:
+            context.update(_signed_policy(
+                aws_region, "s3", requested_at,
+                request.session['access_key'],
+                request.session['secret_key'],
+                security_token=request.session['security_token'],
+                bucket=bucket))
         context.update({"location": "https://%s.s3-%s.amazonaws.com/" % (
                 bucket, aws_region)})
     return context
@@ -168,6 +183,6 @@ class AWSContextMixin(object):
     def get_context_data(self, *args, **kwargs):
         #pylint: disable=unused-argument
         return aws_bucket_context(self.request, kwargs.get('bucket', None),
-            acl=kwargs.get('acl', None),
+            acls=kwargs.get('acls', None),
             aws_upload_role=kwargs.get('aws_upload_role', None),
             aws_region=kwargs.get('aws_region', None))
