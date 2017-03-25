@@ -412,6 +412,7 @@ class UserProfileView(AuthTemplateResponseMixin, UpdateView):
                 context['urls'].update({'user': user_urls})
         else:
             context.update({'urls': {'user': user_urls}})
+        setattr(context['user'], 'full_name', context['user'].get_full_name())
         return context
 
     def get_success_url(self):
