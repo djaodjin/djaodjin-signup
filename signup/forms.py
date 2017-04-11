@@ -76,6 +76,7 @@ class UserForm(forms.ModelForm):
     """
     Form to update a ``User`` profile.
     """
+    submit_title = 'Update'
 
     username = forms.CharField(widget=forms.TextInput(
         attrs={'placeholder': 'Username'}),
