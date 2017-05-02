@@ -58,14 +58,6 @@ from .utils import has_invalid_password
 LOGGER = logging.getLogger(__name__)
 
 
-def _redirect_to(url):
-    try:
-        to_url, args, kwargs = url #(cast to tuple)
-        return redirect(to_url, *args, **kwargs)
-    except ValueError:
-        return redirect(url)
-
-
 class RedirectFormMixin(FormMixin):
     success_url = settings.LOGIN_REDIRECT_URL
 
@@ -255,7 +247,7 @@ class SignupBaseView(RedirectFormMixin, ProcessFormView):
             success_url = self.get_success_url()
         else:
             success_url = self.request.META['PATH_INFO']
-        return _redirect_to(success_url)
+        return HttpResponseRedirect(success_url)
 
     def register(self, **cleaned_data):
         #pylint: disable=maybe-no-member
@@ -324,7 +316,7 @@ class ActivationBaseView(ContextMixin, View):
                 success_url = "%s?%s=%s" % (url, REDIRECT_FIELD_NAME, next_url)
             else:
                 success_url = url
-            return _redirect_to(success_url)
+            return HttpResponseRedirect(success_url)
         context = self.get_context_data(**kwargs)
         return self.render_to_response(context)
 
