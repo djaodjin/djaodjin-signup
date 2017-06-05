@@ -33,7 +33,6 @@ from django.contrib.auth.models import UserManager
 from django.db import models, transaction, IntegrityError
 from django.utils.decorators import method_decorator
 from django.utils.encoding import python_2_unicode_compatible
-from django.utils import six
 from django.utils.timezone import now as datetime_now
 from django.utils.translation import ugettext_lazy as _
 
@@ -90,14 +89,11 @@ class ActivatedUserManager(UserManager):
         if not password and not username:
             user = self.create_user_from_email(
                 email, password=password, **kwargs)
-            username = user.username
         else:
             user = super(ActivatedUserManager, self).create_user(
                 username, email=email, password=password, **kwargs)
         # Force is_active to True and create an email verification key
         # (see above definition of active user).
-        if isinstance(username, six.string_types):
-            username = username.encode('utf-8')
         EmailContact.objects.get_or_create_token(user)
         user.is_active = True
         user.save()
@@ -115,7 +111,8 @@ class EmailContactManager(models.Manager):
 
     def get_or_create_token(self, user, verification_key=None):
         if verification_key is None:
-            salt = hashlib.sha1(str(random.random())).hexdigest()[:5]
+            random_key = str(random.random()).encode('utf-8')
+            salt = hashlib.sha1(random_key).hexdigest()[:5]
             verification_key = hashlib.sha1(salt+user.username).hexdigest()
         return self.get_or_create(user=user, verification_key=verification_key)
 
