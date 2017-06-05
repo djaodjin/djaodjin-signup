@@ -113,7 +113,8 @@ class EmailContactManager(models.Manager):
         if verification_key is None:
             random_key = str(random.random()).encode('utf-8')
             salt = hashlib.sha1(random_key).hexdigest()[:5]
-            verification_key = hashlib.sha1(salt+user.username).hexdigest()
+            verification_key = hashlib.sha1(
+                (salt+user.username).encode('utf-8')).hexdigest()
         return self.get_or_create(user=user, verification_key=verification_key)
 
     def find_user(self, verification_key):
