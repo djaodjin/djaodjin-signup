@@ -24,12 +24,12 @@
 
 from django.views.generic.base import RedirectView
 from django.core.urlresolvers import reverse_lazy
-from urldecorators import patterns, include, url
+from urldecorators import include, url
 
-urlpatterns = patterns('',
+urlpatterns = [
     url(r'^users/',
         include('signup.urls.users'),
         decorators=['django.contrib.auth.decorators.login_required']),
     url(r'^accounts/', include('signup.urls.accounts')),
     url(r'^$', RedirectView.as_view(url=reverse_lazy('registration_register'))),
-)
+]

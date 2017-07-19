@@ -24,7 +24,7 @@
 
 import datetime, base64, hashlib, hmac, json, logging
 
-import boto.sts
+import boto3
 
 from .. import settings
 from ..utils import datetime_or_now
@@ -33,8 +33,9 @@ from ..utils import datetime_or_now
 LOGGER = logging.getLogger(__name__)
 
 
-def temporary_security_token(request, aws_upload_role=None, aws_region=None,
-                             bucket=None, at_time=None):
+def temporary_security_token(request,
+                             aws_upload_role=None, aws_external_id=None,
+                             aws_region=None, at_time=None):
     """
     Create temporary security credentials on AWS. This typically needed
     to allow uploads from the browser directly to S3.
@@ -52,12 +53,11 @@ def temporary_security_token(request, aws_upload_role=None, aws_region=None,
     # Lazy creation of temporary credentials.
     if not aws_upload_role:
         aws_upload_role = settings.AWS_UPLOAD_ROLE
-    if not aws_upload_role:
-        aws_upload_role = "arn:aws:iam::%s:role/%s" % (
-            settings.AWS_ACCOUNT_ID, bucket)
+    if not aws_external_id:
+        aws_external_id = settings.AWS_EXTERNAL_ID
     if not aws_region:
         aws_region = settings.AWS_REGION
-    conn = boto.sts.connect_to_region(aws_region)
+    conn = boto3.client('sts', region_name=aws_region)
     # AWS will fail if we don't sanetize and limit the length
     # of the session key.
     aws_session_key = request.session.session_key.replace('/', '')[:64]
@@ -70,7 +70,8 @@ def temporary_security_token(request, aws_upload_role=None, aws_region=None,
     duration_seconds = 3600
     access_key_expires_at = at_time + datetime.timedelta(
         seconds=duration_seconds)
-    assumed_role = conn.assume_role(aws_upload_role, aws_session_key)
+    assumed_role = conn.assume_role(aws_upload_role, aws_session_key,
+            ExternalId=aws_external_id)
     request.session['access_key'] = assumed_role.credentials.access_key
     request.session['secret_key'] = assumed_role.credentials.secret_key
     request.session['security_token'] \
@@ -141,12 +142,13 @@ def _signed_policy(region, service, requested_at,
     return context
 
 
-def aws_bucket_context(request, bucket,
-                       acls=None, aws_upload_role=None, aws_region=None):
+def aws_bucket_context(request, bucket, acls=None, aws_upload_role=None,
+                       aws_external_id=None, aws_region=None):
     """
     Context to use in templates to upload from the client brower
     to the bucket directly.
     """
+    #pylint:disable=too-many-arguments
     context = {}
     if request.user.is_authenticated():
         if not aws_region:
@@ -156,7 +158,8 @@ def aws_bucket_context(request, bucket,
 
         # Lazy creation of temporary credentials.
         temporary_security_token(request, aws_upload_role=aws_upload_role,
-            aws_region=aws_region, bucket=bucket, at_time=requested_at)
+            aws_external_id=aws_external_id, aws_region=aws_region,
+            at_time=requested_at)
 
         if acls is not None:
             for acl in acls:
@@ -185,4 +188,5 @@ class AWSContextMixin(object):
         return aws_bucket_context(self.request, kwargs.get('bucket', None),
             acls=kwargs.get('acls', None),
             aws_upload_role=kwargs.get('aws_upload_role', None),
+            aws_external_id=kwargs.get('aws_external_id', None),
             aws_region=kwargs.get('aws_region', None))
