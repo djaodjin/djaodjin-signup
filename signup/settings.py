@@ -50,7 +50,7 @@ _SETTINGS = {
     'AWS_REGION': None,
     'AWS_UPLOAD_ROLE': None,
     'AWS_ACCOUNT_ID': None,
-    'AWS_EXTERNAL_ID': None,
+    'AWS_EXTERNAL_ID': "",
     'DEFAULT_FROM_EMAIL': getattr(settings, 'DEFAULT_FROM_EMAIL'),
     'DISABLED_AUTHENTICATION': False,
     'DISABLED_REGISTRATION': False,
