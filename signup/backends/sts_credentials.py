@@ -70,8 +70,9 @@ def temporary_security_token(request,
     duration_seconds = 3600
     access_key_expires_at = at_time + datetime.timedelta(
         seconds=duration_seconds)
-    assumed_role = conn.assume_role(aws_upload_role, aws_session_key,
-            ExternalId=aws_external_id)
+    assumed_role = conn.assume_role(
+        RoleArn=aws_upload_role, RoleSessionName=aws_session_key,
+        ExternalId=aws_external_id)
     request.session['access_key'] = assumed_role.credentials.access_key
     request.session['secret_key'] = assumed_role.credentials.secret_key
     request.session['security_token'] \
