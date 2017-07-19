@@ -55,6 +55,9 @@ def temporary_security_token(request,
         aws_upload_role = settings.AWS_UPLOAD_ROLE
     if not aws_external_id:
         aws_external_id = settings.AWS_EXTERNAL_ID
+    kwargs = {}
+    if aws_external_id:
+        kwargs = {"ExternalId": aws_external_id}
     if not aws_region:
         aws_region = settings.AWS_REGION
     conn = boto3.client('sts', region_name=aws_region)
@@ -70,9 +73,8 @@ def temporary_security_token(request,
     duration_seconds = 3600
     access_key_expires_at = at_time + datetime.timedelta(
         seconds=duration_seconds)
-    assumed_role = conn.assume_role(
-        RoleArn=aws_upload_role, RoleSessionName=aws_session_key,
-        ExternalId=aws_external_id)
+    assumed_role = conn.assume_role(RoleArn=aws_upload_role,
+        RoleSessionName=aws_session_key, **kwargs)
     request.session['access_key'] = assumed_role.credentials.access_key
     request.session['secret_key'] = assumed_role.credentials.secret_key
     request.session['security_token'] \
