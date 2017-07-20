@@ -114,7 +114,8 @@ def _signed_policy(region, service, requested_at,
         "expiration": (requested_at + datetime.timedelta(
             hours=24)).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
         "conditions": conditions}).encode("utf-8")
-    policy_base64 = base64.b64encode(policy).replace('\n', '')
+    policy_base64 = base64.b64encode(policy).decode(
+        "utf-8").replace('\n', '').encode("utf-8")
     date_key = hmac.new(("AWS4%s" % secret_key).encode("utf-8"),
         signature_date.encode("utf-8"),
         hashlib.sha256).digest()
