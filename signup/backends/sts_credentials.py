@@ -75,10 +75,11 @@ def temporary_security_token(request,
         seconds=duration_seconds)
     assumed_role = conn.assume_role(RoleArn=aws_upload_role,
         RoleSessionName=aws_session_key, **kwargs)
-    request.session['access_key'] = assumed_role.credentials.access_key
-    request.session['secret_key'] = assumed_role.credentials.secret_key
+    request.session['access_key'] = assumed_role['Credentials']['AccessKeyId']
+    request.session['secret_key'] \
+        = assumed_role['Credentials']['SecretAccessKey']
     request.session['security_token'] \
-        = assumed_role.credentials.session_token
+        = assumed_role['Credentials']['SessionToken']
     request.session['access_key_expires_at'] = access_key_expires_at.isoformat()
     LOGGER.info('AWS temporary credentials for %s to assume role %s: %s',
         request.user, aws_upload_role, request.session['access_key'],
