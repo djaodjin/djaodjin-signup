@@ -115,7 +115,7 @@ def _signed_policy(region, service, requested_at,
             hours=24)).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
         "conditions": conditions}).encode("utf-8")
     policy_base64 = base64.b64encode(policy).decode(
-        "utf-8").replace('\n', '').encode("utf-8")
+        "utf-8").replace('\n', '')
     date_key = hmac.new(("AWS4%s" % secret_key).encode("utf-8"),
         signature_date.encode("utf-8"),
         hashlib.sha256).digest()
@@ -129,7 +129,7 @@ def _signed_policy(region, service, requested_at,
         date_region_service_key, "aws4_request".encode("utf-8"),
         hashlib.sha256).digest()
     policy_signature = hmac.new(
-        signing_key, policy_base64,
+        signing_key, policy_base64.encode("utf-8"),
         hashlib.sha256).hexdigest()
     if acl is not None:
         acl_prefix = acl.replace('-', '_') + "_"
