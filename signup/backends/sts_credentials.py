@@ -110,6 +110,8 @@ def _signed_policy(region, service, requested_at,
     ]
     if acl is not None:
         conditions += [{"acl": acl}]
+    if acl is None or acl != 'public-read':
+        conditions += [{"x-amz-server-side-encryption": "AES256"}]
     policy = json.dumps({
         "expiration": (requested_at + datetime.timedelta(
             hours=24)).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
