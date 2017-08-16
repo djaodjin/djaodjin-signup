@@ -298,7 +298,8 @@ class ActivationBaseView(ContextMixin, View):
         if user:
             if has_invalid_password(user):
                 messages.info(self.request,
-                    _("Please set a password to protect your account."))
+                    _("You are about to activate your account. Please set"\
+                      " a password to secure it."))
                 url = reverse('registration_password_confirm', args=(
                     verification_key, self.token_generator.make_token(user)))
             else:
