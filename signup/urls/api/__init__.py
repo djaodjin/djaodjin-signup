@@ -22,19 +22,9 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from django.conf.urls import url
-
-from ..settings import USERNAME_PAT
-from ..views import (PasswordChangeView, SendActivationView,
-    UserProfileView, redirect_to_user_profile)
+from django.conf.urls import url, include
 
 urlpatterns = [
-    # These three URLs must be protected.
-    url(r'^(?P<user>%s)/activate/' % USERNAME_PAT,
-        SendActivationView.as_view(), name='users_activate'),
-    url(r'^(?P<user>%s)/password/' % USERNAME_PAT,
-        PasswordChangeView.as_view(), name='password_change'),
-    url(r'^(?P<user>%s)/' % USERNAME_PAT,
-        UserProfileView.as_view(), name='users_profile'),
-    url(r'^', redirect_to_user_profile, name='accounts_profile'),
+    url(r'^', include('signup.urls.api.auth')),
+    url(r'^', include('signup.urls.api.users')),
 ]

@@ -1,4 +1,4 @@
-# Copyright (c) 2017, Djaodjin Inc.
+# Copyright (c) 2018, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -130,5 +130,3 @@ def active_required(function=None,
     if function:
         return decorator(function)
     return decorator
-
-

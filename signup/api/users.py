@@ -1,4 +1,4 @@
-# Copyright (c) 2015, DjaoDjin inc.
+# Copyright (c) 2018, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,28 +22,38 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from django.core import validators
 from django.db.models import Q
 from django.http import Http404
-from django.utils.translation import ugettext_lazy as _
-from rest_framework import serializers
-from rest_framework.generics import ListAPIView
+from django.contrib.auth import update_session_auth_hash
+from rest_framework.generics import (ListAPIView, RetrieveUpdateAPIView,
+    UpdateAPIView)
 
-from signup.compat import User
+from ..compat import User
+from ..serializers import PasswordChangeSerializer, UserSerializer
 
 
-class UserSerializer(serializers.ModelSerializer):
-    #pylint: disable=no-init,old-style-class
+class PasswordChangeAPIView(UpdateAPIView):
 
-    # Only way I found out to remove the ``UniqueValidator``. We are not
-    # interested to create new instances here.
-    username = serializers.CharField(validators=[
-        validators.RegexValidator(r'^[\w.@+-]+$', _('Enter a valid username.'),
-            'invalid')])
+    lookup_field = 'username'
+    lookup_url_kwarg = 'user'
+    serializer_class = PasswordChangeSerializer
 
-    class Meta:
-        model = User
-        fields = ('username', 'email', 'first_name', 'last_name')
+    def perform_update(self, serializer):
+        password = serializer.validated_data['password']
+        serializer.instance.set_password(password)
+        serializer.save()
+        # Updating the password logs out all other sessions for the user
+        # except the current one if
+        # django.contrib.auth.middleware.SessionAuthenticationMiddleware
+        # is enabled.
+        update_session_auth_hash(self.request, serializer.instance)
+
+
+class UserProfileAPIView(RetrieveUpdateAPIView):
+
+    lookup_field = 'username'
+    lookup_url_kwarg = 'user'
+    serializer_class = UserSerializer
 
 
 class UserListAPIView(ListAPIView):

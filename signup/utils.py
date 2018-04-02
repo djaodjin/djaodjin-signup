@@ -1,4 +1,4 @@
-# Copyright (c) 2017, DjaoDjin inc.
+# Copyright (c) 2018, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -37,6 +37,36 @@ def datetime_or_now(dtime_at=None):
     if dtime_at.tzinfo is None:
         dtime_at = dtime_at.replace(tzinfo=utc)
     return dtime_at
+
+def as_timestamp(dtime_at=None):
+    if not dtime_at:
+        dtime_at = datetime_or_now()
+    return int((
+        dtime_at - datetime.datetime(1970, 1, 1, tzinfo=utc)).total_seconds())
+
+
+def full_name_natural_split(full_name):
+    """
+    This function splits a full name into a natural first name, last name
+    and middle initials.
+    """
+    parts = full_name.strip().split(' ')
+    first_name = ""
+    if parts:
+        first_name = parts.pop(0)
+    if first_name.lower() == "el" and parts:
+        first_name += " " + parts.pop(0)
+    last_name = ""
+    if parts:
+        last_name = parts.pop()
+    if (last_name.lower() == 'i' or last_name.lower() == 'ii'
+        or last_name.lower() == 'iii' and parts):
+        last_name = parts.pop() + " " + last_name
+    middle_initials = ""
+    for middle_name in parts:
+        if middle_name:
+            middle_initials += middle_name[0]
+    return first_name, middle_initials, last_name
 
 
 def has_invalid_password(user):

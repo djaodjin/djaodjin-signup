@@ -1,4 +1,4 @@
-# Copyright (c) 2015, DjaoDjin inc.
+# Copyright (c) 2018, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -43,4 +43,3 @@ class AWSTemporaryCredentialsMiddleware(object):
            before 'AWSTemporaryCredentialsMiddleware'."""
         )
         temporary_security_token(request)
-

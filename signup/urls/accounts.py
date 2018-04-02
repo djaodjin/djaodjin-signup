@@ -1,4 +1,4 @@
-# Copyright (c) 2016, Djaodjin Inc.
+# Copyright (c) 2018, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -51,4 +51,3 @@ urlpatterns = [
     url(r'^reset/(?P<uidb64>[0-9A-Za-z_\-]+)/(?P<token>[0-9A-Za-z]{1,13}-[0-9A-Za-z]{1,20})/$', #pylint: disable=line-too-long
         PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
 ]
-

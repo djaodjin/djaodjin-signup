@@ -1,4 +1,4 @@
-# Copyright (c) 2017, Djaodjin Inc.
+# Copyright (c) 2018, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -52,7 +52,7 @@ from .decorators import check_user_active, send_verification_email
 from .forms import (NameEmailForm, PasswordChangeForm, PasswordResetForm,
     UserForm)
 from .models import EmailContact
-from .utils import has_invalid_password
+from .utils import full_name_natural_split, has_invalid_password
 
 
 LOGGER = logging.getLogger(__name__)
@@ -221,13 +221,7 @@ class SignupBaseView(RedirectFormMixin, ProcessFormView):
             # If the form does not contain a first_name/last_name pair,
             # we assume a full_name was passed instead.
             full_name = cleaned_data['full_name']
-            name_parts = full_name.split(' ')
-            if len(name_parts) > 0:
-                first_name = name_parts[0]
-                last_name = ' '.join(name_parts[1:])
-            else:
-                first_name = full_name
-                last_name = ''
+            first_name, _, last_name = full_name_natural_split(full_name)
         return first_name, last_name
 
     def dispatch(self, request, *args, **kwargs):
@@ -292,6 +286,7 @@ class ActivationBaseView(ContextMixin, View):
     key_url_kwarg = 'verification_key'
 
     def get(self, request, *args, **kwargs):
+        #pylint:disable=unused-argument
         verification_key = self.kwargs.get(self.key_url_kwarg)
         #pylint: disable=maybe-no-member
         user = EmailContact.objects.find_user(verification_key)
@@ -361,7 +356,7 @@ class SignoutBaseView(RedirectFormMixin, View):
     Log out the authenticated user.
     """
 
-    def get(self, request, *args, **kwargs):
+    def get(self, request, *args, **kwargs): #pylint:disable=unused-argument
         LOGGER.info("%s signed out.", self.request.user,
             extra={'event': 'logout', 'request': request})
         auth_logout(request)

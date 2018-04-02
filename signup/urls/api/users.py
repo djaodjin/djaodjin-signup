@@ -1,4 +1,4 @@
-# Copyright (c) 2016, Djaodjin Inc.
+# Copyright (c) 2018, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -24,9 +24,14 @@
 
 from django.conf.urls import url
 
-from signup.api import UserListAPIView
+from ...settings import USERNAME_PAT
+from ...api.users import (PasswordChangeAPIView, UserProfileAPIView,
+    UserListAPIView)
 
 urlpatterns = [
-    url(r'^users/?',
-        UserListAPIView.as_view(), name='saas_api_user_list'),
+    url(r'^users/(?P<user>%s)/password/' % USERNAME_PAT,
+        PasswordChangeAPIView.as_view(), name='api_user_password_change'),
+    url(r'^users/(?P<user>%s)/' % USERNAME_PAT,
+        UserProfileAPIView.as_view(), name='api_user_profile'),
+    url(r'^users/?', UserListAPIView.as_view(), name='saas_api_user_list'),
 ]

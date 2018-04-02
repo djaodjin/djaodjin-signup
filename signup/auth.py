@@ -49,4 +49,3 @@ def validate_redirect_url(next_url):
             return None
     return six.moves.urllib.parse.urlunparse(("", "", parts.path,
         parts.params, parts.query, parts.fragment))
-

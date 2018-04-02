@@ -24,17 +24,10 @@
 
 from django.conf.urls import url
 
-from ..settings import USERNAME_PAT
-from ..views import (PasswordChangeView, SendActivationView,
-    UserProfileView, redirect_to_user_profile)
+from ...api.auth import JWTLogin, JWTLogout, JWTRegister
 
 urlpatterns = [
-    # These three URLs must be protected.
-    url(r'^(?P<user>%s)/activate/' % USERNAME_PAT,
-        SendActivationView.as_view(), name='users_activate'),
-    url(r'^(?P<user>%s)/password/' % USERNAME_PAT,
-        PasswordChangeView.as_view(), name='password_change'),
-    url(r'^(?P<user>%s)/' % USERNAME_PAT,
-        UserProfileView.as_view(), name='users_profile'),
-    url(r'^', redirect_to_user_profile, name='accounts_profile'),
+    url(r'^login/', JWTLogin.as_view()),
+    url(r'^logout/', JWTLogout.as_view()),
+    url(r'^register/', JWTRegister.as_view()),
 ]

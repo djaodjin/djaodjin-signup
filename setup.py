@@ -1,4 +1,4 @@
-# Copyright (c) 2014, Djaodjin Inc.
+# Copyright (c) 2018, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -31,8 +31,10 @@ setup(
     author='The DjaoDjin Team',
     author_email='support@djaodjin.com',
     packages=['signup',
+              'signup.api',
               'signup.backends',
               'signup.urls',
+              'signup.urls.api',
               ],
     package_data={'signup': ['templates/accounts/*.html',
                              'templates/notification/*.eml',
