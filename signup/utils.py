@@ -27,6 +27,12 @@ import datetime
 from dateutil.parser import parse
 from django.utils import six
 from django.utils.timezone import utc
+from django.utils.translation import ugettext_lazy as _
+import jwt
+from rest_framework import serializers
+
+from . import settings
+from .compat import User
 
 
 def datetime_or_now(dtime_at=None):
@@ -78,3 +84,29 @@ def printable_name(user):
     if full_name:
         return full_name
     return user.username
+
+
+def verify_token(token):
+    try:
+        payload = jwt.decode(
+            token,
+            settings.JWT_SECRET_KEY,
+            True, # verify
+            options={'verify_exp': True},
+            algorithms=[settings.JWT_ALGORITHM])
+    except jwt.ExpiredSignature:
+        raise serializers.ValidationError(
+            _('Signature has expired.'))
+    except jwt.DecodeError:
+        raise serializers.ValidationError(
+            _('Error decoding signature.'))
+    username = payload.get('username', None)
+    if not username:
+        raise serializers.ValidationError(
+            _('Missing username in payload'))
+    # Make sure user exists
+    try:
+        user = User.objects.get(usermane=username)
+    except User.DoesNotExist:
+        raise serializers.ValidationError(_("User doesn't exist."))
+    return user

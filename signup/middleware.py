@@ -25,8 +25,14 @@
 """
 Middleware to create AWS temporary credentials
 """
+from django.contrib.auth.middleware import (
+    AuthenticationMiddleware as BaseAuthenticationMiddleware)
+from django.utils.encoding import smart_text
+from rest_framework.authentication import get_authorization_header
+from rest_framework.exceptions import ValidationError
 
-from signup.backends.sts_credentials import temporary_security_token
+from .backends.sts_credentials import temporary_security_token
+from .utils import verify_token
 
 
 class AWSTemporaryCredentialsMiddleware(object):
@@ -43,3 +49,27 @@ class AWSTemporaryCredentialsMiddleware(object):
            before 'AWSTemporaryCredentialsMiddleware'."""
         )
         temporary_security_token(request)
+
+
+class AuthenticationMiddleware(BaseAuthenticationMiddleware):
+
+    def process_request(self, request):
+        super(AuthenticationMiddleware, self).process_request(request)
+        if not request.user.is_authenticated():
+            auth = get_authorization_header(request).split()
+            auth_header_prefix = 'JWT'.lower()
+
+            if not auth:
+                return None
+            if smart_text(auth[0].lower()) != auth_header_prefix:
+                return None
+            if len(auth) == 1:
+                raise ValidationError("No credentials in authorization header")
+            elif len(auth) > 2:
+                raise ValidationError("Credentials in authorization header"\
+                    " should not contain space.")
+
+            token = auth[1]
+            user = verify_token(token)
+            if user:
+                request.user = user

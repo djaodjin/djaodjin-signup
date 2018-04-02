@@ -25,15 +25,11 @@
 import logging
 
 from django.core.exceptions import PermissionDenied
-from django.utils.translation import ugettext_lazy as _
-import jwt
-from rest_framework import serializers
 from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
 
-from .. import settings
-from ..compat import User
 from ..serializers import TokenSerializer
+from ..utils import verify_token as verify_token_base
 
 
 LOGGER = logging.getLogger(__name__)
@@ -45,29 +41,7 @@ class JWTVerify(GenericAPIView):
 
     @staticmethod
     def verify_token(token):
-        try:
-            payload = jwt.decode(
-                token,
-                settings.JWT_SECRET_KEY,
-                True, # verify
-                options={'verify_exp': True},
-                algorithms=[settings.JWT_ALGORITHM])
-        except jwt.ExpiredSignature:
-            raise serializers.ValidationError(
-                _('Signature has expired.'))
-        except jwt.DecodeError:
-            raise serializers.ValidationError(
-                _('Error decoding signature.'))
-        username = payload.get('username', None)
-        if not username:
-            raise serializers.ValidationError(
-                _('Missing username in payload'))
-        # Make sure user exists
-        try:
-            user = User.objects.get(usermane=username)
-        except User.DoesNotExist:
-            raise serializers.ValidationError(_("User doesn't exist."))
-        return user
+        return verify_token_base(token)
 
     def post(self, request, *args, **kwargs): #pylint:disable=unused-argument
         serializer = self.get_serializer(data=request.data)
