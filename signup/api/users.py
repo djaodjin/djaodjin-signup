@@ -33,6 +33,18 @@ from ..serializers import PasswordChangeSerializer, UserSerializer
 
 
 class PasswordChangeAPIView(UpdateAPIView):
+    """
+    Changes the password for a user.
+
+    **Example request**:
+
+    .. sourcecode:: http
+
+        POST /api/users/{user}/password/
+        {
+          "password": "yoyo"
+        }
+    """
 
     lookup_field = 'username'
     lookup_url_kwarg = 'user'
@@ -50,6 +62,23 @@ class PasswordChangeAPIView(UpdateAPIView):
 
 
 class UserProfileAPIView(RetrieveUpdateAPIView):
+    """
+    Retrieves and update the profile information of a user.
+
+    **Example request**:
+
+    .. sourcecode:: http
+
+        GET /api/users/{user}
+
+    Response:
+        {
+         "username": "donny",
+         "email": "donny.smith@example.com"
+         "first_name": "Donny",
+         "last_name": "Smith"
+        }
+    """
 
     lookup_field = 'username'
     lookup_url_kwarg = 'user'

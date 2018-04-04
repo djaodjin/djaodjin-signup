@@ -25,18 +25,37 @@
 import logging
 
 from django.core.exceptions import PermissionDenied
-from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
 
 from ..serializers import TokenSerializer
 from ..utils import verify_token as verify_token_base
+from .auth import JWTBase
 
 
 LOGGER = logging.getLogger(__name__)
 
 
-class JWTVerify(GenericAPIView):
+class JWTVerify(JWTBase):
+    """
+    Verifies a JSON Web Token.
 
+    **Example request**:
+
+    .. sourcecode:: http
+
+        POST /api/tokens/verify/
+        {
+            "token": "34rotlgqpoxzmw435Alr...",
+        }
+
+    **Example response**:
+
+    .. sourcecode:: http
+
+        {
+            "token": "34rotlgqpoxzmw435Alr...",
+        }
+    """
     serializer_class = TokenSerializer
 
     @staticmethod
@@ -53,7 +72,26 @@ class JWTVerify(GenericAPIView):
 
 
 class JWTRefresh(JWTVerify):
+    """
+    Creates a new JSON Web Token that expires further in the future.
 
+    **Example request**:
+
+    .. sourcecode:: http
+
+        POST /api/tokens/refresh/
+        {
+            "token": "34rotlgqpoxzmw435Alr...",
+        }
+
+    **Example response**:
+
+    .. sourcecode:: http
+
+        {
+            "token": "tokdwwoaQ135Alr...",
+        }
+    """
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():

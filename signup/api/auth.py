@@ -39,9 +39,9 @@ from .. import settings
 from ..compat import User
 from ..decorators import check_user_active
 from ..serializers import (CredentialsSerializer, CreateUserSerializer,
-    UserSerializer)
-from ..utils import as_timestamp, datetime_or_now
-from .tokens import JWTVerify
+    TokenSerializer, UserSerializer)
+from ..utils import (as_timestamp, datetime_or_now,
+    verify_token as verify_token_base)
 
 
 LOGGER = logging.getLogger(__name__)
@@ -64,9 +64,26 @@ class JWTBase(GenericAPIView):
 
 class JWTLogin(JWTBase):
     """
-    API View that receives a POST with a user's username and password.
+    Returns a JSON Web Token that can be used in requests that require
+    authentication.
 
-    Returns a JSON Web Token that can be used for authenticated requests.
+    **Example request**:
+
+    .. sourcecode:: http
+
+        POST /api/login/
+        {
+          "username": "donny",
+          "password": "yoyo"
+        }
+
+    **Example response**:
+
+    .. sourcecode:: http
+
+        {
+            "token": "34rotlgqpoxzmw435Alr...",
+        }
     """
     serializer_class = CredentialsSerializer
 
@@ -76,16 +93,37 @@ class JWTLogin(JWTBase):
             username = serializer.validated_data['username']
             password = serializer.validated_data['password']
             user = authenticate(username=username, password=password)
-            auth_login(request, user)
-            return self.create_token(user)
+            if user:
+                auth_login(request, user)
+                return self.create_token(user)
         raise PermissionDenied()
 
 
-class JWTRegister(GenericAPIView):
+class JWTRegister(JWTBase):
     """
-    API View that receives a POST with a user's username and password.
+    Creates a new user and returns a JSON Web Token that can be used
+    in requests that require authentication.
 
-    Returns a JSON Web Token that can be used for authenticated requests.
+    **Example request**:
+
+    .. sourcecode:: http
+
+        POST /api/register/
+        {
+          "username": "donny",
+          "password": "yoyo",
+          "email": "donny.smith@example.com",
+          "first_name": "Donny",
+          "last_name": "Smith"
+        }
+
+    **Example response**:
+
+    .. sourcecode:: http
+
+        {
+            "token": "34rotlgqpoxzmw435Alr...",
+        }
     """
     serializer_class = CreateUserSerializer
 
@@ -131,9 +169,32 @@ class JWTRegister(GenericAPIView):
         raise PermissionDenied()
 
 
-class JWTLogout(JWTVerify):
+class JWTLogout(JWTBase):
+    """
+    Removes all cookies associated with the session
+    and returns a new expired token.
 
-    def post(self, request, *args, **kwargs):
+    **Example request**:
+
+    .. sourcecode:: http
+
+        POST /api/login/
+        Authorization: JWT 34rotlgqpoxzmw435Alr
+
+    **Example response**:
+
+    .. sourcecode:: http
+        {
+          "token": 670yoaq34rotlgqpoxzmw435Alr...",
+        }
+    """
+    serializer_class = TokenSerializer
+
+    @staticmethod
+    def verify_token(token):
+        return verify_token_base(token)
+
+    def post(self, request, *args, **kwargs):#pylint:disable=unused-argument
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
             token = serializer.validated_data['token']
@@ -146,3 +207,4 @@ class JWTLogout(JWTVerify):
                 for cookie in settings.LOGOUT_CLEAR_COOKIES:
                     response.delete_cookie(cookie)
             return response
+        return Response({})
