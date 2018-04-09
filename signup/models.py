@@ -182,7 +182,8 @@ class Contact(models.Model):
     email = models.EmailField(_('email address'), blank=True)
     full_name = models.CharField(_('Full name'), max_length=60, blank=True)
     nick_name = models.CharField(_('Nick name'), max_length=60, blank=True)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, null=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL,
+        null=True, on_delete=models.CASCADE)
     verification_key = models.CharField(
         _('email verification key'), max_length=40)
     extra = settings.get_extra_field_class()(null=True)
@@ -236,11 +237,13 @@ class Activity(models.Model):
     Activity associated to a contact.
     """
     created_at = models.DateTimeField(auto_now_add=True)
-    created_by = models.ForeignKey(settings.AUTH_USER_MODEL)
-    contact = models.ForeignKey(Contact)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL,
+        null=True, on_delete=models.SET_NULL)
+    contact = models.ForeignKey(Contact, on_delete=models.CASCADE)
     text = models.TextField(blank=True)
     account = models.ForeignKey(
-        settings.ACCOUNT_MODEL, related_name='activities', null=True)
+        settings.ACCOUNT_MODEL, null=True, on_delete=models.CASCADE,
+        related_name='activities')
     extra = settings.get_extra_field_class()(null=True)
 
     def __str__(self):
