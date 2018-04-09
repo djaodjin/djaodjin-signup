@@ -9,26 +9,58 @@ https://docs.djangoproject.com/en/1.6/ref/settings/
 """
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
-import os
+import os, sys
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+
+def load_config(confpath):
+    '''
+    Given a path to a file, parse its lines in ini-like format, and then
+    set them in the current namespace.
+    '''
+    # todo: consider using something like ConfigObj for this:
+    # http://www.voidspace.org.uk/python/configobj.html
+    import re
+    if os.path.isfile(confpath):
+        sys.stderr.write('config loaded from %s\n' % confpath)
+        with open(confpath) as conffile:
+            line = conffile.readline()
+            while line != '':
+                if not line.startswith('#'):
+                    look = re.match(r'(\w+)\s*=\s*(.*)', line)
+                    if look:
+                        value = look.group(2) \
+                            % {'LOCALSTATEDIR': BASE_DIR + '/var'}
+                        try:
+                            # Once Django 1.5 introduced ALLOWED_HOSTS (a tuple
+                            # definitely in the site.conf set), we had no choice
+                            # other than using eval. The {} are here to restrict
+                            # the globals and locals context eval has access to.
+                            # pylint: disable=eval-used
+                            setattr(sys.modules[__name__],
+                                    look.group(1).upper(), eval(value, {}, {}))
+                        except StandardError:
+                            raise
+                line = conffile.readline()
+    else:
+        sys.stderr.write('warning: config file %s does not exist.\n' % confpath)
+
+load_config(os.path.join(BASE_DIR, 'credentials'))
+
+if not hasattr(sys.modules[__name__], "SECRET_KEY"):
+    from random import choice
+    SECRET_KEY = "".join([choice(
+        "abcdefghijklmnopqrstuvwxyz0123456789!@#$%^*-_=+") for i in range(50)])
+
+# SECURITY WARNING: don't run with debug turned on in production!
+DEBUG = True
+TEMPLATE_DEBUG = True
+
+ALLOWED_HOSTS = []
 
 AUTHENTICATION_BACKENDS = (
     'signup.backends.auth.UsernameOrEmailModelBackend',
     'django.contrib.auth.backends.ModelBackend'
 )
-
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/1.6/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = '9j24plovjvx%-_bvfgd*))umqd_olg!=4#a4i9_rf*)fl9b4b_'
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
-TEMPLATE_DEBUG = True
-
-ALLOWED_HOSTS = []
 
 # Database
 # https://docs.djangoproject.com/en/1.6/ref/settings/#databases
@@ -36,7 +68,7 @@ ALLOWED_HOSTS = []
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        'NAME': os.path.join(BASE_DIR, 'db.sqlite'),
     }
 }
 
@@ -101,3 +133,7 @@ INSTALLED_APPS = (
     'signup',
     'testsite'
 )
+
+REST_FRAMEWORK = {
+    'PAGE_SIZE': 25,
+}

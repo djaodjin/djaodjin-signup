@@ -1,4 +1,4 @@
-# Copyright (c) 2016, Djaodjin Inc.
+# Copyright (c) 2018, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -40,6 +40,7 @@ from django.conf.urls import include, url
 
 urlpatterns = [
     url(r'^api/', include('signup.urls.api')),
+    url(r'^contacts/', include('signup.urls.contacts')),
     url(r'^users/', include('signup.urls.users')),
     url(r'^', include('signup.urls.accounts')),
 ]

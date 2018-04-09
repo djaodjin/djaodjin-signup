@@ -22,10 +22,41 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from django.conf.urls import url, include
+"""Views about contact activities"""
 
-urlpatterns = [
-    url(r'^', include('signup.urls.api.auth')),
-    url(r'^', include('signup.urls.api.contacts')),
-    url(r'^', include('signup.urls.api.users')),
-]
+from django.core.urlresolvers import reverse
+from django.views.generic import DetailView, TemplateView
+
+from ..mixins import ContactMixin, UrlsMixin
+from ..models import Contact
+
+
+class ContactDetailView(ContactMixin, DetailView):
+
+    template_name = 'contacts/contact.html'
+    slug_field = 'slug'
+    slug_url_kwarg = 'contact'
+    model = Contact
+
+    def get_context_data(self, **kwargs):
+        context = super(ContactDetailView, self).get_context_data(**kwargs)
+        context.update({'contact': self.object})
+        self.update_context_urls(context, {
+            'api_activities': reverse('api_activities', args=(self.contact,)),
+            'api_contact': reverse('api_contact', args=(self.contact,)),
+            'api_contacts': reverse('api_contacts')
+        })
+        return context
+
+
+class ContactListView(UrlsMixin, TemplateView):
+
+    template_name = 'contacts/index.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(ContactListView, self).get_context_data(**kwargs)
+        self.update_context_urls(context, {
+            'api_contacts': reverse('api_contacts'),
+            'contacts': reverse('contacts')
+        })
+        return context

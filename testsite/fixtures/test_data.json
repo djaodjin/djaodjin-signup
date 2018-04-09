@@ -1,0 +1,16 @@
+[
+{
+    "fields": {
+      "date_joined": "2012-09-14T14:16:55-09:00",
+      "email": "donny@localhost.localdomain",
+      "first_name": "Donny",
+      "is_active": true,
+      "is_staff": true,
+      "is_superuser": true,
+      "last_login": "2012-09-14T14:57:48-09:00",
+      "last_name": "Manager",
+      "password": "pbkdf2_sha256$10000$z0MBiWn0Rlem$iZdC6uHomlE07qGK/TqfcfxNzKJtFp03c0JILF1frRc=",
+      "username": "donny"
+    },
+    "model": "auth.User", "pk": 1
+}]

@@ -22,10 +22,40 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from django.conf.urls import url, include
+from django.utils import six
+from rest_framework.generics import get_object_or_404
 
-urlpatterns = [
-    url(r'^', include('signup.urls.api.auth')),
-    url(r'^', include('signup.urls.api.contacts')),
-    url(r'^', include('signup.urls.api.users')),
-]
+from .models import Contact
+
+
+class UrlsMixin(object):
+
+    @staticmethod
+    def update_context_urls(context, urls):
+        if 'urls' in context:
+            for key, val in six.iteritems(urls):
+                if key in context['urls']:
+                    if isinstance(val, dict):
+                        context['urls'][key].update(val)
+                    else:
+                        # Because organization_create url is added in this mixin
+                        # and in ``OrganizationRedirectView``.
+                        context['urls'][key] = val
+                else:
+                    context['urls'].update({key: val})
+        else:
+            context.update({'urls': urls})
+        return context
+
+
+class ContactMixin(UrlsMixin):
+
+    lookup_field = 'slug'
+    lookup_url_kwarg = 'contact'
+
+    @property
+    def contact(self):
+        if not hasattr(self, '_contact'):
+            kwargs = {self.lookup_field: self.kwargs.get(self.lookup_url_kwarg)}
+            self._contact = get_object_or_404(Contact.objects.all(), **kwargs)
+        return self._contact

@@ -36,7 +36,7 @@ from django.utils import six
 from django.utils.translation import ugettext_lazy as _
 
 from . import settings, signals
-from .models import EmailContact
+from .models import Contact
 from .utils import has_invalid_password
 
 
@@ -90,7 +90,7 @@ def check_user_active(request, user,
     """
     if has_invalid_password(user):
         # Let's send e-mail again.
-        first_unverified_email = EmailContact.objects.unverified_for_user(
+        first_unverified_email = Contact.objects.unverified_for_user(
             user).first()
         if first_unverified_email is not None:
             if not next_url:

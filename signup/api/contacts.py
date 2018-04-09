@@ -22,10 +22,33 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from django.conf.urls import url, include
+"""API about contact activities"""
 
-urlpatterns = [
-    url(r'^', include('signup.urls.api.auth')),
-    url(r'^', include('signup.urls.api.contacts')),
-    url(r'^', include('signup.urls.api.users')),
-]
+from rest_framework.generics import ListCreateAPIView, RetrieveUpdateAPIView
+
+from ..mixins import ContactMixin
+from ..models import Activity, Contact
+from ..serializers import ActivitySerializer, ContactSerializer
+
+
+class ActivityListAPIView(ContactMixin, ListCreateAPIView):
+
+    serializer_class = ActivitySerializer
+
+    def get_queryset(self):
+        return Activity.objects.filter(contact=self.contact)
+
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user, contact=self.contact)
+
+
+class ContactDetailAPIView(ContactMixin, RetrieveUpdateAPIView):
+
+    serializer_class = ContactSerializer
+    queryset = Contact.objects.all()
+
+
+class ContactListAPIView(ListCreateAPIView):
+
+    serializer_class = ContactSerializer
+    queryset = Contact.objects.all()

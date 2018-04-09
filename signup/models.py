@@ -1,4 +1,4 @@
-# Copyright (c) 2017, Djaodjin Inc.
+# Copyright (c) 2018, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -31,6 +31,7 @@ import datetime, hashlib, logging, random, re
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import UserManager
 from django.db import models, transaction, IntegrityError
+from django.template.defaultfilters import slugify
 from django.utils.decorators import method_decorator
 from django.utils.encoding import python_2_unicode_compatible
 from django.utils.timezone import now as datetime_now
@@ -94,7 +95,7 @@ class ActivatedUserManager(UserManager):
                 username, email=email, password=password, **kwargs)
         # Force is_active to True and create an email verification key
         # (see above definition of active user).
-        EmailContact.objects.get_or_create_token(user)
+        Contact.objects.get_or_create_token(user)
         user.is_active = True
         user.save()
         LOGGER.info("'%s %s <%s>' registered with username '%s'",
@@ -104,7 +105,7 @@ class ActivatedUserManager(UserManager):
         return user
 
 
-class EmailContactManager(models.Manager):
+class ContactManager(models.Manager):
 
     def _get_token(self, verification_key):
         return self.get(verification_key=verification_key)
@@ -127,7 +128,7 @@ class EmailContactManager(models.Manager):
                     verification_key=verification_key)
                 if not token.verification_key_expired():
                     return token.user
-            except EmailContact.DoesNotExist:
+            except Contact.DoesNotExist:
                 pass # We return None instead here.
         return None
 
@@ -144,45 +145,82 @@ class EmailContactManager(models.Manager):
                     extra={'event': 'activate', 'username': token.user.username,
                         'email_verification_key': token.verification_key})
                 with transaction.atomic():
-                    token.verification_key = EmailContact.VERIFIED
+                    token.verification_key = Contact.VERIFIED
                     token.user.is_active = True
                     token.user.save()
                     token.save()
                 return token.user
-        except EmailContact.DoesNotExist:
+        except Contact.DoesNotExist:
             pass # We return None instead here.
         return None
 
     def unverified_for_user(self, user):
         return self.filter(user=user).exclude(
-            verification_key=EmailContact.VERIFIED)
+            verification_key=Contact.VERIFIED)
 
     def is_reachable(self, user):
         """
         Returns True if the user is reachable by email.
         """
         return self.filter(user=user,
-            verification_key=EmailContact.VERIFIED).exists()
+            verification_key=Contact.VERIFIED).exists()
 
 
 @python_2_unicode_compatible
-class EmailContact(models.Model):
+class Contact(models.Model):
     """
     Used in workflow to verify the email address of a ``User``.
     """
 
     VERIFIED = "VERIFIED"
 
-    objects = EmailContactManager()
+    objects = ContactManager()
 
+    slug = models.SlugField(unique=True,
+        help_text=_("Unique identifier shown in the URL bar."))
     created_at = models.DateTimeField(auto_now_add=True)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL)
+    email = models.EmailField(_('email address'), blank=True)
+    full_name = models.CharField(_('Full name'), max_length=60, blank=True)
+    nick_name = models.CharField(_('Nick name'), max_length=60, blank=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, null=True)
     verification_key = models.CharField(
         _('email verification key'), max_length=40)
     extra = settings.get_extra_field_class()(null=True)
 
     def __str__(self):
-        return u"%s-%s" % (self.user.username, self.verification_key)
+        return self.slug
+
+    def save(self, force_insert=False, force_update=False,
+             using=None, update_fields=None):
+        if self.slug: # serializer will set created slug to '' instead of None.
+            return super(Contact, self).save(
+                force_insert=force_insert, force_update=force_update,
+                using=using, update_fields=update_fields)
+        max_length = self._meta.get_field('slug').max_length
+        slug_base = slugify(self.email.split('@')[0])
+        if not slug_base:
+            # title might be empty
+            "".join([random.choice("abcdef0123456789") for _ in range(7)])
+        elif len(slug_base) > max_length:
+            slug_base = slug_base[:max_length]
+        self.slug = slug_base
+        for _ in range(1, 10):
+            try:
+                with transaction.atomic():
+                    return super(Contact, self).save(
+                        force_insert=force_insert, force_update=force_update,
+                        using=using, update_fields=update_fields)
+            except IntegrityError as err:
+                if 'uniq' not in str(err).lower():
+                    raise
+                suffix = '-%s' % "".join([random.choice("abcdef0123456789")
+                    for _ in range(7)])
+                if len(slug_base) + len(suffix) > max_length:
+                    self.slug = slug_base[:(max_length - len(suffix))] + suffix
+                else:
+                    self.slug = slug_base + suffix
+        raise ValidationError({'detail':
+            "Unable to create a unique URL slug from email '%s'" % self.email})
 
     def verification_key_expired(self):
         expiration_date = datetime.timedelta(days=settings.KEY_EXPIRATION)
@@ -190,3 +228,21 @@ class EmailContact(models.Model):
         return self.verification_key == self.VERIFIED or \
                (start_at + expiration_date <= datetime_now())
     verification_key_expired.boolean = True
+
+
+@python_2_unicode_compatible
+class Activity(models.Model):
+    """
+    Activity associated to a contact.
+    """
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL)
+    contact = models.ForeignKey(Contact)
+    text = models.TextField(blank=True)
+    account = models.ForeignKey(
+        settings.ACCOUNT_MODEL, related_name='activities', null=True)
+    extra = settings.get_extra_field_class()(null=True)
+
+    def __str__(self):
+        return u"%s-%s" % (self.created_at, self.created_by)
+

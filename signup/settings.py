@@ -45,6 +45,7 @@ REQUIRE_RECAPTCHA
 from django.conf import settings
 
 _SETTINGS = {
+    'ACCOUNT_MODEL': getattr(settings, 'AUTH_USER_MODEL', None),
     'ACCOUNT_ACTIVATION_DAYS': getattr(settings, 'ACCOUNT_ACTIVATION_DAYS', 2),
     'AUTH_USER_MODEL': getattr(settings, 'AUTH_USER_MODEL'),
     'AWS_REGION': None,
@@ -62,6 +63,7 @@ _SETTINGS = {
 }
 _SETTINGS.update(getattr(settings, 'SIGNUP', {}))
 
+ACCOUNT_MODEL = _SETTINGS.get('ACCOUNT_MODEL')
 AUTH_USER_MODEL = _SETTINGS.get('AUTH_USER_MODEL')
 AWS_REGION = _SETTINGS.get('AWS_REGION')
 AWS_UPLOAD_ROLE = _SETTINGS.get('AWS_UPLOAD_ROLE')

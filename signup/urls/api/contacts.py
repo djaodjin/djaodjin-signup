@@ -22,10 +22,16 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from django.conf.urls import url, include
+from django.conf.urls import url
+
+from ... import settings
+from ...api.contacts import (ActivityListAPIView, ContactDetailAPIView,
+    ContactListAPIView)
 
 urlpatterns = [
-    url(r'^', include('signup.urls.api.auth')),
-    url(r'^', include('signup.urls.api.contacts')),
-    url(r'^', include('signup.urls.api.users')),
+    url(r'^contacts/(?P<contact>%s)/activities/' % settings.USERNAME_PAT,
+        ActivityListAPIView.as_view(), name='api_activities'),
+    url(r'^contacts/(?P<contact>%s)/?' % settings.USERNAME_PAT,
+        ContactDetailAPIView.as_view(), name='api_contact'),
+    url(r'^contacts/?', ContactListAPIView.as_view(), name='api_contacts'),
 ]

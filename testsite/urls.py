@@ -1,4 +1,4 @@
-# Copyright (c) 2014, Djaodjin Inc.
+# Copyright (c) 2018, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -27,6 +27,12 @@ from django.core.urlresolvers import reverse_lazy
 from urldecorators import include, url
 
 urlpatterns = [
+    url(r'^api/',
+        include('signup.urls.api'),
+        decorators=['django.contrib.auth.decorators.login_required']),
+    url(r'^contacts/',
+        include('signup.urls.contacts'),
+        decorators=['django.contrib.auth.decorators.login_required']),
     url(r'^users/',
         include('signup.urls.users'),
         decorators=['django.contrib.auth.decorators.login_required']),

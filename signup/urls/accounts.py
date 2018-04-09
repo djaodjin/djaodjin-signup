@@ -24,10 +24,10 @@
 
 from django.conf.urls import url
 
-from signup.views import (ActivationView, PasswordResetView,
+from ..views.users import (ActivationView, PasswordResetView,
     PasswordResetConfirmView, SigninView, SignoutView, SignupView,
     RegistrationPasswordConfirmView)
-from signup import settings
+from .. import settings
 
 urlpatterns = [
     # When the key and/or token are wrong we don't want to give any clue

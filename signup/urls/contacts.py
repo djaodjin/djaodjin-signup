@@ -22,10 +22,14 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from django.conf.urls import url, include
+from django.conf.urls import url
+
+from .. import settings
+from ..views.contacts import ContactListView, ContactDetailView
 
 urlpatterns = [
-    url(r'^', include('signup.urls.api.auth')),
-    url(r'^', include('signup.urls.api.contacts')),
-    url(r'^', include('signup.urls.api.users')),
+    # These three URLs must be protected.
+    url(r'^(?P<contact>%s)/' % settings.USERNAME_PAT,
+        ContactDetailView.as_view(), name='contact'),
+    url(r'^', ContactListView.as_view(), name='contacts'),
 ]

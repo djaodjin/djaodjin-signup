@@ -27,6 +27,31 @@ from django.utils.translation import ugettext_lazy as _
 from rest_framework import serializers
 
 from .compat import User
+from .models import Activity, Contact
+
+
+class ActivitySerializer(serializers.ModelSerializer):
+
+    created_by = serializers.SlugRelatedField(
+        read_only=True, slug_field='username')
+
+    class Meta:
+        #pylint:disable=old-style-class,no-init
+        model = Activity
+        fields = ('created_at', 'created_by', 'text', 'account')
+        read_only_fields = ('created_at', 'created_by')
+
+
+class ContactSerializer(serializers.ModelSerializer):
+
+    activities = ActivitySerializer(many=True, read_only=True)
+
+    class Meta:
+        #pylint:disable=old-style-class,no-init
+        model = Contact
+        fields = ('slug', 'email', 'full_name', 'nick_name',
+            'created_at', 'activities')
+        read_only_fields = ('slug', 'created_at', 'activities')
 
 
 class CredentialsSerializer(serializers.Serializer):
