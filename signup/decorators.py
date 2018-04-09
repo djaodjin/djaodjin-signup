@@ -30,12 +30,12 @@ from functools import wraps
 
 from django.contrib import messages
 from django.contrib.auth import REDIRECT_FIELD_NAME, logout as auth_logout
-from django.core.urlresolvers import reverse
 from django.utils.decorators import available_attrs
 from django.utils import six
 from django.utils.translation import ugettext_lazy as _
 
 from . import settings, signals
+from .compat import reverse
 from .models import Contact
 from .utils import has_invalid_password
 

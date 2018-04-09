@@ -24,9 +24,9 @@
 
 """Views about contact activities"""
 
-from django.core.urlresolvers import reverse
 from django.views.generic import DetailView, TemplateView
 
+from ..compat import reverse
 from ..mixins import ContactMixin, UrlsMixin
 from ..models import Contact
 

@@ -26,7 +26,6 @@
 
 import logging
 
-from django.core.urlresolvers import reverse
 from django.contrib import messages
 from django.contrib.auth import login as auth_login, logout as auth_logout
 from django.contrib.auth import REDIRECT_FIELD_NAME, authenticate
@@ -47,7 +46,7 @@ from django.views.generic.edit import FormMixin, ProcessFormView, UpdateView
 from .. import settings, signals
 from ..auth import validate_redirect
 from ..backends.auth import UsernameOrEmailAuthenticationForm
-from ..compat import User
+from ..compat import User, reverse
 from ..decorators import check_user_active, send_verification_email
 from ..forms import (NameEmailForm, PasswordChangeForm, PasswordResetForm,
     UserForm)

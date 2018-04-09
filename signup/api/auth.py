@@ -25,7 +25,6 @@
 import logging
 
 from django.core.exceptions import PermissionDenied
-from django.core.urlresolvers import reverse
 from django.contrib.auth import (authenticate, login as auth_login,
     logout as auth_logout)
 from django.utils.safestring import mark_safe
@@ -36,7 +35,7 @@ from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
 
 from .. import settings
-from ..compat import User
+from ..compat import User, reverse
 from ..decorators import check_user_active
 from ..serializers import (CredentialsSerializer, CreateUserSerializer,
     TokenSerializer, UserSerializer)
@@ -57,7 +56,7 @@ class JWTBase(GenericAPIView):
             exp = as_timestamp(expires_at)
         payload = UserSerializer().to_representation(user)
         payload.update({'exp': exp})
-        token = jwt.encode(payload, settings.JWT_PRIVATE_KEY,
+        token = jwt.encode(payload, settings.JWT_SECRET_KEY,
             settings.JWT_ALGORITHM).decode('utf-8')
         return Response({'token': token})
 

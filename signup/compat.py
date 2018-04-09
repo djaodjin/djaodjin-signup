@@ -1,4 +1,4 @@
-# Copyright (c) 2014, Djaodjin Inc.
+# Copyright (c) 2018, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,12 +22,22 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#pylint:disable=no-name-in-module,invalid-name,unused-import
+
 try:
     from django.contrib.auth import get_user_model
 except ImportError: # django < 1.5
-    from django.contrib.auth.models import User #pylint: disable=unused-import
+    from django.contrib.auth.models import User
 else:
-    User = get_user_model()                     #pylint: disable=invalid-name
+    User = get_user_model()
+
+try:
+    from django.urls import NoReverseMatch, reverse, reverse_lazy
+except ImportError: # <= Django 1.10, Python<3.6
+    from django.core.urlresolvers import NoReverseMatch, reverse, reverse_lazy
+except ModuleNotFoundError: #pylint:disable=undefined-variable
+    # <= Django 1.10, Python>=3.6
+    from django.core.urlresolvers import NoReverseMatch, reverse, reverse_lazy
 
 # We would use:
 #     from django.core.validators import slug_re
