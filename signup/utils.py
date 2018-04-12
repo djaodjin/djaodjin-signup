@@ -25,6 +25,8 @@
 import datetime
 
 from dateutil.parser import parse
+from django.apps import apps as django_apps
+from django.core.exceptions import ImproperlyConfigured
 from django.utils import six
 from django.utils.timezone import utc
 from django.utils.translation import ugettext_lazy as _
@@ -43,6 +45,7 @@ def datetime_or_now(dtime_at=None):
     if dtime_at.tzinfo is None:
         dtime_at = dtime_at.replace(tzinfo=utc)
     return dtime_at
+
 
 def as_timestamp(dtime_at=None):
     if not dtime_at:
@@ -73,6 +76,20 @@ def full_name_natural_split(full_name):
         if middle_name:
             middle_initials += middle_name[0]
     return first_name, middle_initials, last_name
+
+
+def get_account_model():
+    """
+    Returns the ``Account`` model that is active in this project.
+    """
+    try:
+        return django_apps.get_model(settings.ACCOUNT_MODEL)
+    except ValueError:
+        raise ImproperlyConfigured(
+            "ACCOUNT_MODEL must be of the form 'app_label.model_name'")
+    except LookupError:
+        raise ImproperlyConfigured("ACCOUNT_MODEL refers to model '%s'"\
+" that has not been installed" % settings.ACCOUNT_MODEL)
 
 
 def has_invalid_password(user):

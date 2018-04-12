@@ -23,15 +23,18 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from django.core import validators
+from django.contrib.auth import get_user_model
 from django.utils.translation import ugettext_lazy as _
 from rest_framework import serializers
 
-from .compat import User
 from .models import Activity, Contact
+from .utils import get_account_model
 
 
 class ActivitySerializer(serializers.ModelSerializer):
 
+    account = serializers.SlugRelatedField(
+        slug_field='slug', queryset=get_account_model().objects.all())
     created_by = serializers.SlugRelatedField(
         read_only=True, slug_field='username')
 
@@ -78,7 +81,7 @@ class CreateUserSerializer(serializers.ModelSerializer):
         style={'input_type': 'password'})
 
     class Meta:
-        model = User
+        model = get_user_model()
         fields = ('username', 'password', 'email', 'first_name', 'last_name')
 
 
@@ -117,5 +120,5 @@ class UserSerializer(serializers.ModelSerializer):
             'invalid')])
 
     class Meta:
-        model = User
+        model = get_user_model()
         fields = ('username', 'email', 'first_name', 'last_name')

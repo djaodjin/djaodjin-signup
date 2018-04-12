@@ -1,7 +1,7 @@
 /*=============================================================================
   App
   ============================================================================*/
-var signupApp = angular.module("signupApp", [
+var signupApp = angular.module("signupApp", ["ui.bootstrap",
     "ngRoute", "signupControllers"]);
 
 //=============================================================================
@@ -195,6 +195,17 @@ signupControllers.controller("contactCtrl",
             }
         );
     }
+
+    $scope.getCandidates = function(val) {
+        if( typeof settings.urls.api_candidates === "undefined" ) {
+            return [];
+        }
+        return $http.get(settings.urls.api_candidates, {
+            params: {q: val}
+        }).then(function(res){
+            return res.data.results;
+        });
+    };
 }]);
 
 
