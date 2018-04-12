@@ -106,7 +106,7 @@ def verify_token(token):
             _('Missing username in payload'))
     # Make sure user exists
     try:
-        user = User.objects.get(usermane=username)
+        user = User.objects.get(username=username)
     except User.DoesNotExist:
         raise serializers.ValidationError(_("User doesn't exist."))
     return user

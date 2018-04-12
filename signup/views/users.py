@@ -219,7 +219,8 @@ class SignupBaseView(RedirectFormMixin, ProcessFormView):
         if not first_name:
             # If the form does not contain a first_name/last_name pair,
             # we assume a full_name was passed instead.
-            full_name = cleaned_data['full_name']
+            full_name = cleaned_data.get(
+                'user_full_name', cleaned_data.get('full_name', None))
             first_name, _, last_name = full_name_natural_split(full_name)
         return first_name, last_name
 
