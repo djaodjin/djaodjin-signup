@@ -249,3 +249,15 @@ class Activity(models.Model):
     def __str__(self):
         return u"%s-%s" % (self.created_at, self.created_by)
 
+
+class Notification(models.Model):
+    """
+    Notification model, represent a single notification type,
+    has a M2M relation with users, which allows to store a user's
+    email notifications preferences
+    """
+    slug = models.SlugField(unique=True, help_text=_("Unique identifier."))
+    users = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='notifications')
+
+    def __str__(self):
+        return self.slug

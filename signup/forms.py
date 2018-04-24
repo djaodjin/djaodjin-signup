@@ -32,6 +32,7 @@ from django.utils.translation import ugettext_lazy as _
 
 from . import settings
 from .compat import User
+from .models import Notification
 
 #pylint: disable=old-style-class,no-init
 
@@ -87,3 +88,22 @@ class UserForm(forms.ModelForm):
     class Meta:
         model = User
         fields = ['username', 'email', 'first_name', 'last_name']
+
+
+class UserNotificationsForm(forms.ModelForm):
+    """
+    Form to update a ``User`` notification preferences.
+    """
+    submit_title = 'Save'
+
+    notifications = forms.ModelMultipleChoiceField(queryset=Notification.objects.all())
+
+    class Meta:
+        model = User
+        fields = []
+
+    def save(self, *args, **kwargs):
+        self.instance.notifications.clear()
+        for notification in self.cleaned_data.get('notifications'):
+            self.instance.notifications.add(notification)
+        return super(UserNotificationsForm, self).save(*args, **kwargs)

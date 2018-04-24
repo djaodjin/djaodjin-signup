@@ -49,7 +49,7 @@ from ..backends.auth import UsernameOrEmailAuthenticationForm
 from ..compat import User, reverse
 from ..decorators import check_user_active, send_verification_email
 from ..forms import (NameEmailForm, PasswordChangeForm, PasswordResetForm,
-    UserForm)
+    UserForm, UserNotificationsForm)
 from ..models import Contact
 from ..utils import full_name_natural_split, has_invalid_password
 
@@ -406,6 +406,22 @@ class UserProfileView(AuthTemplateResponseMixin, UpdateView):
     def get_success_url(self):
         messages.info(self.request, 'Profile Updated.')
         return reverse('users_profile', args=(self.object,))
+
+
+class UserNotificationsView(AuthTemplateResponseMixin, UpdateView):
+    """
+    A view where a user can configure their notification settings
+    """
+
+    model = User
+    form_class = UserNotificationsForm
+    slug_field = 'username'
+    slug_url_kwarg = 'user'
+    template_name = 'users/user_notifications.html'
+    success_url = '/'
+
+    def get_initial(self):
+        return {'notifications': self.request.user.notifications.all()}
 
 
 class PasswordChangeView(UserProfileView):
