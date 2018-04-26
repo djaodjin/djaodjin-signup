@@ -33,6 +33,7 @@ setup(
     packages=['signup',
               'signup.api',
               'signup.backends',
+              'signup.migrations',
               'signup.views',
               'signup.urls',
               'signup.urls.api',

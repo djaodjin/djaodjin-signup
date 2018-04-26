@@ -70,6 +70,9 @@ class AuthenticationMiddleware(BaseAuthenticationMiddleware):
                     " should not contain space.")
 
             token = auth[1]
-            user = verify_token(token)
-            if user:
-                request.user = user
+            try:
+                user = verify_token(token)
+                if user:
+                    request.user = user
+            except ValidationError:
+                pass
