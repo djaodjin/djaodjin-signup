@@ -95,8 +95,8 @@ class UserNotificationsForm(forms.ModelForm):
     Form to update a ``User`` notification preferences.
     """
     submit_title = 'Save'
-
-    notifications = forms.ModelMultipleChoiceField(queryset=Notification.objects.all())
+    notifications = forms.ModelMultipleChoiceField(
+        queryset=Notification.objects.all())
 
     class Meta:
         model = User

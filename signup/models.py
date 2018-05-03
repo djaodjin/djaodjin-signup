@@ -32,7 +32,6 @@ from django.core.exceptions import ValidationError
 from django.contrib.auth.models import UserManager
 from django.db import models, transaction, IntegrityError
 from django.template.defaultfilters import slugify
-from django.utils.decorators import method_decorator
 from django.utils.encoding import python_2_unicode_compatible
 from django.utils.timezone import now as datetime_now
 from django.utils.translation import ugettext_lazy as _
@@ -74,7 +73,6 @@ class ActivatedUserManager(UserManager):
                 trials = trials + 1
         raise err
 
-    @method_decorator(transaction.atomic)
     def create_user(self, username, email=None, password=None, **kwargs):
         """
         Create an inactive user with a default username.
@@ -87,21 +85,22 @@ class ActivatedUserManager(UserManager):
         login. Our definition of inactive is thus a user that has an invalid
         password.
         """
-        if not password and not username:
-            user = self.create_user_from_email(
-                email, password=password, **kwargs)
-        else:
-            user = super(ActivatedUserManager, self).create_user(
-                username, email=email, password=password, **kwargs)
-        # Force is_active to True and create an email verification key
-        # (see above definition of active user).
-        Contact.objects.get_or_create_token(user)
-        user.is_active = True
-        user.save()
-        LOGGER.info("'%s %s <%s>' registered with username '%s'",
-            user.first_name, user.last_name, user.email, user,
-            extra={'event': 'register', 'user': user})
-        signals.user_registered.send(sender=__name__, user=user)
+        with transaction.atomic():
+            if not password and not username:
+                user = self.create_user_from_email(
+                    email, password=password, **kwargs)
+            else:
+                user = super(ActivatedUserManager, self).create_user(
+                    username, email=email, password=password, **kwargs)
+            # Force is_active to True and create an email verification key
+            # (see above definition of active user).
+            Contact.objects.get_or_create_token(user)
+            user.is_active = True
+            user.save()
+            LOGGER.info("'%s %s <%s>' registered with username '%s'",
+                user.first_name, user.last_name, user.email, user,
+                extra={'event': 'register', 'user': user})
+            signals.user_registered.send(sender=__name__, user=user)
         return user
 
 
@@ -116,7 +115,12 @@ class ContactManager(models.Manager):
             salt = hashlib.sha1(random_key).hexdigest()[:5]
             verification_key = hashlib.sha1(
                 (salt+user.username).encode('utf-8')).hexdigest()
-        return self.get_or_create(user=user, verification_key=verification_key)
+        kwargs = {}
+        if hasattr(user, 'email'):
+            kwargs.update({'email': user.email})
+        return self.get_or_create(user=user, defaults={
+            'full_name': user.get_full_name(),
+            'verification_key': verification_key}, **kwargs)
 
     def find_user(self, verification_key):
         """
@@ -200,8 +204,9 @@ class Contact(models.Model):
         max_length = self._meta.get_field('slug').max_length
         slug_base = slugify(self.email.split('@')[0])
         if not slug_base:
-            # title might be empty
-            "".join([random.choice("abcdef0123456789") for _ in range(7)])
+            # email might be empty
+            slug_base = "".join([
+                random.choice("abcdef0123456789") for _ in range(15)])
         elif len(slug_base) > max_length:
             slug_base = slug_base[:max_length]
         self.slug = slug_base
@@ -250,6 +255,7 @@ class Activity(models.Model):
         return u"%s-%s" % (self.created_at, self.created_by)
 
 
+@python_2_unicode_compatible
 class Notification(models.Model):
     """
     Notification model, represent a single notification type,
@@ -257,7 +263,8 @@ class Notification(models.Model):
     email notifications preferences
     """
     slug = models.SlugField(unique=True, help_text=_("Unique identifier."))
-    users = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='notifications')
+    users = models.ManyToManyField(settings.AUTH_USER_MODEL,
+        related_name='notifications')
 
     def __str__(self):
         return self.slug
