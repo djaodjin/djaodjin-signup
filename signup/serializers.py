@@ -27,7 +27,7 @@ from django.contrib.auth import get_user_model
 from django.utils.translation import ugettext_lazy as _
 from rest_framework import serializers
 
-from .models import Activity, Contact
+from .models import Activity, Contact, Notification
 from .utils import get_account_model
 
 
@@ -55,6 +55,17 @@ class ContactSerializer(serializers.ModelSerializer):
         fields = ('slug', 'email', 'full_name', 'nick_name',
             'created_at', 'activities')
         read_only_fields = ('slug', 'created_at', 'activities')
+
+
+class NotificationsSerializer(serializers.ModelSerializer):
+
+    notifications = serializers.SlugRelatedField(many=True,
+        slug_field='slug', queryset=Notification.objects.all())
+
+    class Meta:
+        #pylint:disable=old-style-class,no-init
+        model = get_user_model()
+        fields = ('notifications',)
 
 
 class CredentialsSerializer(serializers.Serializer):
