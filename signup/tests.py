@@ -88,7 +88,6 @@ class SignUpTests(TestCase):
             self.assertTrue(url is None)
 
     def test_activate_password(self):
-        return True
         # Hack to install our create_user method.
         user_class = get_user_model()
         user_class.objects = ActivatedUserManager()
@@ -107,7 +106,6 @@ class SignUpTests(TestCase):
             response.redirect_chain[-1][0]))
 
     def test_register(self):
-        return True
         client = Client()
         response = client.post(reverse('registration_register'),
                      {'full_name': 'John Smith', 'email': REGISTRATION_EMAIL},
@@ -118,19 +116,25 @@ class SignUpTests(TestCase):
         self.assertTrue(re.match(r'\S+/app/[\w.@+-]+/',
                                  response.redirect_chain[-1][0]))
 
+
 class DRFTest(TestCase):
+
     def setUp(self):
-        user = get_user_model().objects.create_user('john', 'lennon@thebeatles.com', 'johnpassword')
+        get_user_model().objects.create_user(
+            'john', 'lennon@thebeatles.com', 'johnpassword')
         Notification(slug='create_user').save()
         self.client = APIClient()
-        res = self.client.login(username='john', password='johnpassword')
+        self.client.login(username='john', password='johnpassword')
 
     def test_notifications(self):
         notification_slug = 'create_user'
-        response = self.client.patch('/api/users/john/notifications/', {'notifications': [notification_slug]}, format='json')
+        response = self.client.patch(
+            '/api/users/john/notifications/', {'notifications': [
+                notification_slug]}, format='json')
 
         self.assertEqual(response.status_code, 200)
 
-        notifications = get_user_model().objects.get(username='john').notifications.all()
+        notifications = get_user_model().objects.get(
+            username='john').notifications.all()
         self.assertEqual(len(notifications), 1)
         self.assertEqual(notifications[0].slug, notification_slug)
