@@ -388,6 +388,10 @@ class UserProfileView(AuthTemplateResponseMixin, UpdateView):
         # URLs for user
         if self.request.user.is_authenticated():
             user_urls = {
+                'api_profile': reverse(
+                    'api_user_profile', args=(self.object,)),
+                'notifications': reverse(
+                    'users_notifications', args=(self.object,)),
                 'password_change': reverse(
                     'password_change', args=(self.object,)),
                 'profile': reverse('users_profile', args=(self.object,)),

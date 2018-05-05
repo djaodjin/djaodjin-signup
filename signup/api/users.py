@@ -22,15 +22,21 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import logging
+
+from django.contrib.auth import logout as auth_logout
 from django.db.models import Q
 from django.http import Http404
 from django.contrib.auth import update_session_auth_hash
-from rest_framework.generics import (ListAPIView, RetrieveUpdateAPIView,
+from rest_framework.generics import (ListAPIView, RetrieveUpdateDestroyAPIView,
     UpdateAPIView)
 
 from ..compat import User
 from ..serializers import (PasswordChangeSerializer, UserSerializer,
     NotificationsSerializer)
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 class PasswordChangeAPIView(UpdateAPIView):
@@ -50,6 +56,7 @@ class PasswordChangeAPIView(UpdateAPIView):
     lookup_field = 'username'
     lookup_url_kwarg = 'user'
     serializer_class = PasswordChangeSerializer
+    queryset = User.objects.all()
 
     def perform_update(self, serializer):
         password = serializer.validated_data['password']
@@ -82,7 +89,7 @@ class UserNotificationsAPIView(UpdateAPIView):
     queryset = User.objects.all()
 
 
-class UserProfileAPIView(RetrieveUpdateAPIView):
+class UserProfileAPIView(RetrieveUpdateDestroyAPIView):
     """
     Retrieves and update the profile information of a user.
 
@@ -104,6 +111,15 @@ class UserProfileAPIView(RetrieveUpdateAPIView):
     lookup_field = 'username'
     lookup_url_kwarg = 'user'
     serializer_class = UserSerializer
+    queryset = User.objects.all()
+
+    def perform_destroy(self, instance):
+        LOGGER.info("user %s deleted.", instance,
+            extra={'event': 'delete', 'request': self.request})
+        requires_logout = (self.request.user == instance)
+        instance.delete()
+        if requires_logout:
+            auth_logout(self.request)
 
 
 class UserListAPIView(ListAPIView):

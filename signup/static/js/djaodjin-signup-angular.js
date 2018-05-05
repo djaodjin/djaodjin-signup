@@ -234,3 +234,24 @@ signupControllers.controller("contactsCtrl",
         );
     }
 }]);
+
+
+signupControllers.controller("userProfileCtrl",
+    ["$scope", "$controller", "$http", "$timeout", "settings",
+    function($scope, $controller, $http, $timeout, settings) {
+
+    $scope.deleteProfile = function(event) {
+        event.preventDefault();
+        $http.delete(settings.urls.api_user_profile).then(
+        function(resp) { // success
+            // When we DELETE the request.user profile, it will lead
+            // to a logout. When we delete a different profile, a reload
+            // of the page leads to a 404. In either cases, moving on
+            // to the redirect_to_profile page is a safe bet. */
+            window.location = settings.urls.user_profile_redirect;
+        }, function(resp) { // error
+            showErrorMessages(resp);
+        });
+   };
+
+}]);

@@ -57,6 +57,17 @@ TEMPLATE_DEBUG = True
 
 ALLOWED_HOSTS = []
 
+INSTALLED_APPS = (
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'django_extensions',
+    'signup',
+    'testsite'
+)
+
 AUTHENTICATION_BACKENDS = (
     'signup.backends.auth.UsernameOrEmailModelBackend',
     'django.contrib.auth.backends.ModelBackend'
@@ -122,17 +133,7 @@ EMAIL_HOST_PASSWORD = ""
 
 LOGIN_REDIRECT_URL = '/users/'
 
-# Application definition
-
-INSTALLED_APPS = (
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'signup',
-    'testsite'
-)
+# Applications settings
 
 REST_FRAMEWORK = {
     'PAGE_SIZE': 25,
