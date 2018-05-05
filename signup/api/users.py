@@ -29,7 +29,8 @@ from rest_framework.generics import (ListAPIView, RetrieveUpdateAPIView,
     UpdateAPIView)
 
 from ..compat import User
-from ..serializers import PasswordChangeSerializer, UserSerializer
+from ..serializers import (PasswordChangeSerializer, UserSerializer,
+    NotificationsSerializer)
 
 
 class PasswordChangeAPIView(UpdateAPIView):
@@ -59,6 +60,26 @@ class PasswordChangeAPIView(UpdateAPIView):
         # django.contrib.auth.middleware.SessionAuthenticationMiddleware
         # is enabled.
         update_session_auth_hash(self.request, serializer.instance)
+
+
+class UserNotificationsAPIView(UpdateAPIView):
+    """
+    Changes notifications preferences for a user.
+
+    **Example request**:
+
+    .. sourcecode:: http
+
+        POST /api/users/{user}/notifications/
+        {
+          "notifications": ["notification_slug"]
+        }
+    """
+
+    lookup_field = 'username'
+    lookup_url_kwarg = 'user'
+    serializer_class = NotificationsSerializer
+    queryset = User.objects.all()
 
 
 class UserProfileAPIView(RetrieveUpdateAPIView):
