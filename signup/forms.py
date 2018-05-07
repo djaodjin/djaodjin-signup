@@ -29,10 +29,10 @@ from django import forms
 from django.contrib.auth.forms import (
     PasswordResetForm as PasswordResetBaseForm, SetPasswordForm)
 from django.utils.translation import ugettext_lazy as _
+from django.utils import six
 
 from . import settings
 from .compat import User
-from .models import Notification
 
 #pylint: disable=old-style-class,no-init
 
@@ -90,20 +90,16 @@ class UserForm(forms.ModelForm):
         fields = ['username', 'email', 'first_name', 'last_name']
 
 
-class UserNotificationsForm(forms.ModelForm):
+class UserNotificationsForm(forms.Form):
     """
     Form to update a ``User`` notification preferences.
     """
-    submit_title = 'Save'
-    notifications = forms.ModelMultipleChoiceField(
-        queryset=Notification.objects.all())
+    submit_title = 'Update'
 
-    class Meta:
-        model = User
-        fields = []
-
-    def save(self, *args, **kwargs):
-        self.instance.notifications.clear()
-        for notification in self.cleaned_data.get('notifications'):
-            self.instance.notifications.add(notification)
-        return super(UserNotificationsForm, self).save(*args, **kwargs)
+    def __init__(self, instance, *args, **kwargs):
+        #pylint:disable=unused-argument
+        super(UserNotificationsForm, self).__init__(*args, **kwargs)
+        for item, initial in six.iteritems(self.initial.get('notifications')):
+            self.fields[item] = forms.BooleanField(
+                label=initial[0].title, help_text=initial[0].description,
+                required=False, initial=initial[1])

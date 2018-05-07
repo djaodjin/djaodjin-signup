@@ -96,6 +96,23 @@ ROOT_URLCONF = 'testsite.urls'
 
 WSGI_APPLICATION = 'testsite.wsgi.application'
 
+TEMPLATES = [{
+    'BACKEND': 'django.template.backends.django.DjangoTemplates',
+    'DIRS': (os.path.join(BASE_DIR, 'testsite', 'templates'),
+             os.path.join(BASE_DIR, 'signup', 'templates')),
+    'OPTIONS': {
+        'context_processors': [
+            'django.contrib.auth.context_processors.auth', # because of admin/
+            'django.template.context_processors.request',
+            'django.template.context_processors.media',
+        ],
+        'loaders': [
+            'django.template.loaders.filesystem.Loader',
+            'django.template.loaders.app_directories.Loader'
+        ],
+    }
+}]
+
 # Internationalization
 # https://docs.djangoproject.com/en/1.6/topics/i18n/
 

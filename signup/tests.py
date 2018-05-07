@@ -47,7 +47,7 @@ class SignUpTests(TestCase):
 
     def setUp(self):
         # By default it will end-up being '*' which breaks multitier tests.
-        settings.ALLOWED_HOSTS = ('localhost',)
+        settings.ALLOWED_HOSTS = ('testserver', 'localhost',)
         # Every test needs access to the request factory.
         self.factory = RequestFactory()
 
@@ -96,12 +96,12 @@ class SignUpTests(TestCase):
             email=REGISTRATION_EMAIL, is_active=False)
         client = Client()
         response = client.get(reverse('registration_activate',
-                                      args=(user.email_verification_key,)),
+                                      args=(user.contact.verification_key,)),
                               follow=True)
         # pylint: disable=maybe-no-member
         self.assertTrue(response.status_code == 200)
         self.assertTrue(re.match(
-     r'\S+/accounts/activate/(?P<verification_key>%s)/password/(?P<token>.+)/$'
+     r'/activate/(?P<verification_key>%s)/password/(?P<token>.+)/$'
             % signup_settings.EMAIL_VERIFICATION_PAT,
             response.redirect_chain[-1][0]))
 
@@ -113,7 +113,7 @@ class SignUpTests(TestCase):
         # XXX Haven't found out how to get this assertion to pass,
         # status_code 302 vs 200 expected.
         # self.assertRedirects(response, settings.LOGIN_REDIRECT_URL)
-        self.assertTrue(re.match(r'\S+/app/[\w.@+-]+/',
+        self.assertTrue(re.match(r'/users/[\w.@+-]+/',
                                  response.redirect_chain[-1][0]))
 
 

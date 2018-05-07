@@ -36,6 +36,6 @@ urlpatterns = [
     url(r'^users/',
         include('signup.urls.users'),
         decorators=['django.contrib.auth.decorators.login_required']),
-    url(r'^accounts/', include('signup.urls.accounts')),
+    url(r'^', include('signup.urls.accounts')),
     url(r'^$', RedirectView.as_view(url=reverse_lazy('registration_register'))),
 ]

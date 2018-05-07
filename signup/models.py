@@ -186,8 +186,8 @@ class Contact(models.Model):
     email = models.EmailField(_('email address'), blank=True)
     full_name = models.CharField(_('Full name'), max_length=60, blank=True)
     nick_name = models.CharField(_('Nick name'), max_length=60, blank=True)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL,
-        null=True, on_delete=models.CASCADE)
+    user = models.OneToOneField(settings.AUTH_USER_MODEL,
+        null=True, on_delete=models.CASCADE, related_name='contact')
     verification_key = models.CharField(
         _('email verification key'), max_length=40)
     extra = settings.get_extra_field_class()(null=True)
@@ -263,8 +263,11 @@ class Notification(models.Model):
     email notifications preferences
     """
     slug = models.SlugField(unique=True, help_text=_("Unique identifier."))
+    title = models.CharField(max_length=100, blank=True)
+    description = models.TextField(null=True, blank=True)
     users = models.ManyToManyField(settings.AUTH_USER_MODEL,
         related_name='notifications')
+    extra = settings.get_extra_field_class()(null=True)
 
     def __str__(self):
         return self.slug

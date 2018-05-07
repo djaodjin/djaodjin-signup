@@ -31,9 +31,11 @@ from django.contrib.auth import login as auth_login, logout as auth_logout
 from django.contrib.auth import REDIRECT_FIELD_NAME, authenticate
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.tokens import default_token_generator
+from django.db import transaction
 from django.http import HttpResponseRedirect
 from django.shortcuts import redirect
 from django.template.response import TemplateResponse
+from django.utils import six
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.utils.safestring import mark_safe
@@ -50,7 +52,7 @@ from ..compat import User, reverse
 from ..decorators import check_user_active, send_verification_email
 from ..forms import (NameEmailForm, PasswordChangeForm, PasswordResetForm,
     UserForm, UserNotificationsForm)
-from ..models import Contact
+from ..models import Contact, Notification
 from ..utils import full_name_natural_split, has_invalid_password
 
 
@@ -416,16 +418,33 @@ class UserNotificationsView(AuthTemplateResponseMixin, UpdateView):
     """
     A view where a user can configure their notification settings
     """
-
     model = User
     form_class = UserNotificationsForm
     slug_field = 'username'
     slug_url_kwarg = 'user'
     template_name = 'users/user_notifications.html'
-    success_url = '/'
+
+    def form_valid(self, form):
+        with transaction.atomic():
+            notifications = self.get_initial().get('notifications')
+            self.object.notifications.clear()
+            for notification_slug, enabled in six.iteritems(form.cleaned_data):
+                if enabled:
+                    self.object.notifications.add(
+                        notifications.get(notification_slug)[0])
+        return HttpResponseRedirect(self.get_success_url())
 
     def get_initial(self):
-        return {'notifications': self.request.user.notifications.all()}
+        notifications = {}
+        enabled = self.request.user.notifications.all()
+        for notification in Notification.objects.all():
+            notifications.update({
+                notification.slug: (notification, notification in enabled)})
+        return {'notifications': notifications}
+
+    def get_success_url(self):
+        messages.info(self.request, 'Notifications Updated.')
+        return reverse('users_notifications', args=(self.object,))
 
 
 class PasswordChangeView(UserProfileView):

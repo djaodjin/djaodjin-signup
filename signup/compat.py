@@ -31,6 +31,11 @@ except ImportError: # django < 1.5
 else:
     User = get_user_model()
 
+# Hack to install our create_user method.
+from .models import ActivatedUserManager
+User.objects = ActivatedUserManager()
+User.objects.model = User
+
 try:
     from django.urls import NoReverseMatch, reverse, reverse_lazy
 except ImportError: # <= Django 1.10, Python<3.6

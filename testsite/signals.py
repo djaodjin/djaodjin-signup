@@ -1,4 +1,4 @@
-# Copyright (c) 2015, Djaodjin Inc.
+# Copyright (c) 2018, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -31,7 +31,7 @@ from signup.signals import (user_registered, user_activated,
 #pylint: disable=unused-argument
 
 @receiver(user_registered, dispatch_uid="user_registered_notice")
-def user_registered_notice(sender, user, request, **kwargs):
+def user_registered_notice(sender, user, request=None, **kwargs):
     send_mail("user registered", "%s has registered.",
               settings.DEFAULT_FROM_EMAIL,
               [admin[1] for admin in settings.ADMINS],
