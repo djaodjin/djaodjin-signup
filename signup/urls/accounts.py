@@ -25,18 +25,13 @@
 from django.conf.urls import url
 
 from ..views.users import (ActivationView, PasswordResetView,
-    PasswordResetConfirmView, SigninView, SignoutView, SignupView,
-    RegistrationPasswordConfirmView)
+    PasswordResetConfirmView, SigninView, SignoutView, SignupView)
 from .. import settings
 
 urlpatterns = [
     # When the key and/or token are wrong we don't want to give any clue
     # as to why that is so. Less information communicated to an attacker,
     # the better.
-    url(r'^activate/(?P<verification_key>%s)/password/(?P<token>.+)/$'
-        % settings.EMAIL_VERIFICATION_PAT,
-        RegistrationPasswordConfirmView.as_view(),
-        name='registration_password_confirm'),
     url(r'^activate/(?P<verification_key>%s)/$'
         % settings.EMAIL_VERIFICATION_PAT,
         ActivationView.as_view(), name='registration_activate'),

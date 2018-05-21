@@ -79,7 +79,7 @@ class JWTRefresh(JWTVerify):
 
     .. sourcecode:: http
 
-        POST /api/tokens/refresh/
+        POST /api/tokens/
         {
             "token": "34rotlgqpoxzmw435Alr...",
         }

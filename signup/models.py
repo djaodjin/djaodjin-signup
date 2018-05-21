@@ -136,7 +136,7 @@ class ContactManager(models.Manager):
                 pass # We return None instead here.
         return None
 
-    def activate_user(self, verification_key):
+    def activate_user(self, verification_key, password=None):
         """
         Activate a user whose email address has been verified.
         """
@@ -151,6 +151,8 @@ class ContactManager(models.Manager):
                 with transaction.atomic():
                     token.verification_key = Contact.VERIFIED
                     token.user.is_active = True
+                    if password:
+                        token.user.set_password(password)
                     token.user.save()
                     token.save()
                 return token.user

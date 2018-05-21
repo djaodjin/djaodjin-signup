@@ -41,7 +41,7 @@ from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.utils.safestring import mark_safe
 from django.utils.translation import ugettext_lazy as _
 from django.views.decorators.cache import add_never_cache_headers
-from django.views.generic.base import ContextMixin, TemplateResponseMixin, View
+from django.views.generic.base import TemplateResponseMixin, View
 from django.views.generic.detail import BaseDetailView
 from django.views.generic.edit import FormMixin, ProcessFormView, UpdateView
 
@@ -50,8 +50,8 @@ from ..auth import validate_redirect
 from ..backends.auth import UsernameOrEmailAuthenticationForm
 from ..compat import User, reverse
 from ..decorators import check_user_active, send_verification_email
-from ..forms import (NameEmailForm, PasswordChangeForm, PasswordResetForm,
-    UserForm, UserNotificationsForm)
+from ..forms import (ActivationForm, NameEmailForm, PasswordChangeForm,
+    PasswordResetForm, UserForm, UserNotificationsForm)
 from ..models import Contact, Notification
 from ..utils import full_name_natural_split, has_invalid_password
 
@@ -278,45 +278,110 @@ class SignupBaseView(RedirectFormMixin, ProcessFormView):
         return user
 
 
-class ActivationBaseView(ContextMixin, View):
+class ActivationBaseView(RedirectFormMixin, UpdateView):
     """
     The user is now on the activation url that was sent in an email.
-    It is time to activate the account.
+    It is time to complete the registration and activate the account.
+
+    View that checks the hash in a password activation link and presents a
+    form for entering a new password. We can activate the account for real
+    once we know the email is valid and a password has been set.
     """
-    http_method_names = ['get']
-    token_generator = default_token_generator
+    form_class = ActivationForm
     key_url_kwarg = 'verification_key'
+    http_method_names = ['get', 'post']
+
+    @staticmethod
+    def first_and_last_names(**cleaned_data):
+        first_name = cleaned_data.get('first_name', None)
+        last_name = cleaned_data.get('last_name', None)
+        if not first_name:
+            # If the form does not contain a first_name/last_name pair,
+            # we assume a full_name was passed instead.
+            full_name = cleaned_data.get(
+                'user_full_name', cleaned_data.get('full_name', None))
+            first_name, _, last_name = full_name_natural_split(full_name)
+        return first_name, last_name
+
+    @property
+    def user(self):
+        if not hasattr(self, '_user'):
+            self._user = Contact.objects.find_user(
+                self.kwargs.get(self.key_url_kwarg))
+        return self._user
+
+    def get_object(self, queryset=None): #pylint:disable=unused-argument
+        return self.user
+
+    def get_initial(self):
+        if self.user:
+            return {
+                'email': self.user.email,
+                'full_name': self.user.get_full_name()}
+        return {}
+
+    def activate_user(self, password=None):
+        verification_key = self.kwargs.get(self.key_url_kwarg)
+        user = Contact.objects.activate_user(
+            verification_key, password=password)
+        signals.user_activated.send(sender=__name__,
+            user=user, verification_key=verification_key,
+            request=self.request)
+        return user
+
+    def dispatch(self, request, *args, **kwargs):
+        # We put the code inline instead of using method_decorator() otherwise
+        # kwargs is interpreted as parameters in sensitive_post_parameters.
+        request.sensitive_post_parameters = '__ALL__'
+        response = super(ActivationBaseView, self).dispatch(
+            request, *args, **kwargs)
+        add_never_cache_headers(response)
+        return response
+
+    def form_valid(self, form):
+        # If we don't save the ``User`` model here,
+        # we won't be able to authenticate later.
+        first_name, last_name = self.first_and_last_names(**form.cleaned_data)
+        user = self.activate_user(password=form.cleaned_data["new_password1"])
+        if first_name:
+            user.first_name = first_name
+        if last_name:
+            user.last_name = last_name
+        user.save() # XXX second save()
+        messages.info(self.request,
+            _("Thank you. Your account is now active."))
+
+        # Okay, security check complete. Log the user in.
+        user_with_backend = authenticate(
+            username=user.username,
+            password=form.cleaned_data.get('new_password1'))
+        auth_login(self.request, user_with_backend)
+        if self.request.session.test_cookie_worked():
+            self.request.session.delete_test_cookie()
+        return HttpResponseRedirect(self.get_success_url())
 
     def get(self, request, *args, **kwargs):
-        #pylint:disable=unused-argument
-        verification_key = self.kwargs.get(self.key_url_kwarg)
-        #pylint: disable=maybe-no-member
-        user = Contact.objects.find_user(verification_key)
-        if user:
-            if has_invalid_password(user):
-                messages.info(self.request,
+        self.object = self.user
+        if not self.user:
+            messages.error(self.request,
+                _("Invalid verification key. Please register."))
+            return HttpResponseRedirect(reverse('registration_register'))
+        if has_invalid_password(self.user):
+            messages.info(self.request,
                     _("You are about to activate your account. Please set"\
                       " a password to secure it."))
-                url = reverse('registration_password_confirm', args=(
-                    verification_key, self.token_generator.make_token(user)))
-            else:
-                user = Contact.objects.activate_user(verification_key)
-                # XXX Should we directly login user here?
-                signals.user_activated.send(sender=__name__,
-                    user=user, verification_key=verification_key,
-                    request=self.request)
-                messages.info(self.request,
-                    _("Thank you. Your account is now active." \
-                          " You can sign in at your convienience."))
-                url = reverse('login')
-            next_url = validate_redirect(self.request)
-            if next_url:
-                success_url = "%s?%s=%s" % (url, REDIRECT_FIELD_NAME, next_url)
-            else:
-                success_url = url
-            return HttpResponseRedirect(success_url)
-        context = self.get_context_data(**kwargs)
-        return self.render_to_response(context)
+            context = self.get_context_data(**kwargs)
+            return self.render_to_response(context)
+        self.activate_user()
+        messages.info(self.request, _("Thank you. Your account is now active." \
+                  " You can sign in at your convienience."))
+        url = reverse('login')
+        next_url = validate_redirect(self.request)
+        if next_url:
+            success_url = "%s?%s=%s" % (url, REDIRECT_FIELD_NAME, next_url)
+        else:
+            success_url = url
+        return HttpResponseRedirect(success_url)
 
 
 class SendActivationView(BaseDetailView):
@@ -464,86 +529,6 @@ class PasswordChangeView(UserProfileView):
         return reverse('users_profile', args=(self.object,))
 
 
-class RegistrationPasswordConfirmBaseView(RedirectFormMixin, ProcessFormView):
-    """
-    View that checks the hash in a password activation link and presents a
-    form for entering a new password. We can activate the account for real
-    once we know the email is valid and a password has been set.
-    """
-    form_class = PasswordChangeForm
-    token_generator = default_token_generator
-    key_url_kwarg = 'verification_key'
-
-    def dispatch(self, request, *args, **kwargs):
-        # We put the code inline instead of using method_decorator() otherwise
-        # kwargs is interpreted as parameters in sensitive_post_parameters.
-        request.sensitive_post_parameters = '__ALL__'
-        response = super(RegistrationPasswordConfirmBaseView, self).dispatch(
-            request, *args, **kwargs)
-        add_never_cache_headers(response)
-        return response
-
-    def post(self, request, *args, **kwargs):
-        """
-        Handles POST requests, instantiating a form instance with the passed
-        POST variables and then checked for validity.
-        """
-        form_class = self.get_form_class()
-        form = self.get_form(form_class)
-        # We use *find_user* instead of *activate_user* because we want
-        # to make sure both the *verification_key* and *token* are valid
-        # before doing any modification of the underlying models.
-        #pylint: disable=maybe-no-member
-        user = self.object
-        if (user is not None
-            and self.token_generator.check_token(
-                user, self.kwargs.get('token'))):
-            if form.is_valid():
-                return self.form_valid(form)
-        return self.form_invalid(form)
-
-    def form_valid(self, form):
-        #pylint: disable=maybe-no-member
-        self.object = form.save() # If we don't save the ``User`` model here,
-                                  # we won't be able to authenticate later.
-        verification_key = self.kwargs.get('verification_key')
-        user = Contact.objects.activate_user(verification_key)
-        signals.user_activated.send(sender=__name__,
-            user=user, verification_key=verification_key, request=self.request)
-        messages.info(self.request,
-                      _("Thank you. Your account is now active."))
-
-        # Okay, security check complete. Log the user in.
-        user_with_backend = authenticate(
-            username=user.username,
-            password=form.cleaned_data.get('new_password1'))
-        auth_login(self.request, user_with_backend)
-        if self.request.session.test_cookie_worked():
-            self.request.session.delete_test_cookie()
-        return HttpResponseRedirect(self.get_success_url())
-
-    def get_context_data(self, **kwargs):
-        context = super(RegistrationPasswordConfirmBaseView,
-                        self).get_context_data(**kwargs)
-        user = self.object
-        if user is not None and self.token_generator.check_token(
-                                    user, self.kwargs.get('token')):
-            context.update({'validlink': True})
-        return context
-
-    def get_form_kwargs(self):
-        """
-        Returns the keyword arguments for instantiating the form.
-        """
-        kwargs = super(
-            RegistrationPasswordConfirmBaseView, self).get_form_kwargs()
-        #pylint: disable=no-member
-        self.object = Contact.objects.find_user(
-            self.kwargs.get(self.key_url_kwarg))
-        kwargs.update({'instance': self.object})
-        return kwargs
-
-
 class ActivationView(AuthTemplateResponseMixin, ActivationBaseView):
 
     template_name = 'accounts/activate.html'
@@ -556,12 +541,6 @@ class PasswordResetView(AuthTemplateResponseMixin, PasswordResetBaseView):
 
 class PasswordResetConfirmView(AuthTemplateResponseMixin,
                                PasswordResetConfirmBaseView):
-
-    template_name = 'accounts/reset.html'
-
-
-class RegistrationPasswordConfirmView(AuthTemplateResponseMixin,
-                                      RegistrationPasswordConfirmBaseView):
 
     template_name = 'accounts/reset.html'
 

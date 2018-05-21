@@ -26,6 +26,7 @@
 
 from captcha.fields import ReCaptchaField
 from django import forms
+from django.contrib.auth import password_validation
 from django.contrib.auth.forms import (
     PasswordResetForm as PasswordResetBaseForm, SetPasswordForm)
 from django.utils.translation import ugettext_lazy as _
@@ -71,6 +72,58 @@ class PasswordChangeForm(SetPasswordForm):
 class PasswordResetForm(PasswordResetBaseForm):
 
     pass
+
+
+class ActivationForm(forms.Form):
+    """
+    Form to set password, and optionally user's profile information
+    in an activation view.
+    """
+    submit_title = 'Activate'
+
+    error_messages = {
+        'password_mismatch': _("The two password fields didn't match."),
+    }
+
+    email = forms.EmailField(
+        widget=forms.TextInput(attrs={'placeholder':'Email', 'maxlength': 75}),
+        label=_("Email address"), disabled=True)
+    full_name = forms.RegexField(
+        regex=r'^[\w\s]+$', max_length=60,
+        widget=forms.TextInput(attrs={'placeholder':'Full name'}),
+        label=_("Full name"),
+        error_messages={'invalid':
+            _("Sorry we do not recognize some characters in your full name.")})
+
+    new_password1 = forms.CharField(
+        label=_("New password"),
+        widget=forms.PasswordInput,
+        strip=False,
+        help_text=password_validation.password_validators_help_text_html(),
+    )
+    new_password2 = forms.CharField(
+        label=_("New password confirmation"),
+        strip=False,
+        widget=forms.PasswordInput,
+    )
+
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('instance')
+        super(ActivationForm, self).__init__(*args, **kwargs)
+        if settings.REQUIRES_RECAPTCHA:
+            self.fields['captcha'] = ReCaptchaField()
+
+    def clean_new_password2(self):
+        password1 = self.cleaned_data.get('new_password1')
+        password2 = self.cleaned_data.get('new_password2')
+        if password1 and password2:
+            if password1 != password2:
+                raise forms.ValidationError(
+                    self.error_messages['password_mismatch'],
+                    code='password_mismatch',
+                )
+        password_validation.validate_password(password2, self.user)
+        return password2
 
 
 class UserForm(forms.ModelForm):

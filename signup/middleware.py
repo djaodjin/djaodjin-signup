@@ -60,9 +60,9 @@ class AuthenticationMiddleware(BaseAuthenticationMiddleware):
             auth_header_prefix = 'JWT'.lower()
 
             if not auth:
-                return None
+                return
             if smart_text(auth[0].lower()) != auth_header_prefix:
-                return None
+                return
             if len(auth) == 1:
                 raise ValidationError("No credentials in authorization header")
             elif len(auth) > 2:

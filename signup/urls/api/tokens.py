@@ -27,6 +27,6 @@ from django.conf.urls import url
 from ...api.tokens import JWTRefresh, JWTVerify
 
 urlpatterns = [
-    url(r'^tokens/verify/', JWTVerify.as_view()),
-    url(r'^tokens/refresh/', JWTRefresh.as_view())
+    url(r'^auth/tokens/verify/', JWTVerify.as_view()),
+    url(r'^auth/tokens/', JWTRefresh.as_view())
 ]

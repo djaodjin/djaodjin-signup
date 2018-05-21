@@ -70,7 +70,7 @@ class JWTLogin(JWTBase):
 
     .. sourcecode:: http
 
-        POST /api/login/
+        POST /api/auth/
         {
           "username": "donny",
           "password": "yoyo"
@@ -107,7 +107,7 @@ class JWTRegister(JWTBase):
 
     .. sourcecode:: http
 
-        POST /api/register/
+        POST /api/auth/register/
         {
           "username": "donny",
           "password": "yoyo",
@@ -177,7 +177,7 @@ class JWTLogout(JWTBase):
 
     .. sourcecode:: http
 
-        POST /api/login/
+        POST /api/auth/logout/
         Authorization: JWT 34rotlgqpoxzmw435Alr
 
     **Example response**:
