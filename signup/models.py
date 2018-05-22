@@ -35,6 +35,7 @@ from django.template.defaultfilters import slugify
 from django.utils.encoding import python_2_unicode_compatible
 from django.utils.timezone import now as datetime_now
 from django.utils.translation import ugettext_lazy as _
+from django.contrib.auth.hashers import check_password, make_password
 
 from signup import settings, signals
 
@@ -273,3 +274,36 @@ class Notification(models.Model):
 
     def __str__(self):
         return self.slug
+
+
+@python_2_unicode_compatible
+class Credentials(models.Model):
+    """
+    API Credentials to authenticate a `User`.
+    """
+    API_PUB_KEY_LENGTH = 32
+    API_PRIV_KEY_LENGTH = 32
+
+    api_pub_key = models.SlugField(unique=True, max_length=API_PUB_KEY_LENGTH)
+    api_priv_key = models.CharField(max_length=128)
+    user = models.OneToOneField(settings.AUTH_USER_MODEL,
+        null=True, on_delete=models.CASCADE, related_name='credentials')
+
+    def __str__(self):
+        return self.api_pub_key
+
+    def set_priv_key(self, api_priv_key):
+        self.api_priv_key = make_password(api_priv_key)
+        self._api_priv_key = api_priv_key
+
+    def check_priv_key(self, raw_api_priv_key):
+        """
+        Return a boolean of whether the raw api_priv_key was correct. Handles
+        hashing formats behind the scenes.
+        """
+        def setter(raw_api_priv_key):
+            self.set_priv_key(raw_api_priv_key)
+            # Password hash upgrades shouldn't be considered password changes.
+            self._api_priv_key = None
+            self.save(update_fields=["api_priv_key"])
+        return check_password(raw_api_priv_key, self.api_priv_key, setter)

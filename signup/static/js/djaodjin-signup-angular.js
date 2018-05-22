@@ -240,6 +240,24 @@ signupControllers.controller("userProfileCtrl",
     ["$scope", "$controller", "$http", "$timeout", "settings",
     function($scope, $controller, $http, $timeout, settings) {
 
+    $scope.api_key = "Generating ...";
+
+    $scope.generateKey = function() {
+        $http.post(settings.urls.api_generate_keys).then(
+           function success(resp) {
+               $scope.api_key = resp.data.api_key;
+           },
+           function error(resp) {
+               $scope.api_key = "ERROR";
+               showErrorMessages(resp);
+           });
+    };
+
+    angular.element(settings.modals.generate_key).on('show.bs.modal',
+      function() {
+        $scope.generateKey();
+    });
+
     $scope.deleteProfile = function(event) {
         event.preventDefault();
         $http.delete(settings.urls.api_user_profile).then(

@@ -22,12 +22,35 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from django.conf.urls import url, include
+from django.contrib.auth.hashers import make_password
+from django.utils.crypto import get_random_string
+from rest_framework import status
+from rest_framework.generics import CreateAPIView
+from rest_framework.response import Response
 
-urlpatterns = [
-    url(r'^', include('signup.urls.api.auth')),
-    url(r'^', include('signup.urls.api.contacts')),
-    url(r'^', include('signup.urls.api.keys')),
-    url(r'^', include('signup.urls.api.tokens')),
-    url(r'^', include('signup.urls.api.users')),
-]
+from ..mixins import UserMixin
+from ..models import Credentials
+from ..serializers import APIKeysSerializer
+
+
+class ResetAPIKeysAPIView(UserMixin, CreateAPIView):
+
+    serializer_class = APIKeysSerializer
+
+    def create(self, request, *args, **kwargs):
+        allowed_chars = 'abcdefghjkmnpqrstuvwxyz'\
+            'ABCDEFGHJKLMNPQRSTUVWXYZ'\
+            '23456789'
+        api_pub_key = get_random_string(
+            length=Credentials.API_PUB_KEY_LENGTH, allowed_chars=allowed_chars)
+        api_priv_key = get_random_string(
+            length=Credentials.API_PRIV_KEY_LENGTH, allowed_chars=allowed_chars)
+        Credentials.objects.update_or_create(
+            user=self.user,
+            defaults={
+                'api_pub_key': api_pub_key,
+                'api_priv_key': make_password(api_priv_key)
+            })
+        return Response(APIKeysSerializer().to_representation({
+            'api_key': api_pub_key + api_priv_key
+        }), status=status.HTTP_201_CREATED)

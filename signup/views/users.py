@@ -52,6 +52,7 @@ from ..compat import User, reverse
 from ..decorators import check_user_active, send_verification_email
 from ..forms import (ActivationForm, NameEmailForm, PasswordChangeForm,
     PasswordResetForm, UserForm, UserNotificationsForm)
+from ..mixins import UserMixin
 from ..models import Contact, Notification
 from ..utils import full_name_natural_split, has_invalid_password
 
@@ -437,7 +438,7 @@ class SignoutBaseView(RedirectFormMixin, View):
 
 # Actual views to instantiate start here:
 
-class UserProfileView(AuthTemplateResponseMixin, UpdateView):
+class UserProfileView(AuthTemplateResponseMixin, UserMixin, UpdateView):
     """
     If a user is manager for an Organization, she can access the Organization
     profile. If a user is manager for an Organization subscribed to another
@@ -452,9 +453,12 @@ class UserProfileView(AuthTemplateResponseMixin, UpdateView):
 
     def get_context_data(self, **kwargs):
         context = super(UserProfileView, self).get_context_data(**kwargs)
+        setattr(context['user'], 'full_name', context['user'].get_full_name())
         # URLs for user
         if self.request.user.is_authenticated():
-            user_urls = {
+            self.update_context_urls(context, {'user': {
+                'api_generate_keys': reverse(
+                    'api_generate_keys', args=(self.object,)),
                 'api_profile': reverse(
                     'api_user_profile', args=(self.object,)),
                 'notifications': reverse(
@@ -463,15 +467,7 @@ class UserProfileView(AuthTemplateResponseMixin, UpdateView):
                     'password_change', args=(self.object,)),
                 'profile': reverse('users_profile', args=(self.object,)),
                 'profile_redirect': reverse('accounts_profile')
-            }
-        if 'urls' in context:
-            if 'user' in context['urls']:
-                context['urls']['user'].update(user_urls)
-            else:
-                context['urls'].update({'user': user_urls})
-        else:
-            context.update({'urls': {'user': user_urls}})
-        setattr(context['user'], 'full_name', context['user'].get_full_name())
+            }})
         return context
 
     def get_success_url(self):

@@ -25,6 +25,7 @@
 from django.utils import six
 from rest_framework.generics import get_object_or_404
 
+from .compat import User
 from .models import Contact
 
 
@@ -59,3 +60,16 @@ class ContactMixin(UrlsMixin):
             kwargs = {self.lookup_field: self.kwargs.get(self.lookup_url_kwarg)}
             self._contact = get_object_or_404(Contact.objects.all(), **kwargs)
         return self._contact
+
+
+class UserMixin(UrlsMixin):
+
+    user_field = 'username'
+    user_url_kwarg = 'user'
+
+    @property
+    def user(self):
+        if not hasattr(self, '_user'):
+            kwargs = {self.user_field: self.kwargs.get(self.user_url_kwarg)}
+            self._user = get_object_or_404(User.objects.all(), **kwargs)
+        return self._user

@@ -45,6 +45,24 @@ class ActivitySerializer(serializers.ModelSerializer):
         read_only_fields = ('created_at', 'created_by')
 
 
+class APIKeysSerializer(serializers.Serializer):
+    """
+    username and password for authentication through API.
+    """
+    api_key = serializers.CharField(max_length=128)
+
+    class Meta:
+        #pylint:disable=old-style-class,no-init
+        fields = ('api_key',)
+        read_only_fields = ('api_key')
+
+    def update(self, instance, validated_data):
+        raise NotImplementedError('`update()` must be implemented.')
+
+    def create(self, validated_data):
+        raise NotImplementedError('`create()` must be implemented.')
+
+
 class ContactSerializer(serializers.ModelSerializer):
 
     activities = ActivitySerializer(many=True, read_only=True)

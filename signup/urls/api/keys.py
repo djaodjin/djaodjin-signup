@@ -22,12 +22,12 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from django.conf.urls import url, include
+from django.conf.urls import url
+
+from ... import settings
+from ...api.keys import ResetAPIKeysAPIView
 
 urlpatterns = [
-    url(r'^', include('signup.urls.api.auth')),
-    url(r'^', include('signup.urls.api.contacts')),
-    url(r'^', include('signup.urls.api.keys')),
-    url(r'^', include('signup.urls.api.tokens')),
-    url(r'^', include('signup.urls.api.users')),
+    url(r'^auth/keys/(?P<user>%s)/' % settings.USERNAME_PAT,
+        ResetAPIKeysAPIView.as_view(), name='api_generate_keys')
 ]

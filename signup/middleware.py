@@ -27,12 +27,10 @@ Middleware to create AWS temporary credentials
 """
 from django.contrib.auth.middleware import (
     AuthenticationMiddleware as BaseAuthenticationMiddleware)
-from django.utils.encoding import smart_text
-from rest_framework.authentication import get_authorization_header
-from rest_framework.exceptions import ValidationError
+from rest_framework import exceptions
+from rest_framework.settings import api_settings
 
 from .backends.sts_credentials import temporary_security_token
-from .utils import verify_token
 
 
 class AWSTemporaryCredentialsMiddleware(object):
@@ -52,27 +50,31 @@ class AWSTemporaryCredentialsMiddleware(object):
 
 
 class AuthenticationMiddleware(BaseAuthenticationMiddleware):
+    """
+    Authenticate using a list of authenticators (i.e. Authorization Header).
+    """
+
+    @staticmethod
+    def get_authenticators():
+        return [auth() for auth in api_settings.DEFAULT_AUTHENTICATION_CLASSES]
 
     def process_request(self, request):
         super(AuthenticationMiddleware, self).process_request(request)
         if not request.user.is_authenticated():
-            auth = get_authorization_header(request).split()
-            auth_header_prefix = 'JWT'.lower()
-
-            if not auth:
-                return
-            if smart_text(auth[0].lower()) != auth_header_prefix:
-                return
-            if len(auth) == 1:
-                raise ValidationError("No credentials in authorization header")
-            elif len(auth) > 2:
-                raise ValidationError("Credentials in authorization header"\
-                    " should not contain space.")
-
-            token = auth[1]
             try:
-                user = verify_token(token)
-                if user:
-                    request.user = user
-            except ValidationError:
+                for authenticator in self.get_authenticators():
+                    try:
+                        user_auth_tuple = authenticator.authenticate(request)
+                    except AttributeError:
+                        # DRF is using a wrapper around a Django request
+                        # which we don't have here.
+                        continue
+
+                    if user_auth_tuple is not None:
+                        #pylint:disable=protected-access
+                        request._authenticator = authenticator
+                        request.user, request.auth = user_auth_tuple
+                        return
+            except exceptions.AuthenticationFailed:
+                # Keep the anonymous user.
                 pass
