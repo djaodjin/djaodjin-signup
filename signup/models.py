@@ -287,7 +287,7 @@ class Credentials(models.Model):
     api_pub_key = models.SlugField(unique=True, max_length=API_PUB_KEY_LENGTH)
     api_priv_key = models.CharField(max_length=128)
     user = models.OneToOneField(settings.AUTH_USER_MODEL,
-        null=True, on_delete=models.CASCADE, related_name='credentials')
+        on_delete=models.CASCADE, related_name='credentials')
 
     def __str__(self):
         return self.api_pub_key
