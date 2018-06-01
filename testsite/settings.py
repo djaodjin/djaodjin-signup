@@ -64,6 +64,7 @@ INSTALLED_APPS = (
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django_extensions',
+    'captcha',
     'signup',
     'testsite'
 )
@@ -148,10 +149,13 @@ DEFAULT_FROM_EMAIL = "admin@example.com"
 EMAIL_HOST_USER = ""
 EMAIL_HOST_PASSWORD = ""
 
-LOGIN_REDIRECT_URL = '/users/'
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = '/app/'
 
 # Applications settings
 
 REST_FRAMEWORK = {
     'PAGE_SIZE': 25,
 }
+
+NOCAPTCHA = True

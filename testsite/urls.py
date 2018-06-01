@@ -22,9 +22,14 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from django.views.generic.base import RedirectView
 from django.core.urlresolvers import reverse_lazy
+from django.views.generic.base import RedirectView, TemplateView
+from signup.forms import NameEmailForm
+from signup.views.users import SignupView
 from urldecorators import include, url
+
+from .forms import SignupWithCaptchaForm
+
 
 urlpatterns = [
     url(r'^api/',
@@ -36,6 +41,13 @@ urlpatterns = [
     url(r'^users/',
         include('signup.urls.users'),
         decorators=['django.contrib.auth.decorators.login_required']),
+    url(r'^register/frictionless/',
+        SignupView.as_view(form_class=NameEmailForm),
+        name='registration_frictionless'),
+    url(r'^register/$',
+        SignupView.as_view(form_class=SignupWithCaptchaForm),
+        name='registration_register'),
     url(r'^', include('signup.urls.accounts')),
+    url(r'^app/', TemplateView.as_view(template_name='app.html')),
     url(r'^$', RedirectView.as_view(url=reverse_lazy('registration_register'))),
 ]

@@ -9,6 +9,7 @@
   {% block menubar %}
   <div>
     {% if user.is_authenticated %}
+    <a href="{% url 'accounts_profile' %}">profile</a>
     <a href="{% url 'logout' %}">sign out</a>
     {% else %}
     <a href="{% url 'login' %}">sign in</a>
