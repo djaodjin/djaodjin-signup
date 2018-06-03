@@ -35,7 +35,7 @@ from django.utils import six
 from django.utils.translation import ugettext_lazy as _
 
 from . import settings, signals
-from .compat import reverse
+from .compat import is_authenticated, reverse
 from .models import Contact
 from .utils import has_invalid_password
 
@@ -113,7 +113,7 @@ def active_required(function=None,
     def decorator(view_func):
         @wraps(view_func, assigned=available_attrs(view_func))
         def _wrapped_view(request, *args, **kwargs):
-            if request.user.is_authenticated():
+            if is_authenticated(request):
                 if check_user_active(request, request.user):
                     return view_func(request, *args, **kwargs)
                 else:

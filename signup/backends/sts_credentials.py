@@ -27,6 +27,7 @@ import datetime, base64, hashlib, hmac, json, logging
 import boto3
 
 from .. import settings
+from ..compat import is_authenticated
 from ..utils import datetime_or_now
 
 
@@ -40,7 +41,7 @@ def temporary_security_token(request,
     Create temporary security credentials on AWS. This typically needed
     to allow uploads from the browser directly to S3.
     """
-    if not request.user.is_authenticated():
+    if not is_authenticated(request):
         return
     at_time = datetime_or_now(at_time)
 
@@ -157,7 +158,7 @@ def aws_bucket_context(request, bucket, acls=None, aws_upload_role=None,
     """
     #pylint:disable=too-many-arguments
     context = {}
-    if request.user.is_authenticated():
+    if is_authenticated(request):
         if not aws_region:
             aws_region = settings.AWS_REGION
 

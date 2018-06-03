@@ -50,3 +50,8 @@ except ModuleNotFoundError: #pylint:disable=undefined-variable
 # but that includes ^ and $ which makes it unsuitable for use in URL patterns.
 
 SLUG_PAT = r'[-a-zA-Z0-9_]+'
+
+def is_authenticated(request):
+    if callable(request.user.is_authenticated):
+        return request.user.is_authenticated()
+    return request.user.is_authenticated

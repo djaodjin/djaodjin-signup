@@ -48,7 +48,7 @@ from django.views.generic.edit import FormMixin, ProcessFormView, UpdateView
 from .. import settings, signals
 from ..auth import validate_redirect
 from ..backends.auth import UsernameOrEmailAuthenticationForm
-from ..compat import User, reverse
+from ..compat import User, reverse, is_authenticated
 from ..decorators import check_user_active, send_verification_email
 from ..forms import (ActivationForm, NameEmailForm, PasswordChangeForm,
     PasswordResetForm, UserForm, UserNotificationsForm)
@@ -88,7 +88,7 @@ class AuthTemplateResponseMixin(TemplateResponseMixin):
             **kwargs)
         # URLs for user
         user_urls = {}
-        if not self.request.user.is_authenticated():
+        if not is_authenticated(self.request):
             user_urls = {
                'login': reverse('login'),
                'password_reset': reverse('password_reset'),
@@ -455,7 +455,7 @@ class UserProfileView(AuthTemplateResponseMixin, UserMixin, UpdateView):
         context = super(UserProfileView, self).get_context_data(**kwargs)
         setattr(context['user'], 'full_name', context['user'].get_full_name())
         # URLs for user
-        if self.request.user.is_authenticated():
+        if is_authenticated(self.request):
             self.update_context_urls(context, {'user': {
                 'api_generate_keys': reverse(
                     'api_generate_keys', args=(self.object,)),

@@ -31,6 +31,7 @@ from rest_framework import exceptions
 from rest_framework.settings import api_settings
 
 from .backends.sts_credentials import temporary_security_token
+from .compat import is_authenticated
 
 
 class AWSTemporaryCredentialsMiddleware(object):
@@ -60,7 +61,7 @@ class AuthenticationMiddleware(BaseAuthenticationMiddleware):
 
     def process_request(self, request):
         super(AuthenticationMiddleware, self).process_request(request)
-        if not request.user.is_authenticated():
+        if not is_authenticated(request):
             try:
                 for authenticator in self.get_authenticators():
                     try:

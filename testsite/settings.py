@@ -32,16 +32,13 @@ def load_config(confpath):
                     if look:
                         value = look.group(2) \
                             % {'LOCALSTATEDIR': BASE_DIR + '/var'}
-                        try:
-                            # Once Django 1.5 introduced ALLOWED_HOSTS (a tuple
-                            # definitely in the site.conf set), we had no choice
-                            # other than using eval. The {} are here to restrict
-                            # the globals and locals context eval has access to.
-                            # pylint: disable=eval-used
-                            setattr(sys.modules[__name__],
-                                    look.group(1).upper(), eval(value, {}, {}))
-                        except StandardError:
-                            raise
+                        # Once Django 1.5 introduced ALLOWED_HOSTS (a tuple
+                        # definitely in the site.conf set), we had no choice
+                        # other than using eval. The {} are here to restrict
+                        # the globals and locals context eval has access to.
+                        # pylint: disable=eval-used
+                        setattr(sys.modules[__name__],
+                            look.group(1).upper(), eval(value, {}, {}))
                 line = conffile.readline()
     else:
         sys.stderr.write('warning: config file %s does not exist.\n' % confpath)
@@ -66,7 +63,6 @@ INSTALLED_APPS = (
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django_extensions',
-    'debug_toolbar',
     'captcha',
     'signup',
     'testsite'
@@ -87,8 +83,7 @@ DATABASES = {
     }
 }
 
-MIDDLEWARE_CLASSES = (
-    'debug_toolbar.middleware.DebugToolbarMiddleware',
+MIDDLEWARE = (
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -96,6 +91,8 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 )
+
+MIDDLEWARE_CLASSES = MIDDLEWARE
 
 ROOT_URLCONF = 'testsite.urls'
 
