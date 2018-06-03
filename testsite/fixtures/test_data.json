@@ -1,16 +1,31 @@
 [
 {
     "fields": {
-      "date_joined": "2012-09-14T14:16:55-09:00",
+      "date_joined": "2018-01-01T00:00:00-09:00",
       "email": "donny@localhost.localdomain",
       "first_name": "Donny",
       "is_active": true,
       "is_staff": true,
       "is_superuser": true,
-      "last_login": "2012-09-14T14:57:48-09:00",
+      "last_login": "2018-01-01T00:00:00-09:00",
       "last_name": "Manager",
       "password": "pbkdf2_sha256$10000$z0MBiWn0Rlem$iZdC6uHomlE07qGK/TqfcfxNzKJtFp03c0JILF1frRc=",
       "username": "donny"
     },
     "model": "auth.User", "pk": 1
+},
+{
+    "fields": {
+      "date_joined": "2018-01-01T00:00:00-09:00",
+      "email": "xia@localhost.localdomain",
+      "first_name": "Xia",
+      "is_active": true,
+      "is_staff": false,
+      "is_superuser": false,
+      "last_login": "2018-01-01T00:00:00-09:00",
+      "last_name": "Lee",
+      "password": "pbkdf2_sha256$10000$z0MBiWn0Rlem$iZdC6uHomlE07qGK/TqfcfxNzKJtFp03c0JILF1frRc=",
+      "username": "xia"
+    },
+    "model": "auth.User", "pk": 2
 }]

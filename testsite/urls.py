@@ -22,6 +22,7 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import debug_toolbar
 from django.core.urlresolvers import reverse_lazy
 from django.views.generic.base import RedirectView, TemplateView
 from signup.forms import NameEmailForm
@@ -32,6 +33,7 @@ from .forms import SignupWithCaptchaForm
 
 
 urlpatterns = [
+    url(r'^__debug__/', include(debug_toolbar.urls)),
     url(r'^api/',
         include('signup.urls.api'),
         decorators=['django.contrib.auth.decorators.login_required']),

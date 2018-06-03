@@ -10,6 +10,8 @@ https://docs.djangoproject.com/en/1.6/ref/settings/
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 import os, sys
+from django.contrib.messages import constants as messages
+
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
 def load_config(confpath):
@@ -64,6 +66,7 @@ INSTALLED_APPS = (
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django_extensions',
+    'debug_toolbar',
     'captcha',
     'signup',
     'testsite'
@@ -85,6 +88,7 @@ DATABASES = {
 }
 
 MIDDLEWARE_CLASSES = (
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -113,6 +117,14 @@ TEMPLATES = [{
         ],
     }
 }]
+
+# Messages
+# --------
+
+MESSAGE_STORAGE = 'django.contrib.messages.storage.session.SessionStorage'
+MESSAGE_TAGS = {
+    messages.ERROR: 'danger'
+}
 
 # Internationalization
 # https://docs.djangoproject.com/en/1.6/topics/i18n/
@@ -157,5 +169,16 @@ LOGIN_REDIRECT_URL = '/app/'
 REST_FRAMEWORK = {
     'PAGE_SIZE': 25,
 }
+
+# Debug toolbar and panel
+# -----------------------
+DEBUG_TOOLBAR_PATCH_SETTINGS = False
+DEBUG_TOOLBAR_CONFIG = {
+    'JQUERY_URL': '/static/vendor/jquery.js',
+    'SHOW_COLLAPSED': True,
+    'SHOW_TEMPLATE_CONTEXT': True,
+}
+
+INTERNAL_IPS = ('127.0.0.1', '::1')
 
 NOCAPTCHA = True

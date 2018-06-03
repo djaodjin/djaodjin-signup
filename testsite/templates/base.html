@@ -1,3 +1,4 @@
+{% load testsite_tags %}
 <!DOCTYPE html>
 <html>
 <head>
@@ -9,19 +10,30 @@
   {% block menubar %}
   <div>
     {% if user.is_authenticated %}
-    <a href="{% url 'accounts_profile' %}">profile</a>
+    <a id="authenticated-user" href="{% url 'accounts_profile' %}">profile</a>
     <a href="{% url 'logout' %}">sign out</a>
     {% else %}
     <a href="{% url 'login' %}">sign in</a>
     {% endif %}
   </div>
   {% endblock %}
-  <div>
-    <ul id="messages">
-      {% for message in messages %}
-      <li>{{ message }}</li>
+  <div id="messages">
+    <div id="messages-content">
+      {% for message in request|messages %}
+      <div class="alert{% if message.tags %} alert-{{message.tags}}{% endif %}">
+        <button type="button" class="close" data-dismiss="alert">&times;</button>
+        <div>{{message|safe}}</div>
+      </div>
       {% endfor %}
-    </ul>
+      {% if form %}
+      {% for message in form|messages %}
+      <div class="alert alert-danger">
+        <button type="button" class="close" data-dismiss="alert">&times;</button>
+        <div>{{message}}</div>
+      </div>
+      {% endfor %}
+      {% endif %}
+    </div>
   </div>
   {% block content %}{% endblock %}
   {% block footer %}{% endblock %}
