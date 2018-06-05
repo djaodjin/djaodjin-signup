@@ -107,10 +107,19 @@ class ActivatedUserManager(UserManager):
 
 class ContactManager(models.Manager):
 
-    def _get_token(self, verification_key):
-        return self.get(verification_key=verification_key)
+    def get_token(self, verification_key):
+        if EMAIL_VERIFICATION_RE.search(verification_key):
+            try:
+                token = self.filter(
+                    verification_key=verification_key).select_related(
+                    'user').get()
+                if not token.verification_key_expired():
+                    return token
+            except Contact.DoesNotExist:
+                pass # We return None instead here.
+        return None
 
-    def get_or_create_token(self, user, verification_key=None):
+    def get_or_create_token(self, user, verification_key=None, reason=None):
         if verification_key is None:
             random_key = str(random.random()).encode('utf-8')
             salt = hashlib.sha1(random_key).hexdigest()[:5]
@@ -119,32 +128,30 @@ class ContactManager(models.Manager):
         kwargs = {}
         if hasattr(user, 'email'):
             kwargs.update({'email': user.email})
-        return self.get_or_create(user=user, defaults={
+        defaults = {
             'full_name': user.get_full_name(),
-            'verification_key': verification_key}, **kwargs)
+            'verification_key': verification_key
+        }
+        if reason:
+            # XXX It is possible a 'reason' field would be a better
+            # implementation.
+            defaults.update({'extra': reason})
+        return self.get_or_create(user=user, defaults=defaults, **kwargs)
 
     def find_user(self, verification_key):
         """
         Find a user based on a verification key but do not activate the user.
         """
-        if EMAIL_VERIFICATION_RE.search(verification_key):
-            try:
-                token = self._get_token(
-                    verification_key=verification_key)
-                if not token.verification_key_expired():
-                    return token.user
-            except Contact.DoesNotExist:
-                pass # We return None instead here.
-        return None
+        token = self.get_token(verification_key=verification_key)
+        return token if token else None
 
     def activate_user(self, verification_key, password=None):
         """
         Activate a user whose email address has been verified.
         """
         try:
-            token = self._get_token(
-                verification_key=verification_key)
-            if not token.verification_key_expired():
+            token = self.get_token(verification_key=verification_key)
+            if token:
                 LOGGER.info('user %s activated through code: %s',
                     token.user, token.verification_key,
                     extra={'event': 'activate', 'username': token.user.username,

@@ -2,16 +2,14 @@
 
 {% block content %}
 <div>
-
-{% if account %}
-<p>Account successfully activated</p>
-<p><a href="{% url 'login' %}">Log in</a></p>
-{% else %}
-<p>Account activation failed</p>
-<p>Please try again to <a href="{% url 'registration_register' %}"> Register</a></p>
-{% endif %}
-
-<p>For any questions, please email us at <a href="mailto:info@example.com">info@example.com</a></p>
-
+    <p>
+You are about to activate your account. Please set a password to secure it.
+    </p>
+    <div>
+    {% if form %}
+    {{form.as_ul}}
+    {% endif %}
+    <hr />
+    <p>Already have an account? <a href="{% url 'login' %}">Log in</a></p>
 </div>
 {% endblock %}

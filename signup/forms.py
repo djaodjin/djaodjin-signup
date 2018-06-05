@@ -94,15 +94,19 @@ class ActivationForm(forms.Form):
         label=_("Full name"),
         error_messages={'invalid':
             _("Sorry we do not recognize some characters in your full name.")})
-
+    username = forms.CharField(widget=forms.TextInput(
+        attrs={'placeholder': 'Username'}),
+        max_length=254, label=_("Username"),
+        error_messages={'invalid': _("username may only contain letters,"\
+" digits and -/_ characters.")})
     new_password1 = forms.CharField(
-        label=_("New password"),
+        label=_("Password"),
         widget=forms.PasswordInput,
         strip=False,
         help_text=password_validation.password_validators_help_text_html(),
     )
     new_password2 = forms.CharField(
-        label=_("New password confirmation"),
+        label=_("Confirm password"),
         strip=False,
         widget=forms.PasswordInput,
     )

@@ -305,14 +305,23 @@ class ActivationBaseView(RedirectFormMixin, UpdateView):
         return first_name, last_name
 
     @property
+    def contact(self):
+        if not hasattr(self, '_contact'):
+            self._contact = Contact.objects.get_token(
+                self.kwargs.get(self.key_url_kwarg))
+        return self._contact
+
+    @property
     def user(self):
         if not hasattr(self, '_user'):
-            self._user = Contact.objects.find_user(
-                self.kwargs.get(self.key_url_kwarg))
+            self._user = self.contact.user
         return self._user
 
-    def get_object(self, queryset=None): #pylint:disable=unused-argument
-        return self.user
+    def get_context_data(self, **kwargs):
+        context = super(ActivationBaseView, self).get_context_data(**kwargs)
+        if self.contact.extra: # XXX might be best as a separate field.
+            context.update({'reason': self.contact.extra})
+        return context
 
     def get_initial(self):
         if self.user:
@@ -320,6 +329,9 @@ class ActivationBaseView(RedirectFormMixin, UpdateView):
                 'email': self.user.email,
                 'full_name': self.user.get_full_name()}
         return {}
+
+    def get_object(self, queryset=None): #pylint:disable=unused-argument
+        return self.user
 
     def activate_user(self, password=None):
         verification_key = self.kwargs.get(self.key_url_kwarg)
@@ -331,6 +343,8 @@ class ActivationBaseView(RedirectFormMixin, UpdateView):
         return user
 
     def dispatch(self, request, *args, **kwargs):
+        if is_authenticated(request):
+            auth_logout(request)
         # We put the code inline instead of using method_decorator() otherwise
         # kwargs is interpreted as parameters in sensitive_post_parameters.
         request.sensitive_post_parameters = '__ALL__'
@@ -368,9 +382,6 @@ class ActivationBaseView(RedirectFormMixin, UpdateView):
                 _("Invalid verification key. Please register."))
             return HttpResponseRedirect(reverse('registration_register'))
         if has_invalid_password(self.user):
-            messages.info(self.request,
-                    _("You are about to activate your account. Please set"\
-                      " a password to secure it."))
             context = self.get_context_data(**kwargs)
             return self.render_to_response(context)
         self.activate_user()
