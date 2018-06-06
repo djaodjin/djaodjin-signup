@@ -101,14 +101,14 @@ class ActivationForm(forms.Form):
 " digits and -/_ characters.")})
     new_password1 = forms.CharField(
         label=_("Password"),
-        widget=forms.PasswordInput,
+        widget=forms.PasswordInput(attrs={'placeholder': 'Password'}),
         strip=False,
         help_text=password_validation.password_validators_help_text_html(),
     )
     new_password2 = forms.CharField(
         label=_("Confirm password"),
         strip=False,
-        widget=forms.PasswordInput,
+        widget=forms.PasswordInput(attrs={'placeholder': 'Confirm password'}),
     )
 
     def __init__(self, *args, **kwargs):
