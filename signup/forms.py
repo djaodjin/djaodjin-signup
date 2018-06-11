@@ -130,6 +130,16 @@ class ActivationForm(forms.Form):
         return password2
 
 
+class PublicKeyForm(forms.Form):
+
+    submit_title = 'Update'
+    pubkey = forms.CharField(widget=forms.Textarea)
+
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('instance')
+        super(PublicKeyForm, self).__init__(*args, **kwargs)
+
+
 class UserForm(forms.ModelForm):
     """
     Form to update a ``User`` profile.

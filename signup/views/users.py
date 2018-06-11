@@ -51,7 +51,7 @@ from ..backends.auth import UsernameOrEmailAuthenticationForm
 from ..compat import User, reverse, is_authenticated
 from ..decorators import check_user_active, send_verification_email
 from ..forms import (ActivationForm, NameEmailForm, PasswordChangeForm,
-    PasswordResetForm, UserForm, UserNotificationsForm)
+    PasswordResetForm, PublicKeyForm, UserForm, UserNotificationsForm)
 from ..mixins import UserMixin
 from ..models import Contact, Notification
 from ..utils import full_name_natural_split, has_invalid_password
@@ -533,6 +533,35 @@ class PasswordChangeView(UserProfileView):
             'event': 'update-password', 'request': self.request,
             'modified': self.object.username})
         messages.info(self.request, "Password has been updated successfuly.")
+        return reverse('users_profile', args=(self.object,))
+
+
+class UserPublicKeyUpdateView(UserProfileView):
+    """
+    Update password for a User
+    """
+    form_class = PublicKeyForm
+    template_name = 'users/pubkey_change_form.html'
+
+    def form_valid(self, form):
+        """
+        If the form is valid, save the associated model.
+        """
+        try:
+            self.user.set_pubkey(self.cleaned_data['pubkey'])
+            self.object = self.user
+        except AttributeError:
+            form.add_error(None, "Cannot store public key in the User model.")
+            return super(UserPublicKeyUpdateView, self).form_invalid(form)
+        return super(UserPublicKeyUpdateView, self).form_valid(form)
+
+    def get_success_url(self):
+        LOGGER.info("%s updated pubkey for %s.",
+            self.request.user, self.object, extra={
+            'event': 'update-pubkey', 'request': self.request,
+            'modified': self.object.username})
+        messages.info(self.request,
+            "Public Key has been updated successfuly.")
         return reverse('users_profile', args=(self.object,))
 
 

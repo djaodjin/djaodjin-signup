@@ -26,7 +26,8 @@ from django.conf.urls import url
 
 from ..settings import USERNAME_PAT
 from ..views.users import (PasswordChangeView, SendActivationView,
-    UserProfileView, UserNotificationsView, redirect_to_user_profile)
+    UserPublicKeyUpdateView, UserProfileView, UserNotificationsView,
+    redirect_to_user_profile)
 
 urlpatterns = [
     # These three URLs must be protected.
@@ -34,6 +35,8 @@ urlpatterns = [
         SendActivationView.as_view(), name='users_activate'),
     url(r'^(?P<user>%s)/password/' % USERNAME_PAT,
         PasswordChangeView.as_view(), name='password_change'),
+    url(r'^(?P<user>%s)/pubkey/' % USERNAME_PAT,
+        UserPublicKeyUpdateView.as_view(), name='pubkey_update'),
     url(r'^(?P<user>%s)/notifications/' % USERNAME_PAT,
         UserNotificationsView.as_view(), name='users_notifications'),
     url(r'^(?P<user>%s)/' % USERNAME_PAT,

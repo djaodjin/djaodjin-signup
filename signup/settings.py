@@ -1,4 +1,4 @@
-# Copyright (c) 2017, Djaodjin Inc.
+# Copyright (c) 2018, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -59,7 +59,11 @@ _SETTINGS = {
     'JWT_SECRET_KEY': getattr(settings, 'SECRET_KEY'),
     'JWT_ALGORITHM': 'HS256',
     'LOGOUT_CLEAR_COOKIES' : None,
-    'REQUIRES_RECAPTCHA': False
+    'REQUIRES_RECAPTCHA': False,
+    'LDAP': {
+        'SERVER_URI': None,
+        'USER_SERCH_DN': None
+    }
 }
 _SETTINGS.update(getattr(settings, 'SIGNUP', {}))
 
@@ -84,6 +88,9 @@ KEY_EXPIRATION = _SETTINGS.get('ACCOUNT_ACTIVATION_DAYS')
 EMAIL_VERIFICATION_PAT = r'[a-f0-9]{40}'
 
 USERNAME_PAT = r'[\w.@+-]+'
+
+LDAP_SERVER_URI = _SETTINGS.get('LDAP', {}).get('SERVER_URI', None)
+LDAP_USER_SERCH_DN = _SETTINGS.get('LDAP', {}).get('USER_SERCH_DN', None)
 
 
 def get_extra_field_class():
