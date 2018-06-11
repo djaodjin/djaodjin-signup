@@ -34,6 +34,26 @@ from ..serializers import APIKeysSerializer
 
 
 class ResetAPIKeysAPIView(UserMixin, CreateAPIView):
+    """
+    Reset the secret API key with which a user can authenticate
+    with the service.
+
+    **Example
+
+    .. code-block:: http
+
+        POST /api/auth/keys/donny/  HTTP/1.1
+
+    responds
+
+    .. code-block:: json
+
+        {
+            "secret": "tgLwDw5ErQ2pQr5TTdAzSYjvZenHC9pSy7fB3sXWERzynbG5zG6h\
+              67pTN4dh7fpy"
+        }
+
+    """
 
     serializer_class = APIKeysSerializer
 
@@ -52,5 +72,5 @@ class ResetAPIKeysAPIView(UserMixin, CreateAPIView):
                 'api_priv_key': make_password(api_priv_key)
             })
         return Response(APIKeysSerializer().to_representation({
-            'api_key': api_pub_key + api_priv_key
+            'secret': api_pub_key + api_priv_key
         }), status=status.HTTP_201_CREATED)

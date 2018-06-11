@@ -49,12 +49,13 @@ class APIKeysSerializer(serializers.Serializer):
     """
     username and password for authentication through API.
     """
-    api_key = serializers.CharField(max_length=128)
+    secret = serializers.CharField(max_length=128, read_only=True,
+        help_text=_("Secret API Key used to authenticate user on every HTTP"\
+        " request"))
 
     class Meta:
         #pylint:disable=old-style-class,no-init
-        fields = ('api_key',)
-        read_only_fields = ('api_key')
+        fields = ('secret',)
 
     def update(self, instance, validated_data):
         raise NotImplementedError('`update()` must be implemented.')
@@ -92,9 +93,11 @@ class CredentialsSerializer(serializers.Serializer):
     """
     username = serializers.CharField(validators=[
         validators.RegexValidator(r'^[\w.@+-]+$', _('Enter a valid username.'),
-            'invalid')])
+            'invalid')],
+        help_text=_("username to identify the account"))
     password = serializers.CharField(write_only=True,
-        style={'input_type': 'password'})
+        style={'input_type': 'password'},
+        help_text=_("secret password for the account"))
 
     def update(self, instance, validated_data):
         raise NotImplementedError('`update()` must be implemented.')
@@ -107,11 +110,16 @@ class CreateUserSerializer(serializers.ModelSerializer):
     #pylint: disable=no-init,old-style-class
 
     password = serializers.CharField(write_only=True,
-        style={'input_type': 'password'})
+        style={'input_type': 'password'}, help_text=_("Password with which"\
+            " a user can authenticate with the service"))
+    email = serializers.EmailField(
+        help_text=_("Primary email to contact user"))
+    full_name = serializers.CharField(
+        help_text=_("Full name of user"))
 
     class Meta:
         model = get_user_model()
-        fields = ('username', 'password', 'email', 'first_name', 'last_name')
+        fields = ('username', 'password', 'email', 'full_name')
 
 
 class PasswordChangeSerializer(serializers.Serializer):
@@ -130,7 +138,8 @@ class TokenSerializer(serializers.Serializer):
     """
     token to verify or refresh.
     """
-    token = serializers.CharField()
+    token = serializers.CharField(
+        help_text=_("Token used to authenticate user on every HTTP request"))
 
     def update(self, instance, validated_data):
         raise NotImplementedError('`update()` must be implemented.')
@@ -147,7 +156,28 @@ class UserSerializer(serializers.ModelSerializer):
     username = serializers.CharField(validators=[
         validators.RegexValidator(r'^[\w.@+-]+$', _('Enter a valid username.'),
             'invalid')])
+    email = serializers.EmailField(
+        help_text=_("Primary email to contact user"))
+    full_name = serializers.SerializerMethodField(
+        help_text=_("Full name of user"))
 
     class Meta:
         model = get_user_model()
-        fields = ('username', 'email', 'first_name', 'last_name')
+        fields = ('username', 'email', 'full_name')
+
+    def get_full_name(self, obj):#pylint:disable=no-self-use
+        return obj.get_full_name()
+
+
+class ValidationErrorSerializer(serializers.Serializer):
+    """
+    Details on why token is invalid.
+    """
+    detail = serializers.CharField(help_text=_("describes the reason for"\
+        " the error in plain text"))
+
+    def update(self, instance, validated_data):
+        raise NotImplementedError('`update()` must be implemented.')
+
+    def create(self, validated_data):
+        raise NotImplementedError('`create()` must be implemented.')

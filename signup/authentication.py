@@ -59,7 +59,7 @@ class APIKeyAuthentication(BasicAuthentication):
 
 class JWTAuthentication(TokenAuthentication):
 
-    keyword = 'JWT'
+    keyword = 'Bearer'
 
     def authenticate_credentials(self, key):
         user = None

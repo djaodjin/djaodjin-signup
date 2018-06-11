@@ -245,16 +245,15 @@ signupControllers.controller("userProfileCtrl",
     $scope.generateKey = function() {
         $http.post(settings.urls.api_generate_keys).then(
            function success(resp) {
-               $scope.api_key = resp.data.api_key;
+               $scope.api_key = resp.data.secret;
            },
            function error(resp) {
                $scope.api_key = "ERROR";
                showErrorMessages(resp);
            });
     };
-
-    angular.element(settings.modals.generate_key).on('show.bs.modal',
-      function() {
+    angular.element(document.querySelector(settings.modals.generate_key)).on(
+      'show.bs.modal', function() {
         $scope.generateKey();
     });
 

@@ -25,11 +25,13 @@
 import logging
 
 from django.core.exceptions import PermissionDenied
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
-from ..serializers import TokenSerializer
-from ..utils import verify_token as verify_token_base
 from .auth import JWTBase
+from ..docs import OpenAPIResponse, swagger_auto_schema
+from ..serializers import TokenSerializer, ValidationErrorSerializer
+from ..utils import verify_token as verify_token_base
 
 
 LOGGER = logging.getLogger(__name__)
@@ -39,21 +41,33 @@ class JWTVerify(JWTBase):
     """
     Verifies a JSON Web Token.
 
-    **Example request**:
+    The authenticated user and the user associated to the token should be
+    identical.
 
-    .. sourcecode:: http
+    **Example
 
-        POST /api/tokens/verify/
+    .. code-block:: http
+
+        POST /api/tokens/verify/ HTTP/1.1
+
+    .. code-block:: json
+
         {
-            "token": "34rotlgqpoxzmw435Alr...",
+            "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2V\
+            ybmFtZSI6ImRvbm55IiwiZW1haWwiOiJzbWlyb2xvKzRAZGphb2RqaW4uY2\
+            9tIiwiZnVsbF9uYW1lIjoiRG9ubnkgQ29vcGVyIiwiZXhwIjoxNTI5NjU4N\
+            zEwfQ.F2y1iwj5NHlImmPfSff6IHLN7sUXpBFmX0qjCbFTe6A"
         }
 
-    **Example response**:
+    responds
 
-    .. sourcecode:: http
+    .. code-block:: json
 
         {
-            "token": "34rotlgqpoxzmw435Alr...",
+            "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2V\
+            ybmFtZSI6ImRvbm55IiwiZW1haWwiOiJzbWlyb2xvKzRAZGphb2RqaW4uY2\
+            9tIiwiZnVsbF9uYW1lIjoiRG9ubnkgQ29vcGVyIiwiZXhwIjoxNTI5NjU4N\
+            zEwfQ.F2y1iwj5NHlImmPfSff6IHLN7sUXpBFmX0qjCbFTe6A"
         }
     """
     serializer_class = TokenSerializer
@@ -62,34 +76,48 @@ class JWTVerify(JWTBase):
     def verify_token(token):
         return verify_token_base(token)
 
+    @swagger_auto_schema(responses={
+        200: OpenAPIResponse("Token is valid", TokenSerializer),
+        400: OpenAPIResponse("Token is invalid", ValidationErrorSerializer)})
     def post(self, request, *args, **kwargs): #pylint:disable=unused-argument
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
             token = serializer.validated_data['token']
-            self.verify_token(token)
-            return Response({'token': token})
-        raise PermissionDenied()
+            if self.request.user == self.verify_token(token):
+                return Response({'token': token})
+        raise ValidationError("token is invalid")
 
 
 class JWTRefresh(JWTVerify):
     """
-    Creates a new JSON Web Token that expires further in the future.
+    Refreshes a JSON Web Token by verifying the token and creating
+    a new one that expires further in the future.
 
-    **Example request**:
+    The authenticated user and the user associated to the token should be
+    identical.
 
-    .. sourcecode:: http
+    **Example
 
-        POST /api/tokens/
+    .. code-block:: http
+
+        POST /api/tokens/ HTTP/1.1
+
+    .. code-block:: json
+
         {
-            "token": "34rotlgqpoxzmw435Alr...",
+            "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2V\
+            ybmFtZSI6ImRvbm55IiwiZW1haWwiOiJzbWlyb2xvKzRAZGphb2RqaW4uY2\
+            9tIiwiZnVsbF9uYW1lIjoiRG9ubnkgQ29vcGVyIiwiZXhwIjoxNTI5NjU4N\
+            zEwfQ.F2y1iwj5NHlImmPfSff6IHLN7sUXpBFmX0qjCbFTe6A"
         }
 
-    **Example response**:
-
-    .. sourcecode:: http
+    .. code-block:: json
 
         {
-            "token": "tokdwwoaQ135Alr...",
+            "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VybmFt\
+            ZSI6ImRvbm55IiwiZW1haWwiOiJzbWlyb2xvKzRAZGphb2RqaW4uY29tIiw\
+            iZnVsbF9uYW1lIjoiRG9ubnkgQ29vcGVyIiwiZXhwIjoxNTI5Njk1NjA1fQ\
+            .-uuZb8R68jWw1Tc9FJocOWe1KHFklRffXbH0Rg6d_0c"
         }
     """
     def post(self, request, *args, **kwargs):
@@ -97,5 +125,6 @@ class JWTRefresh(JWTVerify):
         if serializer.is_valid():
             token = serializer.validated_data['token']
             user = super(JWTRefresh, self).verify_token(token)
-            return self.create_token(user)
+            if self.request.user == user:
+                return self.create_token(user)
         raise PermissionDenied()

@@ -38,15 +38,17 @@ from .. import settings
 from ..compat import User, reverse
 from ..decorators import check_user_active
 from ..serializers import (CredentialsSerializer, CreateUserSerializer,
-    TokenSerializer, UserSerializer)
+    TokenSerializer, UserSerializer, ValidationErrorSerializer)
 from ..utils import (as_timestamp, datetime_or_now,
-    verify_token as verify_token_base)
-
+    full_name_natural_split, verify_token as verify_token_base)
+from ..docs import OpenAPIResponse, swagger_auto_schema
 
 LOGGER = logging.getLogger(__name__)
 
 
 class JWTBase(GenericAPIView):
+
+    serializer_class = TokenSerializer
 
     def create_token(self, user, expires_at=None):
         if not expires_at:
@@ -58,7 +60,7 @@ class JWTBase(GenericAPIView):
         payload.update({'exp': exp})
         token = jwt.encode(payload, settings.JWT_SECRET_KEY,
             settings.JWT_ALGORITHM).decode('utf-8')
-        return Response({'token': token})
+        return Response(TokenSerializer().to_representation({'token': token}))
 
 
 class JWTLogin(JWTBase):
@@ -66,26 +68,32 @@ class JWTLogin(JWTBase):
     Returns a JSON Web Token that can be used in requests that require
     authentication.
 
-    **Example request**:
+    **Example
 
-    .. sourcecode:: http
+    .. code-block:: http
 
-        POST /api/auth/
+        POST /api/auth/ HTTP/1.1
+
+    .. code-block:: json
+
         {
           "username": "donny",
           "password": "yoyo"
         }
 
-    **Example response**:
+    responds
 
-    .. sourcecode:: http
+    .. code-block:: json
 
-        {
-            "token": "34rotlgqpoxzmw435Alr...",
-        }
+        {"token":"eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VybmFtZSI6\
+            ImRvbm55IiwiZW1haWwiOiJzbWlyb2xvKzRAZGphb2RqaW4uY29tIiwiZnV\
+            sbF9uYW1lIjoiRG9ubnkgQ29vcGVyIiwiZXhwIjoxNTI5NjU4NzEwfQ.F2y\
+            1iwj5NHlImmPfSff6IHLN7sUXpBFmX0qjCbFTe6A"}
     """
     serializer_class = CredentialsSerializer
 
+    @swagger_auto_schema(responses={
+        201: OpenAPIResponse("", TokenSerializer)})
     def post(self, request, *args, **kwargs): #pylint:disable=unused-argument
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
@@ -100,28 +108,30 @@ class JWTLogin(JWTBase):
 
 class JWTRegister(JWTBase):
     """
-    Creates a new user and returns a JSON Web Token that can be used
-    in requests that require authentication.
+    Creates a new user and returns a JSON Web Token that can subsequently
+    be used to authenticate the new user in HTTP requests.
 
-    **Example request**:
+    ***Example
 
-    .. sourcecode:: http
+    .. code-block:: http
 
-        POST /api/auth/register/
+        POST /api/auth/register/ HTTP/1.1
         {
-          "username": "donny",
+          "username": "joe1",
           "password": "yoyo",
-          "email": "donny.smith@example.com",
-          "first_name": "Donny",
-          "last_name": "Smith"
+          "email": "joe+1@example.com",
+          "full_name": "Joe Card1"
         }
 
-    **Example response**:
+    responds
 
-    .. sourcecode:: http
+    .. code-block:: http
 
         {
-            "token": "34rotlgqpoxzmw435Alr...",
+            "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VybmFtZSI6\
+              ImpvZTEiLCJlbWFpbCI6ImpvZSsxQGRqYW9kamluLmNvbSIsImZ1bGxfbmFtZ\
+              SI6IkpvZSAgQ2FyZDEiLCJleHAiOjE1Mjk2NTUyMjR9.GFxjU5AvcCQbVylF1P\
+              JwcBUUMECj8AKxsHtRHUSypco"
         }
     """
     serializer_class = CreateUserSerializer
@@ -145,13 +155,13 @@ class JWTRegister(JWTBase):
 " the instructions we just emailed you. Thank you.")))
             return None
 
-        first_name = serializer.validated_data['first_name']
-        last_name = serializer.validated_data['last_name']
+        first_name, mid_initials, last_name = full_name_natural_split(
+            serializer.validated_data['full_name'])
         username = serializer.validated_data.get('username', None)
         password = serializer.validated_data.get('password', None)
         user = User.objects.create_user(username,
             email=email, password=password,
-            first_name=first_name, last_name=last_name)
+            first_name=first_name + " " + mid_initials, last_name=last_name)
 
         # Bypassing authentication here, we are doing frictionless registration
         # the first time around.
@@ -159,32 +169,34 @@ class JWTRegister(JWTBase):
         auth_login(self.request, user)
         return user
 
+    @swagger_auto_schema(responses={
+        201: OpenAPIResponse("", TokenSerializer),
+        400: OpenAPIResponse("parameters error", ValidationErrorSerializer)})
     def post(self, request, *args, **kwargs):#pylint:disable=unused-argument
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
+            # We are not using `is_valid(raise_exceptions=True)` here
+            # because we do not want to give clues on the reasons for failure.
             user = self.register(serializer)
             if user:
                 return self.create_token(user)
-        raise PermissionDenied()
+        raise ValidationError({'detail': "invalid request"})
 
 
 class JWTLogout(JWTBase):
     """
-    Removes all cookies associated with the session
-    and returns a new expired token.
+    XXX Removes all cookies associated with the session.
 
-    **Example request**:
+    **Example
 
-    .. sourcecode:: http
+    .. code-block:: http
 
-        POST /api/auth/logout/
-        Authorization: JWT 34rotlgqpoxzmw435Alr
+        POST /api/auth/logout/  HTTP/1.1
 
-    **Example response**:
+    .. code-block:: json
 
-    .. sourcecode:: http
         {
-          "token": 670yoaq34rotlgqpoxzmw435Alr...",
+          "token": 670yoaq34rotlgqpoxzmw435Alrdf"
         }
     """
     serializer_class = TokenSerializer

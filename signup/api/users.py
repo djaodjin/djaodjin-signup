@@ -43,13 +43,18 @@ class PasswordChangeAPIView(UpdateAPIView):
     """
     Changes the password for a user.
 
-    **Example request**:
+    **Example
 
-    .. sourcecode:: http
+    .. code-block:: http
 
-        POST /api/users/{user}/password/
+        POST /api/users/donny/password/ HTTP/1.1
+
+    responds
+
+    .. code-block:: json
+
         {
-          "password": "yoyo"
+          "password": "yeye"
         }
     """
 
@@ -73,16 +78,26 @@ class UserNotificationsAPIView(UpdateAPIView):
     """
     Changes notifications preferences for a user.
 
-    **Example request**:
+    **Example
 
-    .. sourcecode:: http
+    .. code-block:: http
 
-        POST /api/users/{user}/notifications/
+        POST /api/users/donny/notifications/ HTTP/1.1
+
+    .. code-block:: json
+
         {
-          "notifications": ["notification_slug"]
+          "notifications": ["user_registered_notice"]
+        }
+
+    responds
+
+    .. code-block:: json
+
+        {
+          "notifications": ["user_registered_notice"]
         }
     """
-
     lookup_field = 'username'
     lookup_url_kwarg = 'user'
     serializer_class = NotificationsSerializer
@@ -91,20 +106,22 @@ class UserNotificationsAPIView(UpdateAPIView):
 
 class UserProfileAPIView(RetrieveUpdateDestroyAPIView):
     """
-    Retrieves and update the profile information of a user.
+    Retrieves, updates or deletes the profile information of a user.
 
-    **Example request**:
+    **Example
 
-    .. sourcecode:: http
+    .. code-block:: http
 
-        GET /api/users/{user}
+        GET /api/users/donny HTTP/1.1
 
-    Response:
+    responds
+
+    .. code-block:: json
+
         {
          "username": "donny",
          "email": "donny.smith@example.com"
-         "first_name": "Donny",
-         "last_name": "Smith"
+         "full_name": "Donny Smith"
         }
     """
 
@@ -123,6 +140,25 @@ class UserProfileAPIView(RetrieveUpdateDestroyAPIView):
 
 
 class UserListAPIView(ListAPIView):
+    """
+    Returns the list of users registered with the service.
+
+    **Example
+
+    .. code-block:: http
+
+        GET /api/users/ HTTP/1.1
+
+    responds
+
+    .. code-block:: json
+
+        [{
+         "username": "donny",
+         "email": "donny.smith@example.com"
+         "full_name": "Donny Smith"
+        }]
+    """
 
     serializer_class = UserSerializer
 

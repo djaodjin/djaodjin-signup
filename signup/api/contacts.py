@@ -32,6 +32,21 @@ from ..serializers import ActivitySerializer, ContactSerializer
 
 
 class ActivityListAPIView(ContactMixin, ListCreateAPIView):
+    """
+    Lists activities for a contact.
+
+    **Example
+
+    .. code-block:: http
+
+        GET /api/contacts/xia/activities/ HTTP/1.1
+
+    responds
+
+    .. code-block:: json
+
+       XXX
+    """
 
     serializer_class = ActivitySerializer
 
@@ -43,12 +58,40 @@ class ActivityListAPIView(ContactMixin, ListCreateAPIView):
 
 
 class ContactDetailAPIView(ContactMixin, RetrieveUpdateAPIView):
+    """
+    Retrives or updates a contact information.
 
+    **Example
+
+    .. code-block:: http
+
+        GET /api/contacts/xia/ HTTP/1.1
+
+    responds
+
+    .. code-block:: json
+
+       XXX
+    """
     serializer_class = ContactSerializer
     queryset = Contact.objects.all()
 
 
 class ContactListAPIView(ListCreateAPIView):
+    """
+    Lists or creates a contact.
 
+    **Example
+
+    .. code-block:: http
+
+        GET /api/contacts/ HTTP/1.1
+
+    responds
+
+    .. code-block:: json
+
+       XXX
+    """
     serializer_class = ContactSerializer
     queryset = Contact.objects.all()
