@@ -548,7 +548,7 @@ class UserPublicKeyUpdateView(UserProfileView):
         If the form is valid, save the associated model.
         """
         try:
-            self.user.set_pubkey(self.cleaned_data['pubkey'])
+            self.user.set_pubkey(form.cleaned_data['pubkey'])
             self.object = self.user
         except AttributeError:
             form.add_error(None, "Cannot store public key in the User model.")
