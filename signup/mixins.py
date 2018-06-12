@@ -70,6 +70,12 @@ class UserMixin(UrlsMixin):
     @property
     def user(self):
         if not hasattr(self, '_user'):
-            kwargs = {self.user_field: self.kwargs.get(self.user_url_kwarg)}
-            self._user = get_object_or_404(User.objects.all(), **kwargs)
+            slug = self.kwargs.get(self.user_url_kwarg)
+            if getattr(self.request.user, self.user_field) == slug:
+                # Not only do we avoid one database query, we also
+                # make sure the user is the actual wrapper object.
+                self._user = self.request.user
+            else:
+                kwargs = {self.user_field: slug}
+                self._user = get_object_or_404(User.objects.all(), **kwargs)
         return self._user
