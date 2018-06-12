@@ -102,7 +102,7 @@ class LDAPBackend(object):
         bind_dn = self._get_bind_dn(username)
         try:
             ldap_connection = ldap.initialize(
-                settings.AUTH_LDAP_SERVER_URI, bytes_mode=False)
+                settings.LDAP_SERVER_URI, bytes_mode=False)
             ldap_connection.simple_bind_s(
                 force_text(bind_dn), force_text(password))
 
