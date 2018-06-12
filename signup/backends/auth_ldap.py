@@ -54,7 +54,8 @@ class LDAPUser(object):
         self._dbuser = db_user
 
     def set_password(self, raw_password, bind_password=None):
-        bind_dn = settings.USER_SEARCH_DN % force_text(self.db_user.username)
+        bind_dn = settings.LDAP_USER_SEARCH_DN % force_text(
+            self.db_user.username)
         try:
             ldap_connection = ldap.initialize(
                 settings.AUTH_LDAP_SERVER_URI, bytes_mode=False)
@@ -69,7 +70,8 @@ class LDAPUser(object):
             ldap_connection.unbind_s()
 
     def set_pubkey(self, pubkey, bind_password=None):
-        bind_dn = settings.USER_SEARCH_DN % force_text(self.db_user.username)
+        bind_dn = settings.LDAP_USER_SEARCH_DN % force_text(
+            self.db_user.username)
         try:
             ldap_connection = ldap.initialize(
                 settings.AUTH_LDAP_SERVER_URI, bytes_mode=False)
@@ -90,7 +92,7 @@ class LDAPBackend(object):
     def authenticate(self, request, username=None, password=None, **kwargs):
         #pylint:disable=unused-argument
         user = None
-        bind_dn = settings.USER_SEARCH_DN % force_text(username)
+        bind_dn = settings.LDAP_USER_SEARCH_DN % force_text(username)
         try:
             ldap_connection = ldap.initialize(
                 settings.AUTH_LDAP_SERVER_URI, bytes_mode=False)
