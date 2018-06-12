@@ -56,6 +56,9 @@ class LDAPUser(object):
     def __getattr__(self, name):
         return getattr(self._dbuser, name)
 
+    def __str__(self):
+        return self._dbuser.__str__()
+
     @staticmethod
     def _get_bind_dn(user):
         return settings.LDAP_USER_SEARCH_DN % {'user': force_text(user)}
