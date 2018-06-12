@@ -65,9 +65,9 @@ class LDAPUser(object):
 
     def set_password(self, raw_password, bind_password=None):
         bind_dn = self._get_bind_dn(self._dbuser.username)
+        ldap_connection = ldap.initialize(
+            settings.AUTH_LDAP_SERVER_URI, bytes_mode=False)
         try:
-            ldap_connection = ldap.initialize(
-                settings.AUTH_LDAP_SERVER_URI, bytes_mode=False)
             ldap_connection.simple_bind_s(
                 force_text(bind_dn),
                 force_text(bind_password))
@@ -80,9 +80,9 @@ class LDAPUser(object):
 
     def set_pubkey(self, pubkey, bind_password=None):
         bind_dn = self._get_bind_dn(self._dbuser.username)
+        ldap_connection = ldap.initialize(
+            settings.AUTH_LDAP_SERVER_URI, bytes_mode=False)
         try:
-            ldap_connection = ldap.initialize(
-                settings.AUTH_LDAP_SERVER_URI, bytes_mode=False)
             ldap_connection.simple_bind_s(
                 force_text(bind_dn),
                 force_text(bind_password))
