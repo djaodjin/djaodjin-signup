@@ -31,6 +31,7 @@ from django.contrib.auth import login as auth_login, logout as auth_logout
 from django.contrib.auth import REDIRECT_FIELD_NAME, authenticate
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.tokens import default_token_generator
+from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.http import HttpResponseRedirect
 from django.shortcuts import redirect
@@ -548,12 +549,16 @@ class UserPublicKeyUpdateView(UserProfileView):
         If the form is valid, save the associated model.
         """
         try:
-            self.user.set_pubkey(form.cleaned_data['pubkey'])
+            self.user.set_pubkey(form.cleaned_data['pubkey'],
+                bind_password=form.cleaned_data['password'])
             self.object = self.user
         except AttributeError:
             form.add_error(None, "Cannot store public key in the User model.")
             return super(UserPublicKeyUpdateView, self).form_invalid(form)
-        return super(UserPublicKeyUpdateView, self).form_valid(form)
+        except PermissionDenied as err:
+            form.add_error(None, str(err))
+            return super(UserPublicKeyUpdateView, self).form_invalid(form)
+        return super(UserPublicKeyUpdateView, self).get_success_url()
 
     def get_success_url(self):
         LOGGER.info("%s updated pubkey for %s.",

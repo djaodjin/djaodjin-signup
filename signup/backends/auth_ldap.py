@@ -38,6 +38,7 @@ AUTHENTICATION_BACKENDS = (
 import logging
 
 import ldap  # pip install python-ldap==3.1.0
+from django.core.exceptions import PermissionDenied
 from django.utils.encoding import force_text, force_bytes
 
 from .. import settings
@@ -59,6 +60,16 @@ class LDAPUser(object):
     def __str__(self):
         return self._dbuser.__str__()
 
+    def _get_pk_val(self, meta=None):
+        #pylint:disable=protected-access
+        return self._dbuser._get_pk_val(meta=meta)
+
+    def _set_pk_val(self, value):
+        #pylint:disable=protected-access
+        return self._dbuser._set_pk_val(value)
+
+    pk = property(_get_pk_val, _set_pk_val) #pylint:disable=invalid-name
+
     @staticmethod
     def _get_bind_dn(user):
         return settings.LDAP_USER_SEARCH_DN % {'user': force_text(user)}
@@ -66,7 +77,7 @@ class LDAPUser(object):
     def set_password(self, raw_password, bind_password=None):
         bind_dn = self._get_bind_dn(self._dbuser.username)
         ldap_connection = ldap.initialize(
-            settings.AUTH_LDAP_SERVER_URI, bytes_mode=False)
+            settings.LDAP_SERVER_URI, bytes_mode=False)
         try:
             ldap_connection.simple_bind_s(
                 force_text(bind_dn),
@@ -75,13 +86,15 @@ class LDAPUser(object):
                 force_text(bind_dn),
                 oldpw=force_text(bind_password),
                 newpw=force_text(raw_password))
+        except ldap.LDAPError as err:
+            raise PermissionDenied(str(err))
         finally:
             ldap_connection.unbind_s()
 
     def set_pubkey(self, pubkey, bind_password=None):
         bind_dn = self._get_bind_dn(self._dbuser.username)
         ldap_connection = ldap.initialize(
-            settings.AUTH_LDAP_SERVER_URI, bytes_mode=False)
+            settings.LDAP_SERVER_URI, bytes_mode=False)
         try:
             ldap_connection.simple_bind_s(
                 force_text(bind_dn),
@@ -89,6 +102,8 @@ class LDAPUser(object):
             ldap_connection.modify_s(force_text(bind_dn),
                 [(ldap.MOD_REPLACE, 'sshPublicKey',
                   [force_bytes(pubkey)])])
+        except ldap.LDAPError as err:
+            raise PermissionDenied(str(err))
         finally:
             ldap_connection.unbind_s()
 

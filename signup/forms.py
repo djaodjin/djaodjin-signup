@@ -134,6 +134,11 @@ class PublicKeyForm(forms.Form):
 
     submit_title = 'Update'
     pubkey = forms.CharField(widget=forms.Textarea)
+    password = forms.CharField(
+        label=_("Password"),
+        widget=forms.PasswordInput(attrs={'placeholder': 'Password'}),
+        strip=False,
+        help_text=password_validation.password_validators_help_text_html())
 
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop('instance')
