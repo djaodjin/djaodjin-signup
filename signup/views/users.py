@@ -551,6 +551,10 @@ class UserPublicKeyUpdateView(UserProfileView):
         try:
             self.user.set_pubkey(form.cleaned_data['pubkey'],
                 bind_password=form.cleaned_data['password'])
+            LOGGER.info("%s updated pubkey for %s.",
+                self.request.user, self.object, extra={
+                'event': 'update-pubkey', 'request': self.request,
+                'modified': self.object.username})
             self.object = self.user
         except AttributeError:
             form.add_error(None, "Cannot store public key in the User model.")
@@ -558,16 +562,12 @@ class UserPublicKeyUpdateView(UserProfileView):
         except PermissionDenied as err:
             form.add_error(None, str(err))
             return super(UserPublicKeyUpdateView, self).form_invalid(form)
-        return super(UserPublicKeyUpdateView, self).get_success_url()
+        return HttpResponseRedirect(self.get_success_url())
 
     def get_success_url(self):
-        LOGGER.info("%s updated pubkey for %s.",
-            self.request.user, self.object, extra={
-            'event': 'update-pubkey', 'request': self.request,
-            'modified': self.object.username})
         messages.info(self.request,
             "Public Key has been updated successfuly.")
-        return reverse('users_profile', args=(self.object,))
+        return reverse('users_profile', args=(self.user,))
 
 
 class ActivationView(AuthTemplateResponseMixin, ActivationBaseView):
