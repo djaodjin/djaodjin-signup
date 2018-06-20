@@ -136,6 +136,8 @@ class LDAPBackend(object):
             if created:
                 LOGGER.debug("created user '%s' in database.", username)
             user = LDAPUser(self, db_user=db_user)
+        except ldap.LDAPError:
+            user = None
         finally:
             ldap_connection.unbind_s()
 

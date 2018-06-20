@@ -111,7 +111,7 @@ class JWTRegister(JWTBase):
     Creates a new user and returns a JSON Web Token that can subsequently
     be used to authenticate the new user in HTTP requests.
 
-    ***Example
+    **Example
 
     .. code-block:: http
 

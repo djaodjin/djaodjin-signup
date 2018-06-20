@@ -74,6 +74,15 @@ class PasswordResetForm(PasswordResetBaseForm):
     pass
 
 
+class PasswordResetConfirmForm(SetPasswordForm):
+
+    submit_title = 'Update'
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('instance')
+        super(PasswordResetConfirmForm, self).__init__(user, *args, **kwargs)
+
+
 class ActivationForm(forms.Form):
     """
     Form to set password, and optionally user's profile information

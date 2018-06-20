@@ -52,7 +52,8 @@ from ..backends.auth import UsernameOrEmailAuthenticationForm
 from ..compat import User, reverse, is_authenticated
 from ..decorators import check_user_active, send_verification_email
 from ..forms import (ActivationForm, NameEmailForm, PasswordChangeForm,
-    PasswordResetForm, PublicKeyForm, UserForm, UserNotificationsForm)
+    PasswordResetForm, PasswordResetConfirmForm, PublicKeyForm, UserForm,
+    UserNotificationsForm)
 from ..mixins import UserMixin
 from ..models import Contact, Notification
 from ..utils import full_name_natural_split, has_invalid_password
@@ -160,7 +161,7 @@ class PasswordResetConfirmBaseView(RedirectFormMixin, ProcessFormView):
     """
     Clicked on the link sent in the reset e-mail.
     """
-    form_class = PasswordChangeForm
+    form_class = PasswordResetConfirmForm
     token_generator = default_token_generator
 
     def get_context_data(self, **kwargs):
