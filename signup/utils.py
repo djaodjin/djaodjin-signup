@@ -22,11 +22,12 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import datetime
+import datetime, re
 
 from dateutil.parser import parse
 from django.apps import apps as django_apps
 from django.core.exceptions import ImproperlyConfigured
+from django.db import IntegrityError
 from django.utils import six
 from django.utils.timezone import utc
 from django.utils.translation import ugettext_lazy as _
@@ -101,6 +102,34 @@ def printable_name(user):
     if full_name:
         return full_name
     return user.username
+
+
+def update_db_row(instance, form):
+    """
+    Updates the record in the underlying database, or adds a validation
+    error in the form. When an error is added, the form is returned otherwise
+    this function returns `None`.
+    """
+    try:
+        instance.save()
+        return None
+    except IntegrityError as err:
+        err_msg = str(err).splitlines().pop()
+        # PostgreSQL unique constraint.
+        look = re.match(
+            r'DETAIL:\s+Key \(([a-z_]+)\)=\(.*\) already exists\.', err_msg)
+        if look:
+            form.add_error(look.group(1),
+                "This %s is already taken." % look.group(1))
+            return form
+        # SQLite unique constraint.
+        look = re.match(
+            r'UNIQUE constraint failed: [a-z_]+\.([a-z_]+)', err_msg)
+        if look:
+            form.add_error(look.group(1),
+                "This %s is already taken." % look.group(1))
+            return form
+        raise
 
 
 def verify_token(token):

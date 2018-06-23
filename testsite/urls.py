@@ -25,7 +25,7 @@
 from django.views.generic.base import RedirectView, TemplateView
 from signup.compat import reverse_lazy
 from signup.forms import NameEmailForm
-from signup.views.users import SignupView
+from signup.views.auth import SignupView
 from urldecorators import include, url
 
 from .forms import SignupWithCaptchaForm

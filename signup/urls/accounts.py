@@ -24,7 +24,7 @@
 
 from django.conf.urls import url
 
-from ..views.users import (ActivationView, PasswordResetView,
+from ..views.auth import (ActivationView, PasswordResetView,
     PasswordResetConfirmView, SigninView, SignoutView, SignupView)
 from .. import settings
 
