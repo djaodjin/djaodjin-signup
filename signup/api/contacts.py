@@ -39,13 +39,28 @@ class ActivityListAPIView(ContactMixin, ListCreateAPIView):
 
     .. code-block:: http
 
-        GET /api/contacts/xia/activities/ HTTP/1.1
+        GET /api/contacts/xia/activities HTTP/1.1
 
     responds
 
     .. code-block:: json
 
-       XXX
+        {
+            "count": 1,
+            "next": null,
+            "previous": null,
+            "results": [{
+              "created_at": "2018-01-01T00:00:00Z",
+              "created_by": "alice",
+              "text": "Phone call",
+              "account": null
+            },{
+              "created_at": "2018-01-02T00:00:00Z",
+              "created_by": "alice",
+              "text": "Follow up e-mail",
+              "account": "cowork"
+            }]
+        }
     """
 
     serializer_class = ActivitySerializer
@@ -56,42 +71,148 @@ class ActivityListAPIView(ContactMixin, ListCreateAPIView):
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user, contact=self.contact)
 
+    def post(self, request, *args, **kwargs):
+        """
+        Records new activity with a contact.
+
+        **Examples
+
+        .. code-block:: http
+
+            POST /api/contacts/xia/activities/ HTTP/1.1
+
+        .. code-block:: json
+
+            {
+              "text": "Phone call",
+              "account": null
+            }
+        """
+        return self.create(request, *args, **kwargs)
+
 
 class ContactDetailAPIView(ContactMixin, RetrieveUpdateAPIView):
     """
-    Retrives or updates a contact information.
+    Retrieves information on a ``Contact``.
 
-    **Example
+    **Examples
 
     .. code-block:: http
 
-        GET /api/contacts/xia/ HTTP/1.1
-
-    responds
+        GET /api/contacts/xia HTTP/1.1
 
     .. code-block:: json
 
-       XXX
+        {
+            "slug": "xia",
+            "email": "xia@locahost.localdomain",
+            "full_name": "Xia Lee",
+            "nick_name": "Xia",
+            "created_at": "2018-01-01T00:00:00Z",
+            "activities": [{
+              "created_at": "2018-01-01T00:00:00Z",
+              "created_by": "alice",
+              "text": "Phone call",
+              "account": null
+            },{
+              "created_at": "2018-01-02T00:00:00Z",
+              "created_by": "alice",
+              "text": "Follow up e-mail",
+              "account": "cowork"
+            }]
+        }
     """
     serializer_class = ContactSerializer
     queryset = Contact.objects.all()
+
+    def put(self, request, *args, **kwargs):
+        """
+        Updates a ``Contact``
+
+        **Examples
+
+        .. code-block:: http
+
+            PUT /api/contacts/xia/ HTTP/1.1
+
+        .. code-block:: json
+
+            {
+              "email": "xia@locahost.localdomain",
+              "full_name": "Xia Lee",
+              "nick_name": "Xia",
+            }
+        """
+        return self.update(request, *args, **kwargs)
+
+    def delete(self, request, *args, **kwargs):
+        """
+        Deletes a `Contact``.
+
+        **Examples
+
+        .. code-block:: http
+
+            DELETE /api/contacts/xia/ HTTP/1.1
+        """
+        return self.destroy(request, *args, **kwargs)
 
 
 class ContactListAPIView(ListCreateAPIView):
     """
     Lists or creates a contact.
 
-    **Example
+    **Examples
 
     .. code-block:: http
 
-        GET /api/contacts/ HTTP/1.1
-
-    responds
+        GET /api/contacts HTTP/1.1
 
     .. code-block:: json
 
-       XXX
+        {
+            "count": 1,
+            "next": null,
+            "previous": null,
+            "results": [{
+              "slug": "xia",
+              "email": "xia@locahost.localdomain",
+              "full_name": "Xia Lee",
+              "nick_name": "Xia",
+              "created_at": "2018-01-01T00:00:00Z",
+              "activities": [{
+                "created_at": "2018-01-01T00:00:00Z",
+                "created_by": "alice",
+                "text": "Phone call",
+                "account": null
+              },{
+                "created_at": "2018-01-02T00:00:00Z",
+                "created_by": "alice",
+                "text": "Follow up e-mail",
+                "account": "cowork"
+              }]
+            }]
+        }
     """
     serializer_class = ContactSerializer
     queryset = Contact.objects.all()
+
+    def post(self, request, *args, **kwargs):
+        """
+        Creates a new ``Contact``
+
+        **Examples
+
+        .. code-block:: http
+
+            POST /api/contacts/ HTTP/1.1
+
+        .. code-block:: json
+
+            {
+              "email": "xia@locahost.localdomain",
+              "full_name": "Xia Lee",
+              "nick_name": "Xia"
+            }
+        """
+        return self.create(request, *args, **kwargs)

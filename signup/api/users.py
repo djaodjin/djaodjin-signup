@@ -47,7 +47,7 @@ class PasswordChangeAPIView(UpdateAPIView):
 
     .. code-block:: http
 
-        POST /api/users/donny/password/ HTTP/1.1
+        PUT /api/users/donny/password/ HTTP/1.1
 
     responds
 

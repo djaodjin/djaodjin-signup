@@ -30,7 +30,7 @@ from django.contrib import messages
 from django.contrib.auth import (login as auth_login, logout as auth_logout,
     REDIRECT_FIELD_NAME, authenticate)
 from django.contrib.auth.tokens import default_token_generator
-from django.http import HttpResponseRedirect
+from django.http import Http404, HttpResponseRedirect
 from django.template.response import TemplateResponse
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
@@ -303,6 +303,9 @@ class ActivationBaseView(RedirectFormMixin, UpdateView):
         if not hasattr(self, '_contact'):
             self._contact = Contact.objects.get_token(
                 self.kwargs.get(self.key_url_kwarg))
+            if self._contact is None:
+                raise Http404(
+                    "Cannot find verification key %s" % str(self.key_url_kwarg))
         return self._contact
 
     @property
