@@ -63,6 +63,7 @@ class UserProfileView(UserMixin, UpdateView):
     template_name = 'users/user_form.html'
 
     def form_valid(self, form):
+        form.save(commit=False)
         if update_db_row(self.object, form):
             return self.form_invalid(form)
         return HttpResponseRedirect(self.get_success_url())
