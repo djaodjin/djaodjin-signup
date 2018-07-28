@@ -66,7 +66,7 @@ class PasswordChangeAPIView(UpdateAPIView):
     def perform_update(self, serializer):
         password = serializer.validated_data['password']
         serializer.instance.set_password(password)
-        serializer.save()
+        serializer.instance.save()
         # Updating the password logs out all other sessions for the user
         # except the current one if
         # django.contrib.auth.middleware.SessionAuthenticationMiddleware
