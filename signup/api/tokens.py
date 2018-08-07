@@ -54,9 +54,9 @@ class JWTVerify(JWTBase):
 
         {
             "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2V\
-            ybmFtZSI6ImRvbm55IiwiZW1haWwiOiJzbWlyb2xvKzRAZGphb2RqaW4uY2\
-            9tIiwiZnVsbF9uYW1lIjoiRG9ubnkgQ29vcGVyIiwiZXhwIjoxNTI5NjU4N\
-            zEwfQ.F2y1iwj5NHlImmPfSff6IHLN7sUXpBFmX0qjCbFTe6A"
+ybmFtZSI6ImRvbm55IiwiZW1haWwiOiJzbWlyb2xvKzRAZGphb2RqaW4uY2\
+9tIiwiZnVsbF9uYW1lIjoiRG9ubnkgQ29vcGVyIiwiZXhwIjoxNTI5NjU4N\
+zEwfQ.F2y1iwj5NHlImmPfSff6IHLN7sUXpBFmX0qjCbFTe6A"
         }
 
     responds
@@ -65,9 +65,9 @@ class JWTVerify(JWTBase):
 
         {
             "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2V\
-            ybmFtZSI6ImRvbm55IiwiZW1haWwiOiJzbWlyb2xvKzRAZGphb2RqaW4uY2\
-            9tIiwiZnVsbF9uYW1lIjoiRG9ubnkgQ29vcGVyIiwiZXhwIjoxNTI5NjU4N\
-            zEwfQ.F2y1iwj5NHlImmPfSff6IHLN7sUXpBFmX0qjCbFTe6A"
+ybmFtZSI6ImRvbm55IiwiZW1haWwiOiJzbWlyb2xvKzRAZGphb2RqaW4uY2\
+9tIiwiZnVsbF9uYW1lIjoiRG9ubnkgQ29vcGVyIiwiZXhwIjoxNTI5NjU4N\
+zEwfQ.F2y1iwj5NHlImmPfSff6IHLN7sUXpBFmX0qjCbFTe6A"
         }
     """
     serializer_class = TokenSerializer
@@ -106,18 +106,18 @@ class JWTRefresh(JWTVerify):
 
         {
             "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2V\
-            ybmFtZSI6ImRvbm55IiwiZW1haWwiOiJzbWlyb2xvKzRAZGphb2RqaW4uY2\
-            9tIiwiZnVsbF9uYW1lIjoiRG9ubnkgQ29vcGVyIiwiZXhwIjoxNTI5NjU4N\
-            zEwfQ.F2y1iwj5NHlImmPfSff6IHLN7sUXpBFmX0qjCbFTe6A"
+ybmFtZSI6ImRvbm55IiwiZW1haWwiOiJzbWlyb2xvKzRAZGphb2RqaW4uY2\
+9tIiwiZnVsbF9uYW1lIjoiRG9ubnkgQ29vcGVyIiwiZXhwIjoxNTI5NjU4N\
+zEwfQ.F2y1iwj5NHlImmPfSff6IHLN7sUXpBFmX0qjCbFTe6A"
         }
 
     .. code-block:: json
 
         {
             "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VybmFt\
-            ZSI6ImRvbm55IiwiZW1haWwiOiJzbWlyb2xvKzRAZGphb2RqaW4uY29tIiw\
-            iZnVsbF9uYW1lIjoiRG9ubnkgQ29vcGVyIiwiZXhwIjoxNTI5Njk1NjA1fQ\
-            .-uuZb8R68jWw1Tc9FJocOWe1KHFklRffXbH0Rg6d_0c"
+ZSI6ImRvbm55IiwiZW1haWwiOiJzbWlyb2xvKzRAZGphb2RqaW4uY29tIiw\
+iZnVsbF9uYW1lIjoiRG9ubnkgQ29vcGVyIiwiZXhwIjoxNTI5Njk1NjA1fQ\
+.-uuZb8R68jWw1Tc9FJocOWe1KHFklRffXbH0Rg6d_0c"
         }
     """
     def post(self, request, *args, **kwargs):

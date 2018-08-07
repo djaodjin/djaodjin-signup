@@ -86,9 +86,9 @@ class JWTLogin(JWTBase):
     .. code-block:: json
 
         {"token":"eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VybmFtZSI6\
-            ImRvbm55IiwiZW1haWwiOiJzbWlyb2xvKzRAZGphb2RqaW4uY29tIiwiZnV\
-            sbF9uYW1lIjoiRG9ubnkgQ29vcGVyIiwiZXhwIjoxNTI5NjU4NzEwfQ.F2y\
-            1iwj5NHlImmPfSff6IHLN7sUXpBFmX0qjCbFTe6A"}
+ImRvbm55IiwiZW1haWwiOiJzbWlyb2xvKzRAZGphb2RqaW4uY29tIiwiZnV\
+sbF9uYW1lIjoiRG9ubnkgQ29vcGVyIiwiZXhwIjoxNTI5NjU4NzEwfQ.F2y\
+1iwj5NHlImmPfSff6IHLN7sUXpBFmX0qjCbFTe6A"}
     """
     serializer_class = CredentialsSerializer
 
@@ -129,9 +129,9 @@ class JWTRegister(JWTBase):
 
         {
             "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VybmFtZSI6\
-              ImpvZTEiLCJlbWFpbCI6ImpvZSsxQGRqYW9kamluLmNvbSIsImZ1bGxfbmFtZ\
-              SI6IkpvZSAgQ2FyZDEiLCJleHAiOjE1Mjk2NTUyMjR9.GFxjU5AvcCQbVylF1P\
-              JwcBUUMECj8AKxsHtRHUSypco"
+ImpvZTEiLCJlbWFpbCI6ImpvZSsxQGRqYW9kamluLmNvbSIsImZ1bGxfbmFtZ\
+SI6IkpvZSAgQ2FyZDEiLCJleHAiOjE1Mjk2NTUyMjR9.GFxjU5AvcCQbVylF1P\
+JwcBUUMECj8AKxsHtRHUSypco"
         }
     """
     serializer_class = CreateUserSerializer
@@ -196,7 +196,7 @@ class JWTLogout(JWTBase):
     .. code-block:: json
 
         {
-          "token": 670yoaq34rotlgqpoxzmw435Alrdf"
+          "token": "670yoaq34rotlgqpoxzmw435Alrdf"
         }
     """
     serializer_class = TokenSerializer

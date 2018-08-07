@@ -159,7 +159,6 @@ class UserListAPIView(ListAPIView):
          "full_name": "Donny Smith"
         }]
     """
-
     serializer_class = UserSerializer
 
     def get_queryset(self):

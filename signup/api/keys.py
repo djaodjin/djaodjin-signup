@@ -50,7 +50,7 @@ class ResetAPIKeysAPIView(UserMixin, CreateAPIView):
 
         {
             "secret": "tgLwDw5ErQ2pQr5TTdAzSYjvZenHC9pSy7fB3sXWERzynbG5zG6h\
-              67pTN4dh7fpy"
+67pTN4dh7fpy"
         }
 
     """

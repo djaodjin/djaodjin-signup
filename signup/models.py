@@ -136,7 +136,18 @@ class ContactManager(models.Manager):
             # XXX It is possible a 'reason' field would be a better
             # implementation.
             defaults.update({'extra': reason})
-        return self.get_or_create(user=user, defaults=defaults, **kwargs)
+
+        # XXX The get() needs to be targeted at the write database in order
+        # to avoid potential transaction consistency problems.
+        try:
+            with transaction.atomic():
+                # We have to wrap in a transaction.atomic here, otherwise
+                # we end-up with a TransactionManager error when Contact.slug
+                # already exists in db and we generate new one.
+                return self.get(user=user, **kwargs), False
+        except self.model.DoesNotExist:
+            kwargs.update(defaults)
+        return self.create(user=user, **kwargs), True
 
     def find_user(self, verification_key):
         """
@@ -199,7 +210,7 @@ class Contact(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL,
         null=True, on_delete=models.CASCADE, related_name='contact')
     verification_key = models.CharField(
-        _('email verification key'), max_length=40)
+        _('verification key'), max_length=40)
     extra = settings.get_extra_field_class()(null=True)
 
     def __str__(self):

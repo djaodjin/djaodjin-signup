@@ -48,7 +48,7 @@ from ..decorators import check_user_active
 from ..forms import (ActivationForm, NameEmailForm,
     PasswordResetForm, PasswordResetConfirmForm)
 from ..models import Contact
-from ..utils import full_name_natural_split, has_invalid_password
+from ..utils import full_name_natural_split
 
 
 LOGGER = logging.getLogger(__name__)
@@ -316,19 +316,17 @@ class ActivationBaseView(RedirectFormMixin, UpdateView):
 
     def get_context_data(self, **kwargs):
         context = super(ActivationBaseView, self).get_context_data(**kwargs)
-        if self.contact.extra: # XXX might be best as a separate field.
+        if self.object and self.contact.extra:
+            # XXX might be best as a separate field.
             context.update({'reason': self.contact.extra})
         return context
 
     def get_initial(self):
-        if self.user:
+        if self.object:
             return {
-                'email': self.user.email,
-                'full_name': self.user.get_full_name()}
+                'email': self.object.email,
+                'full_name': self.object.get_full_name()}
         return {}
-
-    def get_object(self, queryset=None): #pylint:disable=unused-argument
-        return self.user
 
     def activate_user(self, password=None):
         verification_key = self.kwargs.get(self.key_url_kwarg)
@@ -373,24 +371,21 @@ class ActivationBaseView(RedirectFormMixin, UpdateView):
         return HttpResponseRedirect(self.get_success_url())
 
     def get(self, request, *args, **kwargs):
-        self.object = self.user
-        if not self.user:
-            messages.error(self.request,
-                _("Invalid verification key. Please register."))
-            return HttpResponseRedirect(reverse('registration_register'))
-        if has_invalid_password(self.user):
-            context = self.get_context_data(**kwargs)
-            return self.render_to_response(context)
-        self.activate_user()
-        messages.info(self.request, _("Thank you. Your account is now active." \
-                  " You can sign in at your convienience."))
-        url = reverse('login')
-        next_url = validate_redirect(self.request)
-        if next_url:
-            success_url = "%s?%s=%s" % (url, REDIRECT_FIELD_NAME, next_url)
+        # We return a custom 404 page such that a user has a chance
+        # to see an explanation of why clicking an expired link
+        # in an e-mail leads to a 404.
+        self.object = self.get_object()
+        context = self.get_context_data(**kwargs)
+        token = context.get('token', None)
+        if token:
+            status = 200
         else:
-            success_url = url
-        return HttpResponseRedirect(success_url)
+            status = 404
+        return self.render_to_response(context, status=status)
+
+    def get_object(self, queryset=None):  #pylint:disable=unused-argument
+        token = Contact.objects.get_token(self.kwargs.get(self.key_url_kwarg))
+        return token.user if token else None
 
 
 class SigninBaseView(RedirectFormMixin, ProcessFormView):
