@@ -23,6 +23,7 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 """Extra Views that might prove useful to register users."""
+from __future__ import unicode_literals
 
 import logging
 
@@ -143,9 +144,9 @@ class PasswordResetBaseView(RedirectFormMixin, ProcessFormView):
         return super(PasswordResetBaseView, self).form_valid(form)
 
     def get_success_url(self):
-        messages.info(self.request, "Please follow the instructions "\
+        messages.info(self.request, _("Please follow the instructions "\
             "in the email that has just been sent to you to reset"\
-            " your password.")
+            " your password."))
         return super(PasswordResetBaseView, self).get_success_url()
 
 
@@ -183,7 +184,8 @@ class PasswordResetConfirmBaseView(RedirectFormMixin, ProcessFormView):
         return self.form_invalid(form)
 
     def get_success_url(self):
-        messages.info(self.request, "Your password has been reset sucessfully.")
+        messages.info(self.request,
+            _("Your password has been reset sucessfully."))
         return super(PasswordResetConfirmBaseView, self).get_success_url()
 
     def get_form_kwargs(self):
@@ -249,9 +251,9 @@ class SignupBaseView(RedirectFormMixin, ProcessFormView):
             if check_user_active(self.request, user,
                                  next_url=self.get_success_url()):
                 messages.warning(self.request, mark_safe(_(
-                    'This email address has already been registered!'\
-' Please <a href="%s">login</a> with your credentials. Thank you.'
-                    % reverse('login'))))
+                    "This email address has already been registered!"\
+" Please <a href=\"%s\">login</a> with your credentials. Thank you.")
+                    % reverse('login')))
             else:
                 messages.warning(self.request, mark_safe(_(
                     "This email address has already been registered!"\
@@ -304,8 +306,8 @@ class ActivationBaseView(RedirectFormMixin, UpdateView):
             self._contact = Contact.objects.get_token(
                 self.kwargs.get(self.key_url_kwarg))
             if self._contact is None:
-                raise Http404(
-                    "Cannot find verification key %s" % str(self.key_url_kwarg))
+                raise Http404(_("Cannot find verification key %s")
+                    % str(self.key_url_kwarg))
         return self._contact
 
     @property
@@ -358,8 +360,7 @@ class ActivationBaseView(RedirectFormMixin, UpdateView):
         if last_name:
             user.last_name = last_name
         user.save() # XXX second save()
-        messages.info(self.request,
-            _("Thank you. Your account is now active."))
+        messages.info(self.request, _("Thank you. Your account is now active."))
 
         # Okay, security check complete. Log the user in.
         user_with_backend = authenticate(

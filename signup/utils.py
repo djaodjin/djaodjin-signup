@@ -120,14 +120,14 @@ def update_db_row(instance, form):
             r'DETAIL:\s+Key \(([a-z_]+)\)=\(.*\) already exists\.', err_msg)
         if look:
             form.add_error(look.group(1),
-                "This %s is already taken." % look.group(1))
+                _("This %s is already taken.") % look.group(1))
             return form
         # SQLite unique constraint.
         look = re.match(
             r'UNIQUE constraint failed: [a-z_]+\.([a-z_]+)', err_msg)
         if look:
             form.add_error(look.group(1),
-                "This %s is already taken." % look.group(1))
+                _("This %s is already taken.") % look.group(1))
             return form
         raise
 
@@ -142,14 +142,14 @@ def verify_token(token):
             algorithms=[settings.JWT_ALGORITHM])
     except jwt.ExpiredSignature:
         raise serializers.ValidationError(
-            _('Signature has expired.'))
+            _("Signature has expired."))
     except jwt.DecodeError:
         raise serializers.ValidationError(
-            _('Error decoding signature.'))
+            _("Error decoding signature."))
     username = payload.get('username', None)
     if not username:
         raise serializers.ValidationError(
-            _('Missing username in payload'))
+            _("Missing username in payload"))
     # Make sure user exists
     try:
         user = User.objects.get(username=username)

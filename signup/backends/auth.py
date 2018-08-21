@@ -55,16 +55,16 @@ from signup.compat import User
 class UsernameOrEmailAuthenticationForm(AuthenticationForm):
 
     username = forms.CharField(widget=forms.TextInput(
-        attrs={'placeholder': 'Username or Email'}),
+        attrs={'placeholder': _("Username or Email")}),
         max_length=254, label=_("Username or Email"))
     password = forms.CharField(widget=forms.PasswordInput(
-        attrs={'placeholder': 'Password'}), label=_("Password"))
+        attrs={'placeholder': _('Password')}), label=_("Password"))
 
     def __init__(self, *args, **kwargs):
         super(UsernameOrEmailAuthenticationForm, self).__init__(*args, **kwargs)
         username_label = self.initial.get('username_label', None)
         if username_label:
-            placeholder_label = '%s or Email' % username_label
+            placeholder_label = _('%s or Email' % username_label)
             self.fields['username'].label = placeholder_label
             self.fields['username'].widget.attrs['placeholder'] \
                 = placeholder_label

@@ -92,7 +92,7 @@ class CredentialsSerializer(serializers.Serializer):
     username and password for authentication through API.
     """
     username = serializers.CharField(validators=[
-        validators.RegexValidator(r'^[\w.@+-]+$', _('Enter a valid username.'),
+        validators.RegexValidator(r'^[\w.@+-]+$', _("Enter a valid username."),
             'invalid')],
         help_text=_("username to identify the account"))
     password = serializers.CharField(write_only=True,
@@ -154,7 +154,7 @@ class UserSerializer(serializers.ModelSerializer):
     # Only way I found out to remove the ``UniqueValidator``. We are not
     # interested to create new instances here.
     username = serializers.CharField(validators=[
-        validators.RegexValidator(r'^[\w.@+-]+$', _('Enter a valid username.'),
+        validators.RegexValidator(r'^[\w.@+-]+$', _("Enter a valid username."),
             'invalid')])
     email = serializers.EmailField(
         help_text=_("Primary email to contact user"))

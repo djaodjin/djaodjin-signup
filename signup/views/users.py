@@ -138,7 +138,7 @@ class PasswordChangeView(UserProfileView):
             self.request.user, self.object, extra={
             'event': 'update-password', 'request': self.request,
             'modified': self.object.username})
-        messages.info(self.request, "Password has been updated successfuly.")
+        messages.info(self.request, _("Password has been updated successfuly."))
         return reverse('users_profile', args=(self.object,))
 
 
@@ -191,7 +191,7 @@ class UserPublicKeyUpdateView(UserProfileView):
 
     def get_success_url(self):
         messages.info(self.request,
-            "Public Key has been updated successfuly.")
+            _("Public Key has been updated successfuly."))
         return reverse('users_profile', args=(self.user,))
 
 

@@ -104,20 +104,21 @@ class ActivationForm(forms.Form):
         error_messages={'invalid':
             _("Sorry we do not recognize some characters in your full name.")})
     username = forms.CharField(widget=forms.TextInput(
-        attrs={'placeholder': 'Username'}),
+        attrs={'placeholder': _("Username")}),
         max_length=254, label=_("Username"),
         error_messages={'invalid': _("username may only contain letters,"\
 " digits and -/_ characters.")})
     new_password1 = forms.CharField(
         label=_("Password"),
-        widget=forms.PasswordInput(attrs={'placeholder': 'Password'}),
+        widget=forms.PasswordInput(attrs={'placeholder': _("Password")}),
         strip=False,
         help_text=password_validation.password_validators_help_text_html(),
     )
     new_password2 = forms.CharField(
         label=_("Confirm password"),
         strip=False,
-        widget=forms.PasswordInput(attrs={'placeholder': 'Confirm password'}),
+        widget=forms.PasswordInput(attrs={
+            'placeholder': _("Confirm password")}),
     )
 
     def __init__(self, *args, **kwargs):
@@ -145,7 +146,7 @@ class PublicKeyForm(forms.Form):
     pubkey = forms.CharField(widget=forms.Textarea)
     password = forms.CharField(
         label=_("Password"),
-        widget=forms.PasswordInput(attrs={'placeholder': 'Password'}),
+        widget=forms.PasswordInput(attrs={'placeholder': _("Password")}),
         strip=False,
         help_text=password_validation.password_validators_help_text_html())
 
@@ -161,7 +162,7 @@ class UserForm(forms.ModelForm):
     submit_title = 'Update'
 
     username = forms.CharField(widget=forms.TextInput(
-        attrs={'placeholder': 'Username'}),
+        attrs={'placeholder': _("Username")}),
         max_length=254, label=_("Username"),
         error_messages={'invalid': _("username may only contain letters,"\
 " digits and -/_ characters.")})

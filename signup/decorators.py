@@ -76,7 +76,7 @@ def send_verification_email(email_contact, request,
     signals.user_verification.send(
         sender=__name__, user=email_contact.user, request=request,
         back_url=back_url, expiration_days=settings.KEY_EXPIRATION)
-    messages.info(request, "Activation e-mail sent.")
+    messages.info(request, _("Activation e-mail sent."))
 
 
 # The user we are looking to activate might be different from

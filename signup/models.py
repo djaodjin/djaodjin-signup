@@ -25,6 +25,7 @@
 """
 User Model for the signup app
 """
+from __future__ import unicode_literals
 
 import datetime, hashlib, logging, random, re
 
@@ -204,13 +205,12 @@ class Contact(models.Model):
     slug = models.SlugField(unique=True,
         help_text=_("Unique identifier shown in the URL bar."))
     created_at = models.DateTimeField(auto_now_add=True)
-    email = models.EmailField(_('email address'), blank=True)
-    full_name = models.CharField(_('Full name'), max_length=60, blank=True)
-    nick_name = models.CharField(_('Nick name'), max_length=60, blank=True)
+    email = models.EmailField(_("Email address"), blank=True)
+    full_name = models.CharField(_("Full name"), max_length=60, blank=True)
+    nick_name = models.CharField(_("Nick name"), max_length=60, blank=True)
     user = models.OneToOneField(settings.AUTH_USER_MODEL,
         null=True, on_delete=models.CASCADE, related_name='contact')
-    verification_key = models.CharField(
-        _('verification key'), max_length=40)
+    verification_key = models.CharField(_("Verification key"), max_length=40)
     extra = settings.get_extra_field_class()(null=True)
 
     def __str__(self):
@@ -231,7 +231,7 @@ class Contact(models.Model):
         elif len(slug_base) > max_length:
             slug_base = slug_base[:max_length]
         self.slug = slug_base
-        for _ in range(1, 10):
+        for idx in range(1, 10): #pylint:disable=unused-variable
             try:
                 with transaction.atomic():
                     return super(Contact, self).save(
@@ -247,7 +247,8 @@ class Contact(models.Model):
                 else:
                     self.slug = slug_base + suffix
         raise ValidationError({'detail':
-            "Unable to create a unique URL slug from email '%s'" % self.email})
+            _("Unable to create a unique URL slug from email '%s'")
+                % self.email})
 
     def verification_key_expired(self):
         expiration_date = datetime.timedelta(days=settings.KEY_EXPIRATION)
@@ -273,7 +274,7 @@ class Activity(models.Model):
     extra = settings.get_extra_field_class()(null=True)
 
     def __str__(self):
-        return u"%s-%s" % (self.created_at, self.created_by)
+        return "%s-%s" % (self.created_at, self.created_by)
 
 
 @python_2_unicode_compatible
