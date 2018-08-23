@@ -44,6 +44,7 @@ urlpatterns = patterns('',
         name='login'),
 )
 """
+from __future__ import unicode_literals
 
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm
@@ -58,7 +59,7 @@ class UsernameOrEmailAuthenticationForm(AuthenticationForm):
         attrs={'placeholder': _("Username or Email")}),
         max_length=254, label=_("Username or Email"))
     password = forms.CharField(widget=forms.PasswordInput(
-        attrs={'placeholder': _('Password')}), label=_("Password"))
+        attrs={'placeholder': _("Password")}), label=_("Password"))
 
     def __init__(self, *args, **kwargs):
         super(UsernameOrEmailAuthenticationForm, self).__init__(*args, **kwargs)

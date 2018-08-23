@@ -25,8 +25,7 @@
 import logging
 
 from django.core.exceptions import PermissionDenied
-from django.contrib.auth import (authenticate, login as auth_login,
-    logout as auth_logout)
+from django.contrib.auth import authenticate, logout as auth_logout
 from django.utils.safestring import mark_safe
 from django.utils.translation import ugettext_lazy as _
 import jwt
@@ -101,7 +100,6 @@ sbF9uYW1lIjoiRG9ubnkgQ29vcGVyIiwiZXhwIjoxNTI5NjU4NzEwfQ.F2y\
             password = serializer.validated_data['password']
             user = authenticate(username=username, password=password)
             if user:
-                auth_login(request, user)
                 return self.create_token(user)
         raise PermissionDenied()
 
@@ -166,7 +164,6 @@ JwcBUUMECj8AKxsHtRHUSypco"
         # Bypassing authentication here, we are doing frictionless registration
         # the first time around.
         user.backend = 'django.contrib.auth.backends.ModelBackend'
-        auth_login(self.request, user)
         return user
 
     @swagger_auto_schema(responses={
