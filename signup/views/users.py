@@ -99,7 +99,8 @@ class UserNotificationsView(UserMixin, UpdateView):
     slug_url_kwarg = 'user'
     template_name = 'users/user_notifications.html'
 
-    def get_notifications(self):
+    @staticmethod
+    def get_notifications():
         return Notification.objects.all()
 
     def form_valid(self, form):
