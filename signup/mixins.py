@@ -25,7 +25,7 @@
 from django.utils import six
 from rest_framework.generics import get_object_or_404
 
-from .compat import User
+from .compat import User, reverse, is_authenticated
 from .models import Contact
 
 
@@ -79,3 +79,15 @@ class UserMixin(UrlsMixin):
                 kwargs = {self.user_field: slug}
                 self._user = get_object_or_404(User.objects.all(), **kwargs)
         return self._user
+
+    def get_context_data(self, **kwargs):
+        context = super(UserMixin, self).get_context_data(**kwargs)
+        # URLs for user
+        if is_authenticated(self.request):
+            self.update_context_urls(context, {'user': {
+                'notifications': reverse(
+                    'users_notifications', args=(self.user,)),
+                'profile': reverse('users_profile', args=(self.user,)),
+                'profile_redirect': reverse('accounts_profile')
+            }})
+        return context

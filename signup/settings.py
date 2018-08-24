@@ -45,25 +45,27 @@ REQUIRE_RECAPTCHA
 from django.conf import settings
 
 _SETTINGS = {
-    'ACCOUNT_MODEL': getattr(settings, 'AUTH_USER_MODEL', None),
     'ACCOUNT_ACTIVATION_DAYS': getattr(settings, 'ACCOUNT_ACTIVATION_DAYS', 2),
+    'ACCOUNT_MODEL': getattr(settings, 'AUTH_USER_MODEL', None),
     'AUTH_USER_MODEL': getattr(settings, 'AUTH_USER_MODEL'),
-    'AWS_REGION': None,
-    'AWS_UPLOAD_ROLE': None,
     'AWS_ACCOUNT_ID': None,
     'AWS_EXTERNAL_ID': "",
+    'AWS_REGION': None,
+    'AWS_UPLOAD_ROLE': None,
     'DEFAULT_FROM_EMAIL': getattr(settings, 'DEFAULT_FROM_EMAIL'),
     'DISABLED_AUTHENTICATION': False,
     'DISABLED_REGISTRATION': False,
     'EXTRA_FIELD': None,
-    'JWT_SECRET_KEY': getattr(settings, 'SECRET_KEY'),
     'JWT_ALGORITHM': 'HS256',
-    'LOGOUT_CLEAR_COOKIES' : None,
-    'REQUIRES_RECAPTCHA': False,
+    'JWT_SECRET_KEY': getattr(settings, 'SECRET_KEY'),
     'LDAP': {
         'SERVER_URI': None,
         'USER_SERCH_DN': None
-    }
+    },
+    'LOGOUT_CLEAR_COOKIES' : None,
+    'REQUIRES_RECAPTCHA': False,
+    'NOTIFICATIONS_OPT_OUT': True
+
 }
 _SETTINGS.update(getattr(settings, 'SIGNUP', {}))
 
@@ -80,6 +82,7 @@ JWT_SECRET_KEY = _SETTINGS.get('JWT_SECRET_KEY')
 JWT_ALGORITHM = _SETTINGS.get('JWT_ALGORITHM')
 LOGOUT_CLEAR_COOKIES = _SETTINGS.get('LOGOUT_CLEAR_COOKIES')
 REQUIRES_RECAPTCHA = _SETTINGS.get('REQUIRES_RECAPTCHA')
+NOTIFICATIONS_OPT_OUT = _SETTINGS.get('NOTIFICATIONS_OPT_OUT')
 
 LOGIN_URL = getattr(settings, 'LOGIN_URL')
 LOGIN_REDIRECT_URL = getattr(settings, 'LOGIN_REDIRECT_URL')

@@ -37,6 +37,7 @@ from django.utils.translation import ugettext_lazy as _
 from django.views.generic.detail import BaseDetailView
 from django.views.generic.edit import UpdateView
 
+from .. import settings
 from ..compat import User, reverse, is_authenticated
 from ..decorators import send_verification_email
 from ..forms import (PasswordChangeForm, PublicKeyForm, UserForm,
@@ -78,21 +79,17 @@ class UserProfileView(UserMixin, UpdateView):
                     'api_generate_keys', args=(self.object,)),
                 'api_profile': reverse(
                     'api_user_profile', args=(self.object,)),
-                'notifications': reverse(
-                    'users_notifications', args=(self.object,)),
                 'password_change': reverse(
                     'password_change', args=(self.object,)),
-                'profile': reverse('users_profile', args=(self.object,)),
-                'profile_redirect': reverse('accounts_profile')
             }})
         return context
 
     def get_success_url(self):
-        messages.info(self.request, 'Profile Updated.')
+        messages.info(self.request, _("Profile Updated."))
         return reverse('users_profile', args=(self.object,))
 
 
-class UserNotificationsView(UpdateView):
+class UserNotificationsView(UserMixin, UpdateView):
     """
     A view where a user can configure their notification settings
     """
@@ -102,26 +99,41 @@ class UserNotificationsView(UpdateView):
     slug_url_kwarg = 'user'
     template_name = 'users/user_notifications.html'
 
+    def get_notifications(self):
+        return Notification.objects.all()
+
     def form_valid(self, form):
         with transaction.atomic():
             notifications = self.get_initial().get('notifications')
             self.object.notifications.clear()
             for notification_slug, enabled in six.iteritems(form.cleaned_data):
-                if enabled:
-                    self.object.notifications.add(
-                        notifications.get(notification_slug)[0])
+                if settings.NOTIFICATIONS_OPT_OUT:
+                    if not enabled:
+                        self.object.notifications.add(
+                            notifications.get(notification_slug)[0])
+                else:
+                    if enabled:
+                        self.object.notifications.add(
+                            notifications.get(notification_slug)[0])
         return HttpResponseRedirect(self.get_success_url())
 
     def get_initial(self):
         notifications = {}
-        enabled = self.request.user.notifications.all()
-        for notification in Notification.objects.all():
-            notifications.update({
-                notification.slug: (notification, notification in enabled)})
+        enabled = self.user.notifications.all()
+        if settings.NOTIFICATIONS_OPT_OUT:
+            for notification in self.get_notifications():
+                notifications.update({
+                    notification.slug: (
+                        notification, notification not in enabled)})
+        else:
+            for notification in self.get_notifications():
+                notifications.update({
+                    notification.slug: (
+                        notification, notification in enabled)})
         return {'notifications': notifications}
 
     def get_success_url(self):
-        messages.info(self.request, 'Notifications Updated.')
+        messages.info(self.request, _("Notifications Updated."))
         return reverse('users_notifications', args=(self.object,))
 
 
