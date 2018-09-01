@@ -1,4 +1,4 @@
-# Copyright (c) 2017, Djaodjin Inc.
+# Copyright (c) 2018, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -29,6 +29,9 @@ import boto3
 from .. import settings
 from ..compat import is_authenticated
 from ..utils import datetime_or_now
+
+#pylint:disable=no-name-in-module,import-error
+from django.utils.six.moves.urllib.parse import urlparse
 
 
 LOGGER = logging.getLogger(__name__)
@@ -94,7 +97,7 @@ def temporary_security_token(request,
 
 def _signed_policy(region, service, requested_at,
                    access_key, secret_key, security_token,
-                   bucket=None, acl=None):
+                   bucket=None, key_prefix="", acl=None):
     #pylint:disable=too-many-arguments,too-many-locals
     signature_date = requested_at.strftime("%Y%m%d")
     x_amz_credential = '/'.join([
@@ -106,7 +109,7 @@ def _signed_policy(region, service, requested_at,
         {"x-amz-credential": x_amz_credential},
         {"x-amz-date": x_amz_date},
         {"x-amz-security-token": security_token},
-        ["starts-with", "$key", ""],
+        ["starts-with", "$key", key_prefix],
         ["starts-with", "$Content-Type", ""]
     ]
     if acl is not None:
@@ -150,7 +153,7 @@ def _signed_policy(region, service, requested_at,
     return context
 
 
-def aws_bucket_context(request, bucket, acls=None, aws_upload_role=None,
+def aws_bucket_context(request, location, acls=None, aws_upload_role=None,
                        aws_external_id=None, aws_region=None):
     """
     Context to use in templates to upload from the client brower
@@ -159,6 +162,25 @@ def aws_bucket_context(request, bucket, acls=None, aws_upload_role=None,
     #pylint:disable=too-many-arguments
     context = {}
     if is_authenticated(request):
+        # Derives a bucket_name and key_prefix from a location
+        # (ex: s3://bucket_name/key_prefix,
+        # https://s3-region.amazonaws/bucket_name/key_prefix)
+        parts = urlparse(location)
+        bucket_name = parts.netloc.split('.')[0]
+        key_prefix = parts.path
+        if bucket_name.startswith('s3-'):
+            aws_region = bucket_name[3:]
+            name_parts = key_prefix.split('/')
+            if name_parts and not name_parts[0]:
+                name_parts.pop(0)
+            bucket_name = name_parts[0]
+            key_prefix = '/'.join(name_parts[1:])
+        if key_prefix.startswith('/'):
+            # we rename leading '/' otherwise S3 copy triggers a 404
+            # because it creates an URL with '//'.
+            key_prefix = key_prefix[1:]
+        if key_prefix and key_prefix.endswith('/'):
+            key_prefix = key_prefix[:-1]
         if not aws_region:
             aws_region = settings.AWS_REGION
 
@@ -176,16 +198,16 @@ def aws_bucket_context(request, bucket, acls=None, aws_upload_role=None,
                     request.session['access_key'],
                     request.session['secret_key'],
                     security_token=request.session['security_token'],
-                    bucket=bucket, acl=acl))
+                    bucket=bucket_name, key_prefix=key_prefix, acl=acl))
         else:
             context.update(_signed_policy(
                 aws_region, "s3", requested_at,
                 request.session['access_key'],
                 request.session['secret_key'],
                 security_token=request.session['security_token'],
-                bucket=bucket))
-        context.update({"location": "https://%s.s3-%s.amazonaws.com/" % (
-                bucket, aws_region)})
+                bucket=bucket_name, key_prefix=key_prefix))
+        context.update({"location": "https://%s.s3-%s.amazonaws.com/%s" % (
+                bucket_name, aws_region, key_prefix)})
     return context
 
 
@@ -193,7 +215,7 @@ class AWSContextMixin(object):
 
     def get_context_data(self, *args, **kwargs):
         #pylint: disable=unused-argument
-        return aws_bucket_context(self.request, kwargs.get('bucket', None),
+        return aws_bucket_context(self.request, kwargs.get('location', None),
             acls=kwargs.get('acls', None),
             aws_upload_role=kwargs.get('aws_upload_role', None),
             aws_external_id=kwargs.get('aws_external_id', None),
