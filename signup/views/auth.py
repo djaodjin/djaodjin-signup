@@ -125,29 +125,30 @@ class PasswordResetBaseView(RedirectFormMixin, ProcessFormView):
     token_generator = default_token_generator
 
     def form_valid(self, form):
-        users = User.objects.filter(email__iexact=form.cleaned_data['email'])
-        if users.exists():
-            user = users.get()
-            if user.is_active and user.has_usable_password():
-                # Make sure that no email is sent to a user that actually has
-                # a password marked as unusable
+        try:
+            user = User.objects.get(
+                email__iexact=form.cleaned_data['email'], is_active=True)
+            next_url = validate_redirect(self.request)
+            if check_user_active(self.request, user, next_url=next_url):
+                # Make sure that a reset password email is sent to a user
+                # that actually has an activated account.
                 uid = urlsafe_base64_encode(force_bytes(user.pk))
                 token = self.token_generator.make_token(user)
                 back_url = self.request.build_absolute_uri(
                     reverse('password_reset_confirm', args=(uid, token)))
-                next_url = validate_redirect(self.request)
                 if next_url:
                     back_url += '?%s=%s' % (REDIRECT_FIELD_NAME, next_url)
                 signals.user_reset_password.send(
                     sender=__name__, user=user, request=self.request,
                     back_url=back_url, expiration_days=settings.KEY_EXPIRATION)
-        return super(PasswordResetBaseView, self).form_valid(form)
-
-    def get_success_url(self):
-        messages.info(self.request, _("Please follow the instructions "\
-            "in the email that has just been sent to you to reset"\
-            " your password."))
-        return super(PasswordResetBaseView, self).get_success_url()
+                messages.info(self.request, _("Please follow the instructions "\
+                    "in the email that has just been sent to you to reset"\
+                    " your password."))
+            return super(PasswordResetBaseView, self).form_valid(form)
+        except User.DoesNotExist:
+            messages.error(self.request, _("We cannot find an account"\
+                "for this e-mail address. Please verify the spelling."))
+        return super(PasswordResetBaseView, self).form_invalid(form)
 
 
 class PasswordResetConfirmBaseView(RedirectFormMixin, ProcessFormView):

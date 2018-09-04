@@ -168,6 +168,9 @@ class SendActivationView(BaseDetailView):
             self.get_object()).first()
         if unverified_email is not None:
             send_verification_email(unverified_email, request)
+            messages.info(self.request, _("Please follow the instructions"\
+                " in the email that has just been sent to you to verify"\
+                " the e-mail address."))
         else:
             messages.info(self.request,
                 _("This email address has already been verified."))

@@ -79,6 +79,11 @@ def full_name_natural_split(full_name):
     return first_name, middle_initials, last_name
 
 
+def get_accept_list(request):
+    http_accept = request.META.get('HTTP_ACCEPT', '*/*')
+    return [item.strip() for item in http_accept.split(',')]
+
+
 def get_account_model():
     """
     Returns the ``Account`` model that is active in this project.

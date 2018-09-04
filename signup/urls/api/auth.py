@@ -27,7 +27,7 @@ from django.conf.urls import url
 from ...api.auth import JWTLogin, JWTLogout, JWTRegister
 
 urlpatterns = [
-    url(r'^auth/logout/', JWTLogout.as_view()),
-    url(r'^auth/register/', JWTRegister.as_view()),
-    url(r'^auth/', JWTLogin.as_view()),
+    url(r'^auth/logout/', JWTLogout.as_view(), name='api_logout'),
+    url(r'^auth/register/', JWTRegister.as_view(), name='api_register'),
+    url(r'^auth/', JWTLogin.as_view(), name='api_login'),
 ]

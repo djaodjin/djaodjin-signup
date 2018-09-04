@@ -109,7 +109,8 @@ class CredentialsSerializer(serializers.Serializer):
 class CreateUserSerializer(serializers.ModelSerializer):
     #pylint: disable=no-init,old-style-class
 
-    password = serializers.CharField(write_only=True,
+    username = serializers.CharField(required=False)
+    password = serializers.CharField(required=False, write_only=True,
         style={'input_type': 'password'}, help_text=_("Password with which"\
             " a user can authenticate with the service"))
     email = serializers.EmailField(

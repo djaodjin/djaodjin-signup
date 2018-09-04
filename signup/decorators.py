@@ -37,7 +37,7 @@ from django.utils.translation import ugettext_lazy as _
 from . import settings, signals
 from .compat import is_authenticated, reverse
 from .models import Contact
-from .utils import has_invalid_password
+from .utils import has_invalid_password, get_accept_list
 
 
 def _insert_url(request, redirect_field_name=REDIRECT_FIELD_NAME,
@@ -76,7 +76,6 @@ def send_verification_email(email_contact, request,
     signals.user_verification.send(
         sender=__name__, user=email_contact.user, request=request,
         back_url=back_url, expiration_days=settings.KEY_EXPIRATION)
-    messages.info(request, _("Activation e-mail sent."))
 
 
 # The user we are looking to activate might be different from
@@ -98,6 +97,11 @@ def check_user_active(request, user,
             send_verification_email(
                 first_unverified_email, request, next_url=next_url,
                 redirect_field_name=redirect_field_name)
+            http_accepts = get_accept_list(request)
+            if 'text/html' in http_accepts:
+                messages.info(request, _("Please follow the instructions "\
+                    "in the email that has just been sent to you to activate"\
+                    " your account."))
             return False
     return True
 

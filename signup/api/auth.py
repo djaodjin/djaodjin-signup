@@ -134,9 +134,9 @@ JwcBUUMECj8AKxsHtRHUSypco"
     """
     serializer_class = CreateUserSerializer
 
-    def register(self, serializer):
+    def register_user(self, **validated_data):
         #pylint: disable=maybe-no-member
-        email = serializer.validated_data['email']
+        email = validated_data['email']
         users = User.objects.filter(email=email)
         if users.exists():
             user = users.get()
@@ -154,9 +154,9 @@ JwcBUUMECj8AKxsHtRHUSypco"
             return None
 
         first_name, mid_initials, last_name = full_name_natural_split(
-            serializer.validated_data['full_name'])
-        username = serializer.validated_data.get('username', None)
-        password = serializer.validated_data.get('password', None)
+            validated_data['full_name'])
+        username = validated_data.get('username', None)
+        password = validated_data.get('password', None)
         user = User.objects.create_user(username,
             email=email, password=password,
             first_name=first_name + " " + mid_initials, last_name=last_name)
@@ -166,13 +166,16 @@ JwcBUUMECj8AKxsHtRHUSypco"
         user.backend = 'django.contrib.auth.backends.ModelBackend'
         return user
 
+    def register(self, serializer):
+        return self.register_user(**serializer.validated_data)
+
     @swagger_auto_schema(responses={
         201: OpenAPIResponse("", TokenSerializer),
         400: OpenAPIResponse("parameters error", ValidationErrorSerializer)})
     def post(self, request, *args, **kwargs):#pylint:disable=unused-argument
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
-            # We are not using `is_valid(raise_exceptions=True)` here
+            # We are not using `is_valid(raise_exception=True)` here
             # because we do not want to give clues on the reasons for failure.
             user = self.register(serializer)
             if user:
