@@ -140,8 +140,7 @@ JwcBUUMECj8AKxsHtRHUSypco"
         users = User.objects.filter(email=email)
         if users.exists():
             user = users.get()
-            if check_user_active(self.request, user,
-                                 next_url=self.get_success_url()):
+            if check_user_active(self.request, user):
                 raise ValidationError(mark_safe(_(
                     'This email address has already been registered!'\
 ' Please <a href="%s">login</a> with your credentials. Thank you.'

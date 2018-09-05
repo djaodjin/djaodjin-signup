@@ -29,12 +29,16 @@ Decorators that check a User a verified email address.
 from functools import wraps
 
 from django.contrib import messages
-from django.contrib.auth import REDIRECT_FIELD_NAME, logout as auth_logout
+from django.contrib.auth import (REDIRECT_FIELD_NAME, get_user_model,
+    logout as auth_logout)
+from django.core.exceptions import PermissionDenied
+from django.shortcuts import get_object_or_404
 from django.utils.decorators import available_attrs
 from django.utils import six
 from django.utils.translation import ugettext_lazy as _
 
 from . import settings, signals
+from .auth import validate_redirect
 from .compat import is_authenticated, reverse
 from .models import Contact
 from .utils import has_invalid_password, get_accept_list
@@ -57,6 +61,18 @@ def _insert_url(request, redirect_field_name=REDIRECT_FIELD_NAME,
         path = request.get_full_path()
     from django.contrib.auth.views import redirect_to_login
     return redirect_to_login(path, inserted_url, redirect_field_name)
+
+
+def redirect_or_denied(request, inserted_url,
+                       redirect_field_name=REDIRECT_FIELD_NAME, descr=None):
+    http_accepts = get_accept_list(request)
+    if ('text/html' in http_accepts
+        and isinstance(inserted_url, six.string_types)):
+        return _insert_url(request, redirect_field_name=redirect_field_name,
+                           inserted_url=inserted_url)
+    if descr is None:
+        descr = ""
+    raise PermissionDenied(descr)
 
 
 def send_verification_email(email_contact, request,
@@ -87,23 +103,30 @@ def check_user_active(request, user,
     Checks that a *user* is active. We won't activate the account of
     a user until we checked the email address is valid.
     """
+    if isinstance(user, six.string_types):
+        user = get_object_or_404(get_user_model(), username=user)
     if has_invalid_password(user):
         # Let's send e-mail again.
         first_unverified_email = Contact.objects.unverified_for_user(
             user).first()
-        if first_unverified_email is not None:
-            if not next_url:
-                next_url = request.META['PATH_INFO']
-            send_verification_email(
-                first_unverified_email, request, next_url=next_url,
-                redirect_field_name=redirect_field_name)
-            http_accepts = get_accept_list(request)
-            if 'text/html' in http_accepts:
-                messages.info(request, _("Please follow the instructions "\
-                    "in the email that has just been sent to you to activate"\
-                    " your account."))
-            return False
+        if first_unverified_email is None:
+            first_unverified_email = user.email
+        if not next_url:
+            next_url = validate_redirect(request)
+        send_verification_email(
+            first_unverified_email, request, next_url=next_url,
+            redirect_field_name=redirect_field_name)
+        return False
     return True
+
+
+def fail_active(request):
+    """
+    Active with valid credentials
+    """
+    if not check_user_active(request, request.user):
+        return reverse(settings.LOGIN_URL)
+    return False
 
 
 def active_required(function=None,
@@ -117,18 +140,20 @@ def active_required(function=None,
     def decorator(view_func):
         @wraps(view_func, assigned=available_attrs(view_func))
         def _wrapped_view(request, *args, **kwargs):
+            redirect_url = login_url or settings.LOGIN_URL
             if is_authenticated(request):
-                if check_user_active(request, request.user):
+                redirect_url = fail_active(request)
+                if not redirect_url:
                     return view_func(request, *args, **kwargs)
-                else:
-                    # User is logged in but her email has not been verified yet.
-                    messages.info(
-                        request, _(
+                # User is logged in but her email has not been verified yet.
+                http_accepts = get_accept_list(request)
+                if 'text/html' in http_accepts:
+                    messages.info(request, _(
 "You should now secure and activate your account following the instructions"\
 " we just emailed you. Thank you."))
-                    auth_logout(request)
-            return _insert_url(request, redirect_field_name,
-                               login_url or settings.LOGIN_URL)
+                auth_logout(request)
+            return redirect_or_denied(request, redirect_url,
+                redirect_field_name=redirect_field_name)
         return _wrapped_view
 
     if function:

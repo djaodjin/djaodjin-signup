@@ -144,8 +144,14 @@ class PasswordResetBaseView(RedirectFormMixin, ProcessFormView):
                 messages.info(self.request, _("Please follow the instructions"\
                     " in the email that has just been sent to you to reset"\
                     " your password."))
+            else:
+                messages.info(self.request, _(
+"You should now secure and activate your account following the instructions"\
+" we just emailed you. Thank you."))
             return super(PasswordResetBaseView, self).form_valid(form)
         except User.DoesNotExist:
+            # We don't want to give a clue about registered users, yet
+            # it already possible to do a straight register to get the same.
             messages.error(self.request, _("We cannot find an account"\
                 " for this e-mail address. Please verify the spelling."))
         return super(PasswordResetBaseView, self).form_invalid(form)
