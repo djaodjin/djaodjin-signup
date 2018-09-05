@@ -243,7 +243,7 @@ class SignupBaseView(RedirectFormMixin, ProcessFormView):
             success_url = self.request.META['PATH_INFO']
         return HttpResponseRedirect(success_url)
 
-    def register(self, **cleaned_data):
+    def register_user(self, **cleaned_data):
         #pylint: disable=maybe-no-member
         email = cleaned_data['email']
         users = User.objects.filter(email=email)
@@ -269,6 +269,8 @@ class SignupBaseView(RedirectFormMixin, ProcessFormView):
             email=email, password=password,
             first_name=first_name, last_name=last_name)
 
+    def register(self, **cleaned_data):
+        user = self.register_user(**cleaned_data)
         # Bypassing authentication here, we are doing frictionless registration
         # the first time around.
         user.backend = 'django.contrib.auth.backends.ModelBackend'
@@ -296,8 +298,7 @@ class ActivationBaseView(RedirectFormMixin, UpdateView):
         if not first_name:
             # If the form does not contain a first_name/last_name pair,
             # we assume a full_name was passed instead.
-            full_name = cleaned_data.get(
-                'user_full_name', cleaned_data.get('full_name', None))
+            full_name = cleaned_data.get('full_name', None)
             first_name, _, last_name = full_name_natural_split(full_name)
         return first_name, last_name
 
