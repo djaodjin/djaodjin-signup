@@ -141,13 +141,13 @@ class PasswordResetBaseView(RedirectFormMixin, ProcessFormView):
                 signals.user_reset_password.send(
                     sender=__name__, user=user, request=self.request,
                     back_url=back_url, expiration_days=settings.KEY_EXPIRATION)
-                messages.info(self.request, _("Please follow the instructions "\
-                    "in the email that has just been sent to you to reset"\
+                messages.info(self.request, _("Please follow the instructions"\
+                    " in the email that has just been sent to you to reset"\
                     " your password."))
             return super(PasswordResetBaseView, self).form_valid(form)
         except User.DoesNotExist:
             messages.error(self.request, _("We cannot find an account"\
-                "for this e-mail address. Please verify the spelling."))
+                " for this e-mail address. Please verify the spelling."))
         return super(PasswordResetBaseView, self).form_invalid(form)
 
 
@@ -268,12 +268,13 @@ class SignupBaseView(RedirectFormMixin, ProcessFormView):
         user = User.objects.create_user(username,
             email=email, password=password,
             first_name=first_name, last_name=last_name)
-
-    def register(self, **cleaned_data):
-        user = self.register_user(**cleaned_data)
         # Bypassing authentication here, we are doing frictionless registration
         # the first time around.
         user.backend = 'django.contrib.auth.backends.ModelBackend'
+        return user
+
+    def register(self, **cleaned_data):
+        user = self.register_user(**cleaned_data)
         auth_login(self.request, user)
         return user
 
