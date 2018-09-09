@@ -339,15 +339,6 @@ class ActivationBaseView(RedirectFormMixin, UpdateView):
                 'full_name': self.object.get_full_name()}
         return {}
 
-    def activate_user(self, password=None):
-        verification_key = self.kwargs.get(self.key_url_kwarg)
-        user = Contact.objects.activate_user(
-            verification_key, password=password)
-        signals.user_activated.send(sender=__name__,
-            user=user, verification_key=verification_key,
-            request=self.request)
-        return user
-
     def dispatch(self, request, *args, **kwargs):
         if is_authenticated(request):
             auth_logout(request)
@@ -363,12 +354,16 @@ class ActivationBaseView(RedirectFormMixin, UpdateView):
         # If we don't save the ``User`` model here,
         # we won't be able to authenticate later.
         first_name, last_name = self.first_and_last_names(**form.cleaned_data)
-        user = self.activate_user(password=form.cleaned_data["new_password1"])
-        if first_name:
-            user.first_name = first_name
-        if last_name:
-            user.last_name = last_name
-        user.save() # XXX second save()
+        verification_key = self.kwargs.get(self.key_url_kwarg)
+        user = Contact.objects.activate_user(verification_key,
+            username=form.cleaned_data['username'],
+            password=form.cleaned_data['new_password1'],
+            first_name=first_name,
+            last_name=last_name)
+        signals.user_activated.send(sender=__name__,
+            user=user, verification_key=verification_key,
+            request=self.request)
+
         messages.info(self.request, _("Thank you. Your account is now active."))
 
         # Okay, security check complete. Log the user in.

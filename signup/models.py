@@ -157,10 +157,12 @@ class ContactManager(models.Manager):
         token = self.get_token(verification_key=verification_key)
         return token if token else None
 
-    def activate_user(self, verification_key, password=None):
+    def activate_user(self, verification_key, username=None, password=None,
+                      first_name=None, last_name=None):
         """
         Activate a user whose email address has been verified.
         """
+        #pylint:disable=too-many-arguments
         try:
             token = self.get_token(verification_key=verification_key)
             if token:
@@ -171,8 +173,14 @@ class ContactManager(models.Manager):
                 with transaction.atomic():
                     token.verification_key = Contact.VERIFIED
                     token.user.is_active = True
+                    if username:
+                        token.user.username = username
                     if password:
                         token.user.set_password(password)
+                    if first_name:
+                        token.user.first_name = first_name
+                    if last_name:
+                        token.user.last_name = last_name
                     token.user.save()
                     token.save()
                 return token.user
