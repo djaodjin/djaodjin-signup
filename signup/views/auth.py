@@ -298,6 +298,18 @@ class ActivationBaseView(RedirectFormMixin, UpdateView):
     key_url_kwarg = 'verification_key'
     http_method_names = ['get', 'post']
 
+    def activate_user(self, form):
+        # If we don't save the ``User`` model here,
+        # we won't be able to authenticate later.
+        first_name, last_name = self.first_and_last_names(**form.cleaned_data)
+        verification_key = self.kwargs.get(self.key_url_kwarg)
+        user = Contact.objects.activate_user(verification_key,
+            username=form.cleaned_data['username'],
+            password=form.cleaned_data['new_password1'],
+            first_name=first_name,
+            last_name=last_name)
+        return user
+
     @staticmethod
     def first_and_last_names(**cleaned_data):
         first_name = cleaned_data.get('first_name', None)
@@ -351,19 +363,11 @@ class ActivationBaseView(RedirectFormMixin, UpdateView):
         return response
 
     def form_valid(self, form):
-        # If we don't save the ``User`` model here,
-        # we won't be able to authenticate later.
-        first_name, last_name = self.first_and_last_names(**form.cleaned_data)
         verification_key = self.kwargs.get(self.key_url_kwarg)
-        user = Contact.objects.activate_user(verification_key,
-            username=form.cleaned_data['username'],
-            password=form.cleaned_data['new_password1'],
-            first_name=first_name,
-            last_name=last_name)
+        user = self.activate_user(form)
         signals.user_activated.send(sender=__name__,
             user=user, verification_key=verification_key,
             request=self.request)
-
         messages.info(self.request, _("Thank you. Your account is now active."))
 
         # Okay, security check complete. Log the user in.
@@ -382,11 +386,13 @@ class ActivationBaseView(RedirectFormMixin, UpdateView):
         self.object = self.get_object()
         context = self.get_context_data(**kwargs)
         token = context.get('token', None)
-        if token:
-            status = 200
-        else:
-            status = 404
-        return self.render_to_response(context, status=status)
+        if not token:
+            messages.error(request, _("Activation failed. You may have"\
+                " already activated your account previously. In that case,"\
+                " just login. Thank you."))
+            next_url = validate_redirect(self.request)
+            return HttpResponseRedirect(next_url)
+        return self.render_to_response(context)
 
     def get_object(self, queryset=None):  #pylint:disable=unused-argument
         token = Contact.objects.get_token(self.kwargs.get(self.key_url_kwarg))
