@@ -31,7 +31,7 @@ from django.contrib import messages
 from django.contrib.auth import (login as auth_login, logout as auth_logout,
     REDIRECT_FIELD_NAME, authenticate)
 from django.contrib.auth.tokens import default_token_generator
-from django.http import Http404, HttpResponseRedirect
+from django.http import HttpResponseRedirect
 from django.template.response import TemplateResponse
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
@@ -326,20 +326,11 @@ class ActivationBaseView(RedirectFormMixin, UpdateView):
         if not hasattr(self, '_contact'):
             self._contact = Contact.objects.get_token(
                 self.kwargs.get(self.key_url_kwarg))
-            if self._contact is None:
-                raise Http404(_("Cannot find verification key %s")
-                    % str(self.key_url_kwarg))
         return self._contact
-
-    @property
-    def user(self):
-        if not hasattr(self, '_user'):
-            self._user = self.contact.user
-        return self._user
 
     def get_context_data(self, **kwargs):
         context = super(ActivationBaseView, self).get_context_data(**kwargs)
-        if self.object and self.contact.extra:
+        if self.contact and self.contact.extra:
             # XXX might be best as a separate field.
             context.update({'reason': self.contact.extra})
         return context
@@ -348,7 +339,8 @@ class ActivationBaseView(RedirectFormMixin, UpdateView):
         if self.object:
             return {
                 'email': self.object.email,
-                'full_name': self.object.get_full_name()}
+                'full_name': self.object.get_full_name(),
+                'username': self.object.username}
         return {}
 
     def dispatch(self, request, *args, **kwargs):
@@ -384,18 +376,16 @@ class ActivationBaseView(RedirectFormMixin, UpdateView):
         # to see an explanation of why clicking an expired link
         # in an e-mail leads to a 404.
         self.object = self.get_object()
-        context = self.get_context_data(**kwargs)
-        token = context.get('token', None)
-        if not token:
+        if not self.object:
             messages.error(request, _("Activation failed. You may have"\
                 " already activated your account previously. In that case,"\
                 " just login. Thank you."))
             next_url = validate_redirect(self.request)
             return HttpResponseRedirect(next_url)
-        return self.render_to_response(context)
+        return self.render_to_response(self.get_context_data(**kwargs))
 
     def get_object(self, queryset=None):  #pylint:disable=unused-argument
-        token = Contact.objects.get_token(self.kwargs.get(self.key_url_kwarg))
+        token = self.contact
         return token.user if token else None
 
 

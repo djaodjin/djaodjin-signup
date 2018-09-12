@@ -189,8 +189,7 @@ class ContactManager(models.Manager):
         return None
 
     def unverified_for_user(self, user):
-        return self.filter(user=user).exclude(
-            verification_key=Contact.VERIFIED)
+        return self.filter(user=user).exclude(verification_key=Contact.VERIFIED)
 
     def is_reachable(self, user):
         """
