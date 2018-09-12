@@ -48,8 +48,8 @@ from ..compat import User, reverse, is_authenticated
 from ..decorators import check_user_active
 from ..forms import (ActivationForm, NameEmailForm,
     PasswordResetForm, PasswordResetConfirmForm)
+from ..helpers import full_name_natural_split
 from ..models import Contact
-from ..utils import full_name_natural_split
 
 
 LOGGER = logging.getLogger(__name__)

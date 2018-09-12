@@ -22,61 +22,17 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import datetime, re
+import re
 
-from dateutil.parser import parse
 from django.apps import apps as django_apps
 from django.core.exceptions import ImproperlyConfigured
 from django.db import IntegrityError
-from django.utils import six
-from django.utils.timezone import utc
 from django.utils.translation import ugettext_lazy as _
 import jwt
 from rest_framework import serializers
 
 from . import settings
 from .compat import User
-
-
-def datetime_or_now(dtime_at=None):
-    if not dtime_at:
-        return datetime.datetime.utcnow().replace(tzinfo=utc)
-    if isinstance(dtime_at, six.string_types):
-        dtime_at = parse(dtime_at)
-    if dtime_at.tzinfo is None:
-        dtime_at = dtime_at.replace(tzinfo=utc)
-    return dtime_at
-
-
-def as_timestamp(dtime_at=None):
-    if not dtime_at:
-        dtime_at = datetime_or_now()
-    return int((
-        dtime_at - datetime.datetime(1970, 1, 1, tzinfo=utc)).total_seconds())
-
-
-def full_name_natural_split(full_name):
-    """
-    This function splits a full name into a natural first name, last name
-    and middle initials.
-    """
-    parts = full_name.strip().split(' ')
-    first_name = ""
-    if parts:
-        first_name = parts.pop(0)
-    if first_name.lower() == "el" and parts:
-        first_name += " " + parts.pop(0)
-    last_name = ""
-    if parts:
-        last_name = parts.pop()
-    if (last_name.lower() == 'i' or last_name.lower() == 'ii'
-        or last_name.lower() == 'iii' and parts):
-        last_name = parts.pop() + " " + last_name
-    middle_initials = ""
-    for middle_name in parts:
-        if middle_name:
-            middle_initials += middle_name[0]
-    return first_name, middle_initials, last_name
 
 
 def get_accept_list(request):

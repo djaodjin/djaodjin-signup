@@ -28,7 +28,7 @@ import boto3
 
 from .. import settings
 from ..compat import is_authenticated
-from ..utils import datetime_or_now
+from ..helpers import datetime_or_now
 
 #pylint:disable=no-name-in-module,import-error
 from django.utils.six.moves.urllib.parse import urlparse

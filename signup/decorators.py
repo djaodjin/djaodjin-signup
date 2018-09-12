@@ -104,7 +104,7 @@ def check_user_active(request, user,
     if has_invalid_password(user):
         # Let's send e-mail again.
         #pylint:disable=unused-variable
-        contact, created = Contact.objects.get_or_create_token(user)
+        contact, created = Contact.objects.update_or_create_token(user)
         if not next_url:
             next_url = validate_redirect(request)
         send_verification_email(

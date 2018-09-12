@@ -25,6 +25,7 @@
 """
 User Model for the signup app
 """
+from __future__ import absolute_import
 from __future__ import unicode_literals
 
 import datetime, hashlib, logging, random, re
@@ -34,15 +35,15 @@ from django.contrib.auth.models import UserManager
 from django.db import models, transaction, IntegrityError
 from django.template.defaultfilters import slugify
 from django.utils.encoding import python_2_unicode_compatible
-from django.utils.timezone import now as datetime_now
 from django.utils.translation import ugettext_lazy as _
 from django.contrib.auth.hashers import check_password, make_password
 
-from signup import settings, signals
+from . import settings, signals
+from .helpers import datetime_or_now
 
 LOGGER = logging.getLogger(__name__)
-
 EMAIL_VERIFICATION_RE = re.compile('^%s$' % settings.EMAIL_VERIFICATION_PAT)
+
 
 class ActivatedUserManager(UserManager):
 
@@ -96,7 +97,7 @@ class ActivatedUserManager(UserManager):
                     username, email=email, password=password, **kwargs)
             # Force is_active to True and create an email verification key
             # (see above definition of active user).
-            Contact.objects.get_or_create_token(user)
+            Contact.objects.update_or_create_token(user)
             user.is_active = True
             user.save()
             LOGGER.info("'%s %s <%s>' registered with username '%s'",
@@ -120,7 +121,7 @@ class ContactManager(models.Manager):
                 pass # We return None instead here.
         return None
 
-    def get_or_create_token(self, user, verification_key=None, reason=None):
+    def update_or_create_token(self, user, verification_key=None, reason=None):
         if verification_key is None:
             random_key = str(random.random()).encode('utf-8')
             salt = hashlib.sha1(random_key).hexdigest()[:5]
@@ -145,7 +146,21 @@ class ContactManager(models.Manager):
                 # We have to wrap in a transaction.atomic here, otherwise
                 # we end-up with a TransactionManager error when Contact.slug
                 # already exists in db and we generate new one.
-                return self.get(user=user, **kwargs), False
+                token = self.get(user=user, **kwargs)
+                if token.verification_key_expired():
+                    # In case we sent multiple activate links in a short
+                    # period, we want to use the same `verification_key`
+                    # so users can click on any e-mail link.
+                    token.verification_key = verification_key
+                # We are about to send a link that expires so better update
+                # date of creation in case the `Contact` for that `User`
+                # was not created recently.
+                token.created_at = datetime_or_now()
+                # XXX It is possible a 'reason' field would be a better
+                # implementation.
+                token.extra = reason
+                token.save()
+                return token, False
         except self.model.DoesNotExist:
             kwargs.update(defaults)
         return self.create(user=user, **kwargs), True
@@ -261,7 +276,7 @@ class Contact(models.Model):
         expiration_date = datetime.timedelta(days=settings.KEY_EXPIRATION)
         start_at = self.created_at
         return self.verification_key == self.VERIFIED or \
-               (start_at + expiration_date <= datetime_now())
+               (start_at + expiration_date <= datetime_or_now())
     verification_key_expired.boolean = True
 
 

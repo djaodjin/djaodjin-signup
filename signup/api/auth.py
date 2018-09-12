@@ -36,10 +36,10 @@ from rest_framework.response import Response
 from .. import settings
 from ..compat import User, reverse
 from ..decorators import check_user_active
+from ..helpers import as_timestamp, datetime_or_now, full_name_natural_split
 from ..serializers import (CredentialsSerializer, CreateUserSerializer,
     TokenSerializer, UserSerializer, ValidationErrorSerializer)
-from ..utils import (as_timestamp, datetime_or_now,
-    full_name_natural_split, verify_token as verify_token_base)
+from ..utils import verify_token as verify_token_base
 from ..docs import OpenAPIResponse, swagger_auto_schema
 
 LOGGER = logging.getLogger(__name__)
