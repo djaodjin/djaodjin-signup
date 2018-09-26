@@ -31,12 +31,23 @@ from .models import Activity, Contact, Notification
 from .utils import get_account_model
 
 
+class NoModelSerializer(serializers.Serializer):
+
+    def create(self, validated_data):
+        raise RuntimeError('`create()` should not be called.')
+
+    def update(self, instance, validated_data):
+        raise RuntimeError('`update()` should not be called.')
+
+
 class ActivitySerializer(serializers.ModelSerializer):
 
     account = serializers.SlugRelatedField(
-        slug_field='slug', queryset=get_account_model().objects.all())
+        slug_field='slug', queryset=get_account_model().objects.all(),
+        help_text=_("account the activity is associated to"))
     created_by = serializers.SlugRelatedField(
-        read_only=True, slug_field='username')
+        read_only=True, slug_field='username',
+        help_text=_("user that created the activity"))
 
     class Meta:
         #pylint:disable=old-style-class,no-init
@@ -45,7 +56,7 @@ class ActivitySerializer(serializers.ModelSerializer):
         read_only_fields = ('created_at', 'created_by')
 
 
-class APIKeysSerializer(serializers.Serializer):
+class APIKeysSerializer(NoModelSerializer):
     """
     username and password for authentication through API.
     """
@@ -57,12 +68,6 @@ class APIKeysSerializer(serializers.Serializer):
         #pylint:disable=old-style-class,no-init
         fields = ('secret',)
 
-    def update(self, instance, validated_data):
-        raise NotImplementedError('`update()` must be implemented.')
-
-    def create(self, validated_data):
-        raise NotImplementedError('`create()` must be implemented.')
-
 
 class ContactSerializer(serializers.ModelSerializer):
 
@@ -71,7 +76,7 @@ class ContactSerializer(serializers.ModelSerializer):
     class Meta:
         #pylint:disable=old-style-class,no-init
         model = Contact
-        fields = ('slug', 'email', 'full_name', 'nick_name',
+        fields = ('slug', 'email', 'full_name', 'nick_name', 'extra',
             'created_at', 'activities')
         read_only_fields = ('slug', 'created_at', 'activities')
 
@@ -87,7 +92,7 @@ class NotificationsSerializer(serializers.ModelSerializer):
         fields = ('notifications',)
 
 
-class CredentialsSerializer(serializers.Serializer):
+class CredentialsSerializer(NoModelSerializer):
     """
     username and password for authentication through API.
     """
@@ -98,12 +103,6 @@ class CredentialsSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True,
         style={'input_type': 'password'},
         help_text=_("secret password for the account"))
-
-    def update(self, instance, validated_data):
-        raise NotImplementedError('`update()` must be implemented.')
-
-    def create(self, validated_data):
-        raise NotImplementedError('`create()` must be implemented.')
 
 
 class CreateUserSerializer(serializers.ModelSerializer):
@@ -123,30 +122,18 @@ class CreateUserSerializer(serializers.ModelSerializer):
         fields = ('username', 'password', 'email', 'full_name')
 
 
-class PasswordChangeSerializer(serializers.Serializer):
+class PasswordChangeSerializer(NoModelSerializer):
 
     password = serializers.CharField(required=False, write_only=True,
         style={'input_type': 'password'})
 
-    def update(self, instance, validated_data):
-        raise NotImplementedError('`update()` must be implemented.')
 
-    def create(self, validated_data):
-        raise NotImplementedError('`create()` must be implemented.')
-
-
-class TokenSerializer(serializers.Serializer):
+class TokenSerializer(NoModelSerializer):
     """
     token to verify or refresh.
     """
     token = serializers.CharField(
         help_text=_("Token used to authenticate user on every HTTP request"))
-
-    def update(self, instance, validated_data):
-        raise NotImplementedError('`update()` must be implemented.')
-
-    def create(self, validated_data):
-        raise NotImplementedError('`create()` must be implemented.')
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -170,15 +157,10 @@ class UserSerializer(serializers.ModelSerializer):
         return obj.get_full_name()
 
 
-class ValidationErrorSerializer(serializers.Serializer):
+class ValidationErrorSerializer(NoModelSerializer):
     """
     Details on why token is invalid.
     """
     detail = serializers.CharField(help_text=_("describes the reason for"\
         " the error in plain text"))
 
-    def update(self, instance, validated_data):
-        raise NotImplementedError('`update()` must be implemented.')
-
-    def create(self, validated_data):
-        raise NotImplementedError('`create()` must be implemented.')

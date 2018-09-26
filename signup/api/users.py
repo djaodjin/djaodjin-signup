@@ -22,7 +22,7 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import logging
+import logging, re
 
 from django.contrib.auth import logout as auth_logout
 from django.db.models import Q
@@ -31,6 +31,7 @@ from django.contrib.auth import update_session_auth_hash
 from rest_framework.generics import (ListAPIView, RetrieveUpdateDestroyAPIView,
     UpdateAPIView)
 
+from .. import settings
 from ..compat import User
 from ..serializers import (PasswordChangeSerializer, UserSerializer,
     NotificationsSerializer)
@@ -131,10 +132,27 @@ class UserProfileAPIView(RetrieveUpdateDestroyAPIView):
     queryset = User.objects.all()
 
     def perform_destroy(self, instance):
-        LOGGER.info("user %s deleted.", instance,
-            extra={'event': 'delete', 'request': self.request})
+        slug = '_archive_%d' % instance.id
         requires_logout = (self.request.user == instance)
-        instance.delete()
+
+        # We mark the user as inactive and scramble personal information
+        # such that we don't remove audit records (ex: billing transactions)
+        # from the database.
+        LOGGER.info("%s deleted user profile for '%s <%s>' (%s).",
+                    self.request.user, instance.username, instance.email, slug,
+                    extra={'event': 'delete', 'request': self.request,
+                        'username': instance.username, 'email': instance.email,
+                        'pk': instance.pk})
+
+        email = instance.email
+        look = re.match(r'.*(@\S+)', settings.DEFAULT_FROM_EMAIL)
+        if look:
+            email = '%s+%d%s' % (instance.username, instance.id, look.group(1))
+        instance.username = slug
+        instance.email = email
+        instance.password = '!'
+        instance.is_active = False
+        instance.save()
         if requires_logout:
             auth_logout(self.request)
 

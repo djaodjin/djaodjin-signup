@@ -30,7 +30,7 @@ from ..mixins import ContactMixin
 from ..models import Activity, Contact
 from ..serializers import ActivitySerializer, ContactSerializer
 
-
+# XXX smart list? search and order?
 class ActivityListAPIView(ContactMixin, ListCreateAPIView):
     """
     Lists activities for a contact.
@@ -147,7 +147,7 @@ class ContactDetailAPIView(ContactMixin, RetrieveUpdateAPIView):
 
     def delete(self, request, *args, **kwargs):
         """
-        Deletes a `Contact``.
+        Deletes a `Contact`.
 
         **Examples
 
@@ -158,9 +158,10 @@ class ContactDetailAPIView(ContactMixin, RetrieveUpdateAPIView):
         return self.destroy(request, *args, **kwargs)
 
 
+# XXX smart list? search and order?
 class ContactListAPIView(ListCreateAPIView):
     """
-    Lists or creates a contact.
+    Lists contacts.
 
     **Examples
 

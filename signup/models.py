@@ -226,14 +226,20 @@ class Contact(models.Model):
 
     slug = models.SlugField(unique=True,
         help_text=_("Unique identifier shown in the URL bar."))
-    created_at = models.DateTimeField(auto_now_add=True)
-    email = models.EmailField(_("Email address"), blank=True)
-    full_name = models.CharField(_("Full name"), max_length=60, blank=True)
-    nick_name = models.CharField(_("Nick name"), max_length=60, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,
+        help_text=_("date/time of creation in ISO format"))
+    email = models.EmailField(_("Email address"), blank=True,
+        help_text=_("Email for the contact"))
+    full_name = models.CharField(_("Full name"), max_length=60, blank=True,
+        help_text=_("Full name for the contact (often first name"\
+        " followed by last name)"))
+    nick_name = models.CharField(_("Nick name"), max_length=60, blank=True,
+        help_text=_("Short casual name used to address the contact"))
     user = models.OneToOneField(settings.AUTH_USER_MODEL,
         null=True, on_delete=models.CASCADE, related_name='contact')
     verification_key = models.CharField(_("Verification key"), max_length=40)
-    extra = settings.get_extra_field_class()(null=True)
+    extra = settings.get_extra_field_class()(null=True,
+        help_text=_("Free form meta information stored on a contact"))
 
     def __str__(self):
         return self.slug
@@ -285,14 +291,18 @@ class Activity(models.Model):
     """
     Activity associated to a contact.
     """
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True,
+        help_text=_("date/time of creation in ISO format"))
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL,
-        null=True, on_delete=models.SET_NULL)
+        null=True, on_delete=models.SET_NULL,
+        help_text=_("user that created the activity"))
     contact = models.ForeignKey(Contact, on_delete=models.CASCADE)
-    text = models.TextField(blank=True)
+    text = models.TextField(blank=True,
+        help_text=_("free form text description of the activity"))
     account = models.ForeignKey(
         settings.ACCOUNT_MODEL, null=True, on_delete=models.CASCADE,
-        related_name='activities')
+        related_name='activities',
+        help_text=_("account the activity is associated to"))
     extra = settings.get_extra_field_class()(null=True)
 
     def __str__(self):

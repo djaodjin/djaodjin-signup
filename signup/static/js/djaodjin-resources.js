@@ -70,6 +70,8 @@ function _showErrorMessages(resp) {
                                 message += sep + messagePart;
                                 sep = ", ";
                             }
+                        } else if( data[key].hasOwnProperty('detail') ) {
+                            message = data[key].detail;
                         }
                         messages.push(key + ": " + message);
                         $("[name=\"" + key + "\"]").parents('.form-group').addClass("has-error");
@@ -87,7 +89,13 @@ function _showErrorMessages(resp) {
 function showErrorMessages(resp) {
     var messages = _showErrorMessages(resp);
     if( messages.length === 0 ) {
-        messages = ["Error " + resp.status + ": " + resp.statusText];
+        if( resp.status == 500 ) {
+            messages = ["Error " + resp.status + ": " + resp.statusText
+                + ". We have been notified and have started on fixing"
+                + " the error. We apologize for the inconvinience."];
+        } else {
+            messages = ["Error " + resp.status + ": " + resp.statusText];
+        }
     }
     showMessages(messages, "error");
 };
