@@ -146,8 +146,8 @@ ACCOUNT_ACTIVATION_DAYS = 2
 
 # Mail server and accounts for notifications.
 # Host, port, TLS for sending email.
-EMAIL_HOST = ""
-EMAIL_PORT = 587
+EMAIL_HOST = "localhost"
+EMAIL_PORT = 1025
 EMAIL_USE_TLS = False
 
 # Default email address to use for various automated correspondence from
