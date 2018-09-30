@@ -44,10 +44,10 @@ class ActivitySerializer(serializers.ModelSerializer):
 
     account = serializers.SlugRelatedField(
         slug_field='slug', queryset=get_account_model().objects.all(),
-        help_text=_("account the activity is associated to"))
+        help_text=_("Account the activity is associated to"))
     created_by = serializers.SlugRelatedField(
         read_only=True, slug_field='username',
-        help_text=_("user that created the activity"))
+        help_text=_("User that created the activity"))
 
     class Meta:
         #pylint:disable=old-style-class,no-init
@@ -99,10 +99,10 @@ class CredentialsSerializer(NoModelSerializer):
     username = serializers.CharField(validators=[
         validators.RegexValidator(r'^[\w.@+-]+$', _("Enter a valid username."),
             'invalid')],
-        help_text=_("username to identify the account"))
+        help_text=_("Username to identify the account"))
     password = serializers.CharField(write_only=True,
         style={'input_type': 'password'},
-        help_text=_("secret password for the account"))
+        help_text=_("Secret password for the account"))
 
 
 class CreateUserSerializer(serializers.ModelSerializer):
@@ -113,9 +113,9 @@ class CreateUserSerializer(serializers.ModelSerializer):
         style={'input_type': 'password'}, help_text=_("Password with which"\
             " a user can authenticate with the service"))
     email = serializers.EmailField(
-        help_text=_("Primary email to contact user"))
+        help_text=_("Primary e-mail to contact user"))
     full_name = serializers.CharField(
-        help_text=_("Full name of user"))
+        help_text=_("Full name"))
 
     class Meta:
         model = get_user_model()
@@ -145,9 +145,9 @@ class UserSerializer(serializers.ModelSerializer):
         validators.RegexValidator(r'^[\w.@+-]+$', _("Enter a valid username."),
             'invalid')])
     email = serializers.EmailField(
-        help_text=_("Primary email to contact user"))
+        help_text=_("Primary e-mail to contact user"))
     full_name = serializers.SerializerMethodField(
-        help_text=_("Full name of user"))
+        help_text=_("Full name"))
 
     class Meta:
         model = get_user_model()
@@ -161,6 +161,5 @@ class ValidationErrorSerializer(NoModelSerializer):
     """
     Details on why token is invalid.
     """
-    detail = serializers.CharField(help_text=_("describes the reason for"\
+    detail = serializers.CharField(help_text=_("Describes the reason for"\
         " the error in plain text"))
-

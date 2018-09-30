@@ -81,14 +81,16 @@ def update_db_row(instance, form):
             r'DETAIL:\s+Key \(([a-z_]+)\)=\(.*\) already exists\.', err_msg)
         if look:
             form.add_error(look.group(1),
-                _("This %s is already taken.") % look.group(1))
+                _("This %(field)s is already taken.") % {
+                    'field': look.group(1)})
             return form
         # SQLite unique constraint.
         look = re.match(
             r'UNIQUE constraint failed: [a-z_]+\.([a-z_]+)', err_msg)
         if look:
             form.add_error(look.group(1),
-                _("This %s is already taken.") % look.group(1))
+                _("This %(field)s is already taken.") % {
+                    'field': look.group(1)})
             return form
         raise
 
@@ -115,5 +117,5 @@ def verify_token(token):
     try:
         user = User.objects.get(username=username)
     except User.DoesNotExist:
-        raise serializers.ValidationError(_("User doesn't exist."))
+        raise serializers.ValidationError(_("User does not exist."))
     return user

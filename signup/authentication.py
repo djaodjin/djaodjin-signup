@@ -43,10 +43,10 @@ class APIKeyAuthentication(BasicAuthentication):
             token = self.model.objects.select_related('user').get(
                 api_pub_key=pub_key)
         except self.model.DoesNotExist:
-            raise exceptions.AuthenticationFailed(_('Invalid token.'))
+            raise exceptions.AuthenticationFailed(_('Invalid token'))
 
         if not token.check_priv_key(priv_key):
-            raise exceptions.AuthenticationFailed(_('Invalid token.'))
+            raise exceptions.AuthenticationFailed(_('Invalid token'))
 
         is_active = getattr(token.user, 'is_active', None)
         if not (is_active or is_active is None):
@@ -66,6 +66,6 @@ class JWTAuthentication(TokenAuthentication):
         try:
             user = verify_token(key)
         except exceptions.ValidationError:
-            raise exceptions.AuthenticationFailed(_('Invalid token.'))
+            raise exceptions.AuthenticationFailed(_('Invalid token'))
 
         return (user, key)

@@ -52,7 +52,7 @@ class NameEmailForm(forms.Form):
     email = forms.EmailField(
         widget=forms.TextInput(attrs={'placeholder':'Email',
                                       'maxlength': 75}),
-        label=_("Email address"))
+        label=_("E-mail address"))
 
     def __init__(self, *args, **kwargs):
         super(NameEmailForm, self).__init__(*args, **kwargs)
@@ -91,12 +91,13 @@ class ActivationForm(forms.Form):
     submit_title = 'Activate'
 
     error_messages = {
-        'password_mismatch': _("The two password fields didn't match."),
+        'password_mismatch': _("Password and password confirmation"\
+        " do not match."),
     }
 
     email = forms.EmailField(
         widget=forms.TextInput(attrs={'placeholder':'Email', 'maxlength': 75}),
-        label=_("Email address"), disabled=True)
+        label=_("E-mail address"), disabled=True)
     full_name = forms.RegexField(
         regex=r'^[\w\s]+$', max_length=60,
         widget=forms.TextInput(attrs={'placeholder':'Full name'}),
@@ -106,8 +107,8 @@ class ActivationForm(forms.Form):
     username = forms.CharField(widget=forms.TextInput(
         attrs={'placeholder': _("Username")}),
         max_length=254, label=_("Username"),
-        error_messages={'invalid': _("username may only contain letters,"\
-" digits and -/_ characters.")})
+        error_messages={'invalid': _("Username may only contain letters,"\
+            " digits and -/_ characters. Spaces are not allowed.")})
     new_password1 = forms.CharField(
         label=_("Password"),
         widget=forms.PasswordInput(attrs={'placeholder': _("Password")}),
@@ -164,8 +165,8 @@ class UserForm(forms.ModelForm):
     username = forms.CharField(widget=forms.TextInput(
         attrs={'placeholder': _("Username")}),
         max_length=254, label=_("Username"),
-        error_messages={'invalid': _("username may only contain letters,"\
-" digits and -/_ characters.")})
+        error_messages={'invalid': _("Username may only contain letters,"\
+" digits and -/_ characters. Spaces are not allowed.")})
 
     class Meta:
         model = User

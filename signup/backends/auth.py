@@ -1,4 +1,4 @@
-# Copyright (c) 2014, Djaodjin Inc.
+# Copyright (c) 2018, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -56,8 +56,8 @@ from signup.compat import User
 class UsernameOrEmailAuthenticationForm(AuthenticationForm):
 
     username = forms.CharField(widget=forms.TextInput(
-        attrs={'placeholder': _("Username or Email")}),
-        max_length=254, label=_("Username or Email"))
+        attrs={'placeholder': _("Username or e-mail")}),
+        max_length=254, label=_("Username or e-mail"))
     password = forms.CharField(widget=forms.PasswordInput(
         attrs={'placeholder': _("Password")}), label=_("Password"))
 
@@ -65,7 +65,8 @@ class UsernameOrEmailAuthenticationForm(AuthenticationForm):
         super(UsernameOrEmailAuthenticationForm, self).__init__(*args, **kwargs)
         username_label = self.initial.get('username_label', None)
         if username_label:
-            placeholder_label = _('%s or Email' % username_label)
+            placeholder_label = _('%(username)s or e-mail' % {
+                'username': username_label})
             self.fields['username'].label = placeholder_label
             self.fields['username'].widget.attrs['placeholder'] \
                 = placeholder_label

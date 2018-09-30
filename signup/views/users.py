@@ -85,7 +85,7 @@ class UserProfileView(UserMixin, UpdateView):
         return context
 
     def get_success_url(self):
-        messages.info(self.request, _("Profile Updated."))
+        messages.info(self.request, _("Profile updated."))
         return reverse('users_profile', args=(self.object,))
 
 
@@ -134,7 +134,7 @@ class UserNotificationsView(UserMixin, UpdateView):
         return {'notifications': notifications}
 
     def get_success_url(self):
-        messages.info(self.request, _("Notifications Updated."))
+        messages.info(self.request, _("Notifications updated."))
         return reverse('users_notifications', args=(self.object,))
 
 

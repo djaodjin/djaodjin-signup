@@ -225,13 +225,13 @@ class Contact(models.Model):
     objects = ContactManager()
 
     slug = models.SlugField(unique=True,
-        help_text=_("Unique identifier shown in the URL bar."))
+        help_text=_("Unique identifier shown in the URL bar"))
     created_at = models.DateTimeField(auto_now_add=True,
-        help_text=_("date/time of creation in ISO format"))
-    email = models.EmailField(_("Email address"), blank=True,
-        help_text=_("Email for the contact"))
+        help_text=_("Date/time of creation (in ISO format)"))
+    email = models.EmailField(_("E-mail address"), blank=True,
+        help_text=_("E-mail address for the contact"))
     full_name = models.CharField(_("Full name"), max_length=60, blank=True,
-        help_text=_("Full name for the contact (often first name"\
+        help_text=_("Full name for the contact (effectively first name"\
         " followed by last name)"))
     nick_name = models.CharField(_("Nick name"), max_length=60, blank=True,
         help_text=_("Short casual name used to address the contact"))
@@ -239,7 +239,7 @@ class Contact(models.Model):
         null=True, on_delete=models.CASCADE, related_name='contact')
     verification_key = models.CharField(_("Verification key"), max_length=40)
     extra = settings.get_extra_field_class()(null=True,
-        help_text=_("Free form meta information stored on a contact"))
+        help_text=_("Extra meta data (can be stringify JSON)"))
 
     def __str__(self):
         return self.slug
@@ -292,17 +292,17 @@ class Activity(models.Model):
     Activity associated to a contact.
     """
     created_at = models.DateTimeField(auto_now_add=True,
-        help_text=_("date/time of creation in ISO format"))
+        help_text=_("Date/time of creation (in ISO format)"))
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL,
         null=True, on_delete=models.SET_NULL,
-        help_text=_("user that created the activity"))
+        help_text=_("User that created the activity"))
     contact = models.ForeignKey(Contact, on_delete=models.CASCADE)
     text = models.TextField(blank=True,
-        help_text=_("free form text description of the activity"))
+        help_text=_("Free form text description of the activity"))
     account = models.ForeignKey(
         settings.ACCOUNT_MODEL, null=True, on_delete=models.CASCADE,
         related_name='activities',
-        help_text=_("account the activity is associated to"))
+        help_text=_("Account the activity is associated to"))
     extra = settings.get_extra_field_class()(null=True)
 
     def __str__(self):
@@ -316,7 +316,8 @@ class Notification(models.Model):
     has a M2M relation with users, which allows to store a user's
     email notifications preferences
     """
-    slug = models.SlugField(unique=True, help_text=_("Unique identifier."))
+    slug = models.SlugField(unique=True,
+        help_text=_("Unique identifier shown in the URL bar"))
     title = models.CharField(max_length=100, blank=True)
     description = models.TextField(null=True, blank=True)
     users = models.ManyToManyField(settings.AUTH_USER_MODEL,
