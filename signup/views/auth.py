@@ -132,7 +132,7 @@ class PasswordResetBaseView(RedirectFormMixin, ProcessFormView):
             if check_user_active(self.request, user, next_url=next_url):
                 # Make sure that a reset password email is sent to a user
                 # that actually has an activated account.
-                uid = urlsafe_base64_encode(force_bytes(user.pk))
+                uid = urlsafe_base64_encode(force_bytes(user.pk)).decode()
                 token = self.token_generator.make_token(user)
                 back_url = self.request.build_absolute_uri(
                     reverse('password_reset_confirm', args=(uid, token)))
@@ -201,7 +201,7 @@ class PasswordResetConfirmBaseView(RedirectFormMixin, ProcessFormView):
         """
         kwargs = super(PasswordResetConfirmBaseView, self).get_form_kwargs()
         try:
-            uid = urlsafe_base64_decode(self.kwargs.get('uidb64'))
+            uid = urlsafe_base64_decode(self.kwargs.get('uidb64')).decode()
             self.object = User.objects.get(pk=uid)
         except (TypeError, ValueError, OverflowError, User.DoesNotExist):
             self.object = None
