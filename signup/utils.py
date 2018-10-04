@@ -80,6 +80,7 @@ def update_db_row(instance, form):
             handle_uniq_error(err)
     except ValidationError as err:
         fill_form_errors(form, err)
+        return form
     return None
 
 
@@ -87,10 +88,9 @@ def fill_form_errors(form, err):
     """
     Fill a Django form from DRF ValidationError exceptions.
     """
-    for detail in err.detail:
-        if isinstance(detail, dict):
-            for field, msg in six.iteritems(detail):
-                form.add_error(field, msg)
+    if isinstance(err.detail, dict):
+        for field, msg in six.iteritems(err.detail):
+            form.add_error(field, msg)
 
 
 def handle_uniq_error(err):
