@@ -40,6 +40,7 @@ from django.utils.translation import ugettext_lazy as _
 from django.views.decorators.cache import add_never_cache_headers
 from django.views.generic.base import TemplateResponseMixin, View
 from django.views.generic.edit import FormMixin, ProcessFormView, UpdateView
+from rest_framework.exceptions import ValidationError
 
 from .. import settings, signals
 from ..auth import validate_redirect
@@ -50,6 +51,7 @@ from ..forms import (ActivationForm, NameEmailForm,
     PasswordResetForm, PasswordResetConfirmForm)
 from ..helpers import full_name_natural_split
 from ..models import Contact
+from ..utils import fill_form_errors
 
 
 LOGGER = logging.getLogger(__name__)
@@ -242,7 +244,11 @@ class SignupBaseView(RedirectFormMixin, ProcessFormView):
         return super(SignupBaseView, self).dispatch(request, *args, **kwargs)
 
     def form_valid(self, form):
-        new_user = self.register(**form.cleaned_data)
+        try:
+            new_user = self.register(**form.cleaned_data)
+        except ValidationError as err:
+            fill_form_errors(form, err)
+            return self.form_invalid(form)
         if new_user:
             success_url = self.get_success_url()
         else:

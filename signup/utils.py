@@ -27,9 +27,11 @@ import re
 from django.apps import apps as django_apps
 from django.core.exceptions import ImproperlyConfigured
 from django.db import IntegrityError
+from django.utils import six
 from django.utils.translation import ugettext_lazy as _
 import jwt
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 
 from . import settings
 from .compat import User
@@ -72,27 +74,45 @@ def update_db_row(instance, form):
     this function returns `None`.
     """
     try:
-        instance.save()
-        return None
-    except IntegrityError as err:
-        err_msg = str(err).splitlines().pop()
-        # PostgreSQL unique constraint.
-        look = re.match(
-            r'DETAIL:\s+Key \(([a-z_]+)\)=\(.*\) already exists\.', err_msg)
-        if look:
-            form.add_error(look.group(1),
-                _("This %(field)s is already taken.") % {
-                    'field': look.group(1)})
-            return form
-        # SQLite unique constraint.
-        look = re.match(
-            r'UNIQUE constraint failed: [a-z_]+\.([a-z_]+)', err_msg)
-        if look:
-            form.add_error(look.group(1),
-                _("This %(field)s is already taken.") % {
-                    'field': look.group(1)})
-            return form
-        raise
+        try:
+            instance.save()
+        except IntegrityError as err:
+            handle_uniq_error(err)
+    except ValidationError as err:
+        fill_form_errors(form, err)
+    return None
+
+
+def fill_form_errors(form, err):
+    """
+    Fill a Django form from DRF ValidationError exceptions.
+    """
+    for detail in err.detail:
+        if isinstance(detail, dict):
+            for field, msg in six.iteritems(detail):
+                form.add_error(field, msg)
+
+
+def handle_uniq_error(err):
+    """
+    Will raise a ``ValidationError`` with the appropriate error message.
+    """
+    err_msg = str(err).splitlines().pop()
+    # PostgreSQL unique constraint.
+    look = re.match(
+        r'DETAIL:\s+Key \(([a-z_]+)\)=\(.*\) already exists\.', err_msg)
+    if look:
+        raise ValidationError({look.group(1):
+            _("This %(field)s is already taken.") % {
+                'field': look.group(1)}})
+    # SQLite unique constraint.
+    look = re.match(
+        r'UNIQUE constraint failed: [a-z_]+\.([a-z_]+)', err_msg)
+    if look:
+        raise ValidationError({look.group(1):
+            _("This %(field)s is already taken.") % {
+                'field': look.group(1)}})
+    raise err
 
 
 def verify_token(token):
