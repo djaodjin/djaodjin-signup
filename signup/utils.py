@@ -25,7 +25,7 @@
 import re
 
 from django.apps import apps as django_apps
-from django.core.exceptions import ImproperlyConfigured
+from django.core.exceptions import ImproperlyConfigured, NON_FIELD_ERRORS
 from django.db import IntegrityError
 from django.utils import six
 from django.utils.translation import ugettext_lazy as _
@@ -90,10 +90,15 @@ def fill_form_errors(form, err):
     """
     if isinstance(err.detail, dict):
         for field, msg in six.iteritems(err.detail):
-            form.add_error(field, msg)
+            if field in form.fields:
+                form.add_error(field, msg)
+            else:
+                form.add_error(NON_FIELD_ERRORS,
+                    _("No field '%(field)s': %(msg)s" % {
+                    'field': field, 'msg': msg}))
 
 
-def handle_uniq_error(err):
+def handle_uniq_error(err, renames=None):
     """
     Will raise a ``ValidationError`` with the appropriate error message.
     """
@@ -102,16 +107,18 @@ def handle_uniq_error(err):
     look = re.match(
         r'DETAIL:\s+Key \(([a-z_]+)\)=\(.*\) already exists\.', err_msg)
     if look:
-        raise ValidationError({look.group(1):
-            _("This %(field)s is already taken.") % {
-                'field': look.group(1)}})
-    # SQLite unique constraint.
-    look = re.match(
-        r'UNIQUE constraint failed: [a-z_]+\.([a-z_]+)', err_msg)
-    if look:
-        raise ValidationError({look.group(1):
-            _("This %(field)s is already taken.") % {
-                'field': look.group(1)}})
+        field_name = look.group(1)
+    else:
+        # SQLite unique constraint.
+        look = re.match(
+            r'UNIQUE constraint failed: [a-z_]+\.([a-z_]+)', err_msg)
+        if look:
+            field_name = look.group(1)
+    if field_name:
+        if renames and field_name in renames:
+            field_name = renames[field_name]
+        raise ValidationError({field_name:
+            _("This %(field)s is already taken.") % {'field': field_name}})
     raise err
 
 

@@ -33,6 +33,7 @@ from django.contrib.auth import (login as auth_login, logout as auth_logout,
 from django.contrib.auth.tokens import default_token_generator
 from django.http import HttpResponseRedirect
 from django.template.response import TemplateResponse
+from django.utils import six
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.utils.safestring import mark_safe
@@ -245,7 +246,11 @@ class SignupBaseView(RedirectFormMixin, ProcessFormView):
 
     def form_valid(self, form):
         try:
-            new_user = self.register(**form.cleaned_data)
+            cleaned_data = {}
+            for field_name in six.iterkeys(form.data):
+                cleaned_data.update({
+                    field_name: form.cleaned_data.get(field_name, None)})
+            new_user = self.register(**cleaned_data)
         except ValidationError as err:
             fill_form_errors(form, err)
             return self.form_invalid(form)
@@ -276,7 +281,8 @@ class SignupBaseView(RedirectFormMixin, ProcessFormView):
 
         first_name, last_name = self.first_and_last_names(**cleaned_data)
         username = cleaned_data.get('username', None)
-        password = cleaned_data.get('new_password1', None)
+        password = cleaned_data.get('password',
+            cleaned_data.get('new_password1', None))
         user = User.objects.create_user(username,
             email=email, password=password,
             first_name=first_name, last_name=last_name)

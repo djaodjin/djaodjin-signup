@@ -403,6 +403,7 @@
     };
 
     $(document).ready(function(){
+        $("[name='password']").passwordStrength();
         $("[name='new_password1']").passwordStrength();
         $("[name='new_password2']").passwordMatch({
             reference: $("[name='new_password1']").first()});
