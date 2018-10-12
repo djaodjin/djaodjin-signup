@@ -91,6 +91,7 @@ KEY_EXPIRATION = _SETTINGS.get('ACCOUNT_ACTIVATION_DAYS')
 EMAIL_VERIFICATION_PAT = r'[a-f0-9]{40}'
 
 USERNAME_PAT = r'[\w.@+-]+'
+FULL_NAME_PAT = r"^([^\W\d_]|[ \.\'\-])+$"
 
 LDAP_SERVER_URI = _SETTINGS.get('LDAP', {}).get('SERVER_URI', None)
 LDAP_USER_SEARCH_DN = _SETTINGS.get('LDAP', {}).get('USER_SERCH_DN', None)

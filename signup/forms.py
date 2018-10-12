@@ -44,7 +44,7 @@ class NameEmailForm(forms.Form):
     and password later.
     """
     full_name = forms.RegexField(
-        regex=r'^[\w\s]+$', max_length=60,
+        regex=settings.FULL_NAME_PAT, max_length=60,
         widget=forms.TextInput(attrs={'placeholder':'Full name'}),
         label=_("Full name"),
         error_messages={'invalid':
