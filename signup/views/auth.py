@@ -281,8 +281,8 @@ class SignupBaseView(RedirectFormMixin, ProcessFormView):
 
         first_name, last_name = self.first_and_last_names(**cleaned_data)
         username = cleaned_data.get('username', None)
-        password = cleaned_data.get('password',
-            cleaned_data.get('new_password1', None))
+        password = cleaned_data.get('new_password',
+            cleaned_data.get('password', None))
         user = User.objects.create_user(username,
             email=email, password=password,
             first_name=first_name, last_name=last_name)
@@ -317,7 +317,7 @@ class ActivationBaseView(RedirectFormMixin, UpdateView):
         verification_key = self.kwargs.get(self.key_url_kwarg)
         user = Contact.objects.activate_user(verification_key,
             username=form.cleaned_data['username'],
-            password=form.cleaned_data['new_password1'],
+            password=form.cleaned_data['new_password'],
             first_name=first_name,
             last_name=last_name)
         return user
@@ -377,7 +377,7 @@ class ActivationBaseView(RedirectFormMixin, UpdateView):
         # Okay, security check complete. Log the user in.
         user_with_backend = authenticate(
             username=user.username,
-            password=form.cleaned_data.get('new_password1'))
+            password=form.cleaned_data.get('new_password'))
         auth_login(self.request, user_with_backend)
         if self.request.session.test_cookie_worked():
             self.request.session.delete_test_cookie()

@@ -28,7 +28,7 @@ from captcha.fields import ReCaptchaField
 from django import forms
 from django.contrib.auth import password_validation
 from django.contrib.auth.forms import (
-    PasswordResetForm as PasswordResetBaseForm, SetPasswordForm)
+    PasswordResetForm as PasswordResetBaseForm)
 from django.utils.translation import ugettext_lazy as _
 from django.utils import six
 
@@ -60,13 +60,78 @@ class NameEmailForm(forms.Form):
             self.fields['captcha'] = ReCaptchaField()
 
 
-class PasswordChangeForm(SetPasswordForm):
+class PasswordConfirmMixin(object):
+
+    new_password = forms.CharField(strip=False,
+        label=_("New password"),
+        widget=forms.PasswordInput(
+            attrs={'placeholder': _("New password")}),
+        help_text=password_validation.password_validators_help_text_html())
+    new_password2 = forms.CharField(strip=False,
+        label=_("Confirm password"),
+        widget=forms.PasswordInput(
+            attrs={'placeholder': _("Type password again")}))
+
+    def clean_new_password(self):
+        password = self.cleaned_data.get('new_password')
+        password_validation.validate_password(password, self.user)
+        return password
+
+    def clean(self):
+        """
+        Validates that both passwords respectively match.
+        """
+        super(PasswordConfirmMixin, self).clean()
+        if not ('new_password' in self._errors
+            or 'new_password2' in self._errors):
+            if ('new_password' in self.cleaned_data and
+                'new_password2' in self.cleaned_data):
+                new_password = self.cleaned_data.get('new_password', False)
+                new_password2 = self.cleaned_data.get('new_password2', True)
+                if new_password != new_password2:
+                    self._errors['new_password'] = self.error_class([
+                        _("This field does not match password confirmation.")])
+                    self._errors['new_password2'] = self.error_class([
+                        _("This field does not match password.")])
+                    if 'new_password' in self.cleaned_data:
+                        del self.cleaned_data['new_password']
+                    if 'new_password2' in self.cleaned_data:
+                        del self.cleaned_data['new_password2']
+                    raise forms.ValidationError(
+                        _("Password and password confirmation do not match."))
+        return self.cleaned_data
+
+
+class PasswordChangeForm(PasswordConfirmMixin, forms.Form):
 
     submit_title = 'Update'
 
     def __init__(self, *args, **kwargs):
-        user = kwargs.pop('instance')
-        super(PasswordChangeForm, self).__init__(user, *args, **kwargs)
+        self.user = kwargs.pop('instance')
+        super(PasswordChangeForm, self).__init__(*args, **kwargs)
+
+    def save(self, commit=True):
+        password = self.cleaned_data['new_password']
+        self.user.set_password(password)
+        if commit:
+            self.user.save()
+        return self.user
+
+
+class PasswordResetConfirmForm(PasswordConfirmMixin, forms.Form):
+
+    submit_title = 'Update'
+
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('instance')
+        super(PasswordResetConfirmForm, self).__init__(*args, **kwargs)
+
+    def save(self, commit=True):
+        password = self.cleaned_data['new_password']
+        self.user.set_password(password)
+        if commit:
+            self.user.save()
+        return self.user
 
 
 class PasswordResetForm(PasswordResetBaseForm):
@@ -74,16 +139,7 @@ class PasswordResetForm(PasswordResetBaseForm):
     pass
 
 
-class PasswordResetConfirmForm(SetPasswordForm):
-
-    submit_title = 'Update'
-
-    def __init__(self, *args, **kwargs):
-        user = kwargs.pop('instance')
-        super(PasswordResetConfirmForm, self).__init__(user, *args, **kwargs)
-
-
-class ActivationForm(forms.Form):
+class ActivationForm(PasswordConfirmMixin, forms.Form):
     """
     Form to set password, and optionally user's profile information
     in an activation view.
@@ -109,36 +165,20 @@ class ActivationForm(forms.Form):
         max_length=254, label=_("Username"),
         error_messages={'invalid': _("Username may only contain letters,"\
             " digits and -/_ characters. Spaces are not allowed.")})
-    new_password1 = forms.CharField(
+    new_password = forms.CharField(strip=False,
         label=_("Password"),
         widget=forms.PasswordInput(attrs={'placeholder': _("Password")}),
-        strip=False,
-        help_text=password_validation.password_validators_help_text_html(),
-    )
-    new_password2 = forms.CharField(
+        help_text=password_validation.password_validators_help_text_html())
+    new_password2 = forms.CharField(strip=False,
         label=_("Confirm password"),
-        strip=False,
         widget=forms.PasswordInput(attrs={
-            'placeholder': _("Confirm password")}),
-    )
+            'placeholder': _("Confirm password")}))
 
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop('instance')
         super(ActivationForm, self).__init__(*args, **kwargs)
         if settings.REQUIRES_RECAPTCHA:
             self.fields['captcha'] = ReCaptchaField()
-
-    def clean_new_password2(self):
-        password1 = self.cleaned_data.get('new_password1')
-        password2 = self.cleaned_data.get('new_password2')
-        if password1 and password2:
-            if password1 != password2:
-                raise forms.ValidationError(
-                    self.error_messages['password_mismatch'],
-                    code='password_mismatch',
-                )
-        password_validation.validate_password(password2, self.user)
-        return password2
 
 
 class PublicKeyForm(forms.Form):
