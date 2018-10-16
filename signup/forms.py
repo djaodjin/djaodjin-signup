@@ -102,13 +102,27 @@ class PasswordConfirmMixin(object):
         return self.cleaned_data
 
 
-class PasswordChangeForm(PasswordConfirmMixin, forms.Form):
+class PasswordUpdateForm(PasswordConfirmMixin, forms.ModelForm):
+
+    new_password = forms.CharField(strip=False,
+        label=_("New password"),
+        widget=forms.PasswordInput(
+            attrs={'placeholder': _("New password")}),
+        help_text=password_validation.password_validators_help_text_html())
+    new_password2 = forms.CharField(strip=False,
+        label=_("Confirm password"),
+        widget=forms.PasswordInput(
+            attrs={'placeholder': _("Type password again")}))
 
     submit_title = 'Update'
 
+    class Meta:
+        model = User
+        fields = ['new_password', 'new_password2']
+
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop('instance')
-        super(PasswordChangeForm, self).__init__(*args, **kwargs)
+        super(PasswordUpdateForm, self).__init__(*args, **kwargs)
 
     def save(self, commit=True):
         password = self.cleaned_data['new_password']
@@ -118,20 +132,12 @@ class PasswordChangeForm(PasswordConfirmMixin, forms.Form):
         return self.user
 
 
-class PasswordResetConfirmForm(PasswordConfirmMixin, forms.Form):
+class PasswordChangeForm(PasswordUpdateForm):
+    pass
 
-    submit_title = 'Update'
 
-    def __init__(self, *args, **kwargs):
-        self.user = kwargs.pop('instance')
-        super(PasswordResetConfirmForm, self).__init__(*args, **kwargs)
-
-    def save(self, commit=True):
-        password = self.cleaned_data['new_password']
-        self.user.set_password(password)
-        if commit:
-            self.user.save()
-        return self.user
+class PasswordResetConfirmForm(PasswordUpdateForm):
+    pass
 
 
 class PasswordResetForm(PasswordResetBaseForm):

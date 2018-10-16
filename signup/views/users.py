@@ -27,13 +27,16 @@
 import logging
 
 from django.contrib import messages
+from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.http import HttpResponseRedirect
 from django.shortcuts import redirect
 from django.utils import six
+from django.utils.decorators import method_decorator
 from django.utils.translation import ugettext_lazy as _
+from django.views.decorators.csrf import csrf_protect
 from django.views.generic.detail import BaseDetailView
 from django.views.generic.edit import UpdateView
 
@@ -146,11 +149,19 @@ class PasswordChangeView(UserProfileView):
     form_class = PasswordChangeForm
     template_name = 'users/password_change_form.html'
 
+    @method_decorator(csrf_protect)
+    def dispatch(self, *args, **kwargs):
+        return super(PasswordChangeView, self).dispatch(*args, **kwargs)
+
     def get_success_url(self):
         LOGGER.info("%s updated password for %s.",
             self.request.user, self.object, extra={
             'event': 'update-password', 'request': self.request,
             'modified': self.object.username})
+        if self.request.user == self.object:
+            # Updating the password logs out all other sessions for the user
+            # except the current one.
+            update_session_auth_hash(self.request, self.object)
         messages.info(self.request, _("Password has been updated successfuly."))
         return reverse('users_profile', args=(self.object,))
 
