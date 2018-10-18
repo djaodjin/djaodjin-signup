@@ -42,6 +42,7 @@ from django.views.decorators.cache import add_never_cache_headers
 from django.views.generic.base import TemplateResponseMixin, View
 from django.views.generic.edit import FormMixin, ProcessFormView, UpdateView
 from rest_framework.exceptions import ValidationError
+from rest_framework.settings import api_settings
 
 from .. import settings, signals
 from ..auth import validate_redirect
@@ -263,20 +264,28 @@ class SignupBaseView(RedirectFormMixin, ProcessFormView):
     def register_user(self, **cleaned_data):
         #pylint: disable=maybe-no-member
         email = cleaned_data['email']
-        users = User.objects.filter(email=email)
+        users = User.objects.filter(email__iexact=email)
         if users.exists():
             user = users.get()
             if check_user_active(self.request, user,
                                  next_url=self.get_success_url()):
-                messages.warning(self.request, mark_safe(_(
-                    "This email address has already been registered!"\
+                raise ValidationError(
+                    {'email':
+                     _("A user with that e-mail address already exists."),
+                     api_settings.NON_FIELD_ERRORS_KEY:
+                     mark_safe(_(
+                         "This email address has already been registered!"\
 " Please <a href=\"%s\">login</a> with your credentials. Thank you.")
-                    % reverse('login')))
+                        % reverse('login'))})
             else:
-                messages.warning(self.request, mark_safe(_(
-                    "This email address has already been registered!"\
+                raise ValidationError(
+                    {'email':
+                     _("A user with that e-mail address already exists."),
+                    api_settings.NON_FIELD_ERRORS_KEY:
+                     mark_safe(_(
+                         "This email address has already been registered!"\
 " You should now secure and activate your account following "\
-" the instructions we just emailed you. Thank you.")))
+" the instructions we just emailed you. Thank you."))})
             return None
 
         first_name, last_name = self.first_and_last_names(**cleaned_data)

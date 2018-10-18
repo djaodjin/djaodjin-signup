@@ -32,6 +32,7 @@ from django.utils.translation import ugettext_lazy as _
 import jwt
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
+from rest_framework.settings import api_settings
 
 from . import settings
 from .compat import User
@@ -92,6 +93,8 @@ def fill_form_errors(form, err):
         for field, msg in six.iteritems(err.detail):
             if field in form.fields:
                 form.add_error(field, msg)
+            elif field == api_settings.NON_FIELD_ERRORS_KEY:
+                form.add_error(NON_FIELD_ERRORS, msg)
             else:
                 form.add_error(NON_FIELD_ERRORS,
                     _("No field '%(field)s': %(msg)s" % {
