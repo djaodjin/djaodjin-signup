@@ -105,6 +105,7 @@ def handle_uniq_error(err, renames=None):
     """
     Will raise a ``ValidationError`` with the appropriate error message.
     """
+    field_name = None
     err_msg = str(err).splitlines().pop()
     # PostgreSQL unique constraint.
     look = re.match(
@@ -112,11 +113,17 @@ def handle_uniq_error(err, renames=None):
     if look:
         field_name = look.group(1)
     else:
-        # SQLite unique constraint.
         look = re.match(
-            r'UNIQUE constraint failed: [a-z_]+\.([a-z_]+)', err_msg)
+          r'DETAIL:\s+Key \(lower\(([a-z_]+):text\)\)=\(.*\) already exists\.',
+            err_msg)
         if look:
             field_name = look.group(1)
+        else:
+            # SQLite unique constraint.
+            look = re.match(
+                r'UNIQUE constraint failed: [a-z_]+\.([a-z_]+)', err_msg)
+            if look:
+                field_name = look.group(1)
     if field_name:
         if renames and field_name in renames:
             field_name = renames[field_name]
