@@ -1,4 +1,9 @@
-$.ajaxSetup({ cache: false });
+$.ajaxSetup({
+    cache: false,
+    headers: {
+        'X-CSRFTOKEN': djaodjinSettings.csrf
+    }
+});
 
 Vue.mixin({
     delimiters: ['[[',']]'],
@@ -32,12 +37,6 @@ var itemListMixin = {
                     count: 0
                 },
                 params: {},
-            }
-            if(djaodjinSettings.date_range.start_at ) {
-                data.params['start_at'] = moment(djaodjinSettings.date_range.start_at).toDate()
-            }
-            if(djaodjinSettings.date_range.ends_at ) {
-                data.params['ends_at'] = moment(djaodjinSettings.date_range.ends_at).toDate()
             }
             return data;
         },
@@ -144,6 +143,7 @@ var app = new Vue({
         },
     },
     mounted: function(){
+        console.log(1)
         this.get();
     },
 })
@@ -156,13 +156,14 @@ var app = new Vue({
     data: {
         url: djaodjinSettings.urls.api_activities,
         activityText: '',
-        itemSelected: '',
+        itemSelected: {
+            slug: ''
+        },
         searching: false,
     },
     methods: {
         createActivity: function() {
             var vm = this;
-            if(!vm.itemSelected) return;
             var data = {
                 text: vm.activityText,
                 account: vm.itemSelected.slug
