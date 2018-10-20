@@ -33,6 +33,7 @@ from django.contrib.auth import (login as auth_login, logout as auth_logout,
 from django.contrib.auth.tokens import default_token_generator
 from django.http import HttpResponseRedirect
 from django.template.response import TemplateResponse
+from django.utils import six
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.utils.safestring import mark_safe
@@ -40,6 +41,8 @@ from django.utils.translation import ugettext_lazy as _
 from django.views.decorators.cache import add_never_cache_headers
 from django.views.generic.base import TemplateResponseMixin, View
 from django.views.generic.edit import FormMixin, ProcessFormView, UpdateView
+from rest_framework.exceptions import ValidationError
+from rest_framework.settings import api_settings
 
 from .. import settings, signals
 from ..auth import validate_redirect
@@ -50,6 +53,7 @@ from ..forms import (ActivationForm, NameEmailForm,
     PasswordResetForm, PasswordResetConfirmForm)
 from ..helpers import full_name_natural_split
 from ..models import Contact
+from ..utils import fill_form_errors
 
 
 LOGGER = logging.getLogger(__name__)
@@ -242,7 +246,15 @@ class SignupBaseView(RedirectFormMixin, ProcessFormView):
         return super(SignupBaseView, self).dispatch(request, *args, **kwargs)
 
     def form_valid(self, form):
-        new_user = self.register(**form.cleaned_data)
+        try:
+            cleaned_data = {}
+            for field_name in six.iterkeys(form.data):
+                cleaned_data.update({
+                    field_name: form.cleaned_data.get(field_name, None)})
+            new_user = self.register(**cleaned_data)
+        except ValidationError as err:
+            fill_form_errors(form, err)
+            return self.form_invalid(form)
         if new_user:
             success_url = self.get_success_url()
         else:
@@ -252,25 +264,34 @@ class SignupBaseView(RedirectFormMixin, ProcessFormView):
     def register_user(self, **cleaned_data):
         #pylint: disable=maybe-no-member
         email = cleaned_data['email']
-        users = User.objects.filter(email=email)
+        users = User.objects.filter(email__iexact=email)
         if users.exists():
             user = users.get()
             if check_user_active(self.request, user,
                                  next_url=self.get_success_url()):
-                messages.warning(self.request, mark_safe(_(
-                    "This email address has already been registered!"\
+                raise ValidationError(
+                    {'email':
+                     _("A user with that e-mail address already exists."),
+                     api_settings.NON_FIELD_ERRORS_KEY:
+                     mark_safe(_(
+                         "This email address has already been registered!"\
 " Please <a href=\"%s\">login</a> with your credentials. Thank you.")
-                    % reverse('login')))
+                        % reverse('login'))})
             else:
-                messages.warning(self.request, mark_safe(_(
-                    "This email address has already been registered!"\
+                raise ValidationError(
+                    {'email':
+                     _("A user with that e-mail address already exists."),
+                    api_settings.NON_FIELD_ERRORS_KEY:
+                     mark_safe(_(
+                         "This email address has already been registered!"\
 " You should now secure and activate your account following "\
-" the instructions we just emailed you. Thank you.")))
+" the instructions we just emailed you. Thank you."))})
             return None
 
         first_name, last_name = self.first_and_last_names(**cleaned_data)
         username = cleaned_data.get('username', None)
-        password = cleaned_data.get('new_password1', None)
+        password = cleaned_data.get('new_password',
+            cleaned_data.get('password', None))
         user = User.objects.create_user(username,
             email=email, password=password,
             first_name=first_name, last_name=last_name)
@@ -305,7 +326,7 @@ class ActivationBaseView(RedirectFormMixin, UpdateView):
         verification_key = self.kwargs.get(self.key_url_kwarg)
         user = Contact.objects.activate_user(verification_key,
             username=form.cleaned_data['username'],
-            password=form.cleaned_data['new_password1'],
+            password=form.cleaned_data['new_password'],
             first_name=first_name,
             last_name=last_name)
         return user
@@ -365,7 +386,7 @@ class ActivationBaseView(RedirectFormMixin, UpdateView):
         # Okay, security check complete. Log the user in.
         user_with_backend = authenticate(
             username=user.username,
-            password=form.cleaned_data.get('new_password1'))
+            password=form.cleaned_data.get('new_password'))
         auth_login(self.request, user_with_backend)
         if self.request.session.test_cookie_worked():
             self.request.session.delete_test_cookie()
