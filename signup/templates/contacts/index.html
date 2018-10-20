@@ -1,24 +1,33 @@
 {% extends "contacts/base.html" %}
 
 {% block content %}
-<div ng-app="signupApp">
+<div id="contact-list-container"
+     ng-app="signupApp">
   <div ng-controller="contactsCtrl">
     <h1>Contacts</h1>
-    <form ng-submit="createContact()">
+    <form
+       ng-submit="createContact()"
+       @submit.prevent="createContact">
       <div>
         <label>Full name</label>
-        <input type="text" name="full_name" ng-model="contact.full_name">
+        <input type="text" name="full_name"
+            ng-model="contact.full_name"
+            v-model="contact.full_name">
       </div>
       <div>
         <label>Nick name</label>
-        <input type="text" name="nick_name" ng-model="contact.nick_name">
+        <input type="text" name="nick_name"
+            ng-model="contact.nick_name"
+            v-model="contact.nick_name">
       </div>
       <div>
         <label>Email</label>
-        <input type="text" name="email" ng-model="contact.email">
+        <input type="text" name="email"
+            ng-model="contact.email"
+            v-model="contact.email">
       </div>
       <button type="submit" value="submit">Create Contact</button>
     </form>
-  <div>
+  </div>
 </div>
 {% endblock %}

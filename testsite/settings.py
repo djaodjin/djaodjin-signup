@@ -13,6 +13,9 @@ import os, sys
 from django.contrib.messages import constants as messages
 
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+#JS_FRAMEWORK = 'angularjs'
+JS_FRAMEWORK = 'vuejs'
+
 
 def load_config(confpath):
     '''
@@ -103,10 +106,14 @@ TEMPLATES = [{
     'DIRS': (os.path.join(BASE_DIR, 'testsite', 'templates'),
              os.path.join(BASE_DIR, 'signup', 'templates')),
     'OPTIONS': {
+        'builtins': [
+            'testsite.templatetags.testsite_tags',
+        ],
         'context_processors': [
             'django.contrib.auth.context_processors.auth', # because of admin/
             'django.template.context_processors.request',
             'django.template.context_processors.media',
+            'testsite.context_processors.js_framework'
         ],
         'loaders': [
             'django.template.loaders.filesystem.Loader',

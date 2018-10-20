@@ -30,7 +30,7 @@ from signup.forms import NameEmailForm
 class SignupWithCaptchaForm(NameEmailForm):
 
     username = forms.SlugField(max_length=30, label="Username")
-    new_password1 = forms.CharField(widget=forms.PasswordInput(
+    new_password = forms.CharField(widget=forms.PasswordInput(
         attrs={'placeholder': 'Password'}), label="Password")
     new_password2 = forms.CharField(widget=forms.PasswordInput(
         attrs={'placeholder': 'Type Password Again'}),

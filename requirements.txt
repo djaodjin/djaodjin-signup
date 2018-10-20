@@ -1,6 +1,6 @@
 Django>=1.6
 boto3>=1.4.4
-django-recaptcha>=1.2.1
-djangorestframework>=3
+django-recaptcha>=1.3
+djangorestframework>=3.2
 PyJWT>=1.6.1
 python-dateutil>=2.2

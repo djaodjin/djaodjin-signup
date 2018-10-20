@@ -1,7 +1,7 @@
 {% extends "contacts/base.html" %}
 
 {% block content %}
-<div ng-app="signupApp">
+<div id="contact-edit-container" ng-app="signupApp">
   <div ng-controller="contactCtrl">
     <h1>Contact Profile</h1>
     <dl>
@@ -17,21 +17,33 @@
       <dd>{{contact.email}}</dd>
     </dl>
     <h2>Activities</h2>
-    <form ng-submit="createActivity()">
-      <textarea name="text" ng-model="activity.text"></textarea>
+    <form ng-submit="createActivity()" @submit.prevent="createActivity">
+        <input
+         id="typeahead"
+         type="text"
+         placeholder="Username or Email"
+         name="subscription"
+         v-model="itemSelected.slug"
+         autocomplete="off"/>
+      <textarea name="text" ng-model="activity.text" v-model="activityText"></textarea>
       <button type="submit" value="submit">Create</button>
     </form>
-    <div ng-hide="items.$resolved">
+    <div ng-hide="items.$resolved" v-show="!itemsLoaded">
       <h3>Loading ...</h3>
     </div>
-    <div ng-show="items.$resolved && items.results.length == 0">
-      <h4><em>No activity<span ng-show="filterExpr"> [[filterExpr]]</span></em></h4>
+    <div ng-show="items.$resolved && items.results.length == 0" v-show="itemsLoaded && items.results.length === 0">
+      <h4><em>No activity</em></h4>
     </div>
-    <div id="has-activities" ng-cloak ng-show="items.$resolved && items.results.length > 0">
-      <div ng-repeat="entry in items.results">
-        <p>[[entry.created_at | date : mediumDate]] by [[entry.created_by]]:</p>
+    <div id="has-activities"
+         ng-cloak ng-show="items.$resolved && items.results.length > 0"
+         v-cloak v-show="itemsLoaded && items.results.length > 0">
+      <div
+         ng-repeat="entry in items.results"
+         v-for="entry in items.results">
+        <p>[[entry.created_at | formatDate('MMM D, Y')]] by [[entry.created_by]]:</p>
         <div>[[entry.text]]</div>
       </div>
+    </div>
   </div>
 </div>
 {% endblock %}

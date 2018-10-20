@@ -1,7 +1,8 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div ng-app="signupApp">
+<div id="user-profile-container"
+    ng-app="signupApp">
   <h1>User Profile</h1>
   <div ng-controller="userProfileCtrl">
     <form method="post" action=".">
@@ -11,51 +12,20 @@
     </form>
     <a id="change-password" href="{% url 'password_change' user %}">Change Password</a>
     {% if urls.user.api_generate_keys %}
-    <button id="generate-key-open" data-target="#generate-key">Reset API Key</button>
+    <button id="generate-key-open"
+        data-target="#generate-key">Reset API Key</button>
     {% endif %}
     <a href="{% url 'users_activate' user %}">Activate</a>
     <a href="{% url 'users_notifications' user %}">Notifications</a>
     <div id="generate-key">
-      <input ng-model="api_key" name="key" maxlength="128"
-             type="text" disabled value="Generating ..." />
-      <button id="regenerate-key"
-              type="button" ng-click="generateKey('#generate-key')">Generate</button>
+      <input name="key" maxlength="128" type="text" disabled
+          value="Generating ..."
+          ng-model="api_key"
+          v-model="apiKey" />
+      <button id="regenerate-key" type="button"
+              ng-click="generateKey('#generate-key')"
+              @click="generateKey">Generate</button>
     </div>
   </div><!-- userProfileCtrl -->
 </div><!-- signupApp -->
-{% endblock %}
-
-{% block scripts %}
-<script type="text/javascript" charset="utf-8" src="/static/vendor/angular.js"></script>
-<script type="text/javascript" charset="utf-8" src="/static/vendor/angular-touch.js"></script>
-<script type="text/javascript" charset="utf-8" src="/static/vendor/angular-animate.js"></script>
-<script type="text/javascript" charset="utf-8" src="/static/vendor/angular-resource.js"></script>
-<script type="text/javascript" charset="utf-8" src="/static/vendor/angular-route.js"></script>
-<script type="text/javascript" charset="utf-8" src="/static/vendor/ui-bootstrap-tpls.js"></script>
-<script type="text/javascript" charset="utf-8" src="/static/js/djaodjin-resources.js"></script>
-<script type="text/javascript" charset="utf-8" src="/static/js/djaodjin-signup-angular.js"></script>
-<script type="text/javascript">
-/* Implementation Note: Not including a list of dependent modules
-   (2nd parameter to `module`) "re-opens" the module for additional
-   configuration.
-   - We add the CSRF token for as an HTTP header on API calls.
-   - We make it easier to separate between django and angularjs templates
-     by changing Angular defaults to [[ and ]] characters. */
-var reopenSignupApp = angular.module('signupApp');
-reopenSignupApp.config(['$interpolateProvider', '$httpProvider',
-           function($interpolateProvider, $httpProvider) {
-    $httpProvider.defaults.headers.common['X-CSRFToken'] = '{{csrf_token}}';
-    $interpolateProvider.startSymbol('[[');
-    $interpolateProvider.endSymbol(']]');
-}]);
-reopenSignupApp.constant('settings', {
-modals: {
-    generate_key: "#generate-key",
-},
-urls: {
-    api_generate_keys: "{{urls.user.api_generate_keys}}",
-    api_user_profile: "{{urls.user.api_profile}}",
-    user_profile_redirect: "{{urls.user.profile_redirect}}",
-}});
-</script>
 {% endblock %}
