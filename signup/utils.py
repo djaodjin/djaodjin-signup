@@ -114,7 +114,7 @@ def handle_uniq_error(err, renames=None):
         field_name = look.group(1)
     else:
         look = re.match(
-          r'DETAIL:\s+Key \(lower\(([a-z_]+):text\)\)=\(.*\) already exists\.',
+          r'DETAIL:\s+Key \(lower\(([a-z_]+)::text\)\)=\(.*\) already exists\.',
             err_msg)
         if look:
             field_name = look.group(1)
