@@ -5,7 +5,7 @@
      ng-app="signupApp">
   <div ng-controller="contactsCtrl">
     <h1>Contacts</h1>
-    <form
+    <form id="create-contact"
        ng-submit="createContact()"
        @submit.prevent="createContact">
       <div>
@@ -28,6 +28,22 @@
       </div>
       <button type="submit" value="submit">Create Contact</button>
     </form>
+    <div ng-show="!items.$resolved"
+         v-show="!itemsLoaded">
+      <h3>Loading ...</h3>
+    </div>
+    <div ng-show="items.$resolved && items.results.length == 0" ng-cloak
+         v-show="itemsLoaded && items.results.length === 0" v-cloak>
+      <h4><em>No contacts</em></h4>
+    </div>
+    <div id="has-contacts"
+         ng-show="items.$resolved && items.results.length > 0" ng-cloak
+         v-show="itemsLoaded && items.results.length > 0" v-cloak>
+      <div ng-repeat="entry in items.results"
+           v-for="entry in items.results">
+        <p><a href="{{urls.contacts}}[[entry.slug]]/">[[entry.full_name]]</a></p>
+      </div>
+    </div>
   </div>
 </div>
 {% endblock %}

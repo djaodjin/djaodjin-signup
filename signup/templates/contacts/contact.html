@@ -28,10 +28,13 @@
       <textarea name="text" ng-model="activity.text" v-model="activityText"></textarea>
       <button type="submit" value="submit">Create</button>
     </form>
-    <div ng-hide="items.$resolved" v-show="!itemsLoaded">
+    <div ng-show="!items.$resolved"
+         v-show="!itemsLoaded">
       <h3>Loading ...</h3>
     </div>
-    <div ng-show="items.$resolved && items.results.length == 0" v-show="itemsLoaded && items.results.length === 0">
+    <div id="has-no-activity"
+         ng-show="items.$resolved && items.results.length == 0"
+         v-show="itemsLoaded && items.results.length === 0">
       <h4><em>No activity</em></h4>
     </div>
     <div id="has-activities"

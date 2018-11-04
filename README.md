@@ -1,5 +1,4 @@
-This code was taken out of [djaodjin](http://djaodjin.com/) main repo,
-generalized and open sourced as a frictionless signup Django app.
+This code a frictionless signup Django app.
 
 The app will register and login a user with as little as only an email address.
 
@@ -11,6 +10,17 @@ the email address has been verified.
 If during the first login and/or subsequent login, the email address should
 be verified before moving forward (ex: before presenting a payment view),
 you should decorate the view with an *active_required* decorator.
+
+Tested with
+
+- **Python:** 2.7, **Django:** 1.11 ([LTS](https://www.djangoproject.com/download/)), **Django Rest Framework:** 3.8.2
+- **Python:** 3.6, **Django:** 1.11 ([LTS](https://www.djangoproject.com/download/)), **Django Rest Framework:** 3.8.2
+- **Python:** 3.6, **Django:** 2.1 (latest),       **Django Rest Framework:** 3.8.2
+
+This project contains bare bone templates which are compatible with Django
+and Jinja2 template engines. To see djaodjin-signup in action as part
+of a full-fledged subscription-based session proxy, take a look
+at [djaoapp](https://github.com/djaodjin/djaoapp/).
 
 
 Install
@@ -45,12 +55,23 @@ After cloning the repository, create a virtualenv environment, install
 the prerequisites, create and load initial data into the database, then
 run the testsite webapp.
 
-    $ virtualenv-2.7 _installTop_
+    $ virtualenv _installTop_
     $ source _installTop_/bin/activate
-    $ pip install -r requirements.txt
+    $ pip install -r testsite/requirements.txt
     $ python manage.py syncdb
     $ python manage.py loaddata testsite/fixtures/test_data.json
     $ python manage.py runserver
 
     # Browse http://localhost:8000/
 
+Release Notes
+=============
+
+0.2.5
+
+  * Replaces AngularJS by Vue.js front-end
+
+    AngularJS is still currently available through a settings.py
+    variable.
+
+        JS_FRAMEWORK = 'angularjs'

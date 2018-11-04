@@ -29,18 +29,21 @@ from signup.signals import (user_registered, user_activated,
     user_reset_password, user_verification)
 
 #pylint: disable=unused-argument
+SEND_EMAIL = False
 
 @receiver(user_registered, dispatch_uid="user_registered_notice")
 def user_registered_notice(sender, user, request=None, **kwargs):
-    send_mail("user registered", "%s has registered.",
-              settings.DEFAULT_FROM_EMAIL,
-              [admin[1] for admin in settings.ADMINS],
-              fail_silently=False)
+    if SEND_EMAIL:
+        send_mail("user registered", "%s has registered.",
+                  settings.DEFAULT_FROM_EMAIL,
+                  [admin[1] for admin in settings.ADMINS],
+                  fail_silently=False)
 
 
 @receiver(user_activated, dispatch_uid="user_activated_notice")
 def user_activated_notice(sender, user, request, **kwargs):
-    send_mail("user activated", "%s has been activated.",
+    if SEND_EMAIL:
+        send_mail("user activated", "%s has been activated.",
               settings.DEFAULT_FROM_EMAIL,
               [admin[1] for admin in settings.ADMINS],
               fail_silently=False)
@@ -49,7 +52,8 @@ def user_activated_notice(sender, user, request, **kwargs):
 @receiver(user_verification, dispatch_uid="user_verification_notice")
 def user_verification_notice(
         sender, user, request, back_url, expiration_days, **kwargs):
-    send_mail("email verification", "please click %s" % back_url,
+    if SEND_EMAIL:
+        send_mail("email verification", "please click %s" % back_url,
               settings.DEFAULT_FROM_EMAIL, [user.email],
               fail_silently=False)
 
@@ -57,6 +61,7 @@ def user_verification_notice(
 @receiver(user_reset_password, dispatch_uid="user_reset_password_notice")
 def user_reset_password_notice(
         sender, user, request, back_url, expiration_days, **kwargs):
-    send_mail("password reset", "please click %s" % back_url,
+    if SEND_EMAIL:
+        send_mail("password reset", "please click %s" % back_url,
               settings.DEFAULT_FROM_EMAIL, [user.email],
               fail_silently=False)
