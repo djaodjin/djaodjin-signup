@@ -168,6 +168,7 @@ def upload_contact_picture(picture, slug):
         res = client.put_object(Body=picture, Key=key, ACL='public-read',
             Bucket=bucket)
         if res['ResponseMetadata']['HTTPStatusCode'] == 200:
-            return 's3://%s||%s||%s' % (region, bucket, key)
+            return 'https://s3.%s.amazonaws.com/%s/%s' % (region, bucket,
+                key)
     except Exception as e:
         LOGGER.error('error while uploading picture: %s', e)

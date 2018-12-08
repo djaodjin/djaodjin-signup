@@ -235,7 +235,7 @@ class Contact(models.Model):
         " followed by last name)"))
     nick_name = models.CharField(_("Nick name"), max_length=60, blank=True,
         help_text=_("Short casual name used to address the contact"))
-    picture = models.CharField(_("Profile picture"), max_length=300, blank=True,
+    picture = models.URLField(_("Profile picture"), max_length=300, blank=True,
         help_text=_("Profile picture S3 URL"))
     user = models.OneToOneField(settings.AUTH_USER_MODEL,
         null=True, on_delete=models.CASCADE, related_name='contact')
@@ -286,15 +286,6 @@ class Contact(models.Model):
         return self.verification_key == self.VERIFIED or \
                (start_at + expiration_date <= datetime_or_now())
     verification_key_expired.boolean = True
-
-    @property
-    def picture_url(self):
-        url = ''
-        if self.picture:
-            region, bucket, key = self.picture[5:].split('||')
-            url = 'https://s3.%s.amazonaws.com/%s/%s' % (region, bucket,
-                key)
-            return url
 
 
 @python_2_unicode_compatible
