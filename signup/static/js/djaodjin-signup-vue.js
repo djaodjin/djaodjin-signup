@@ -18,6 +18,7 @@ Vue.mixin({
 });
 
 Vue.use(uiv, {prefix: 'uiv'});
+Vue.use(Croppa);
 
 Vue.filter('formatDate', function(value, format) {
   if (value) {
@@ -93,6 +94,8 @@ var app = new Vue({
         userModalOpen: false,
         apiModalOpen: false,
         apiKey: 'Generating ...',
+        picture: null,
+        contact: {},
     },
     methods: {
         deleteProfile: function() {
@@ -120,7 +123,52 @@ var app = new Vue({
                 vm.apiKey = "ERROR";
                 showErrorMessages(resp);
             });
+        },
+        getContact: function(cb){
+            var vm = this;
+            $.ajax({
+                method: 'GET',
+                url: djaodjinSettings.urls.user.api_contact,
+            }).done(function(res) {
+                if(res.picture){
+                    var rand = '?r=' + Math.ceil(Math.random()*1000000)
+                    res.picture += rand
+                }
+                vm.contact = res;
+                if(cb) cb();
+            }).fail(function(resp){
+                showErrorMessages(resp);
+            });
+        },
+        uploadImage() {
+            var vm = this;
+            this.picture.generateBlob(function(blob){
+                if(!blob) return;
+                var data = new FormData();
+                data.append('picture', blob);
+                $.ajax({
+                    method: 'PUT',
+                    contentType: false,
+                    processData: false,
+                    url: djaodjinSettings.urls.user.api_contact,
+                    data: data,
+                }).done(function(res) {
+                    vm.getContact(function(){
+                        vm.picture.remove()
+                    });
+                }).fail(function(resp){
+                    showErrorMessages(resp);
+                });
+            }, 'image/jpeg');
         }
+    },
+    computed: {
+        imageSelected: function(){
+            return this.picture.hasImage();
+        }
+    },
+    mounted: function(){
+        this.getContact();
     },
 })
 }
@@ -151,7 +199,6 @@ var app = new Vue({
         },
     },
     mounted: function(){
-        console.log(1)
         this.get();
     },
 })
