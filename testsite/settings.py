@@ -13,6 +13,8 @@ import os, sys
 from django.contrib.messages import constants as messages
 
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+RUN_DIR = os.getcwd()
+
 #JS_FRAMEWORK = 'angularjs'
 JS_FRAMEWORK = 'vuejs'
 
@@ -46,7 +48,8 @@ def load_config(confpath):
     else:
         sys.stderr.write('warning: config file %s does not exist.\n' % confpath)
 
-load_config(os.path.join(BASE_DIR, 'credentials'))
+load_config(os.path.join(
+    os.getenv('TESTSITE_SETTINGS_LOCATION', RUN_DIR), 'credentials'))
 
 if not hasattr(sys.modules[__name__], "SECRET_KEY"):
     from random import choice
