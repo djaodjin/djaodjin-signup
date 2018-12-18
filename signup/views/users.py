@@ -77,14 +77,14 @@ class UserProfileView(UserMixin, UpdateView):
         setattr(context['user'], 'full_name', context['user'].get_full_name())
         # URLs for user
         if is_authenticated(self.request):
-            contact, _ = Contact.objects.update_or_create_token(self.object)
+#XXX            contact, _ = Contact.objects.update_or_create_token(self.object)
             self.update_context_urls(context, {'user': {
                 'api_generate_keys': reverse(
                     'api_generate_keys', args=(self.object,)),
                 'api_profile': reverse(
                     'api_user_profile', args=(self.object,)),
                 'api_contact': reverse(
-                    'api_contact', args=(contact,)),
+                    'api_contact', args=(self.object.username,)), #XXX
                 'password_change': reverse(
                     'password_change', args=(self.object,)),
             }})

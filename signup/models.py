@@ -131,7 +131,7 @@ class ContactManager(models.Manager):
         if hasattr(user, 'email'):
             kwargs.update({'email': user.email})
         defaults = {
-            'slug': user.username,
+#XXX            'slug': user.username,
             'full_name': user.get_full_name(),
             'verification_key': verification_key
         }
