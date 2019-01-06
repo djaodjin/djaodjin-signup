@@ -281,3 +281,31 @@ var app = new Vue({
     },
 })
 }
+
+if($('#update-password-container').length > 0){
+var app = new Vue({
+    el: "#update-password-container",
+    data: {
+        password: '',
+        password_confirmation: '',
+    },
+    methods: {
+        updatePassword: function(){
+            var vm = this;
+            if(vm.password != vm.password_confirmation){
+                alert("the passwords don't match");
+                return;
+            }
+            $.ajax({
+                method: 'PUT',
+                url: djaodjinSettings.urls.user.api_password_change,
+                data: {
+                    password: vm.password
+                },
+            }).done(function(res){
+                showMessages(["Password was updated."], "success");
+            });
+        },
+    }
+})
+}

@@ -83,6 +83,8 @@ class UserProfileView(UserMixin, UpdateView):
                     'api_generate_keys', args=(self.object,)),
                 'api_profile': reverse(
                     'api_user_profile', args=(self.object,)),
+                'api_password_change': reverse(
+                    'api_user_password_change', args=(self.object,)),
                 'api_contact': reverse(
                     'api_contact', args=(self.object.username,)), #XXX
                 'password_change': reverse(
