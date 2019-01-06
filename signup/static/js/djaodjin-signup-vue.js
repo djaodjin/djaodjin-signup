@@ -91,6 +91,10 @@ if($('#user-profile-container').length > 0){
 var app = new Vue({
     el: "#user-profile-container",
     data: {
+        username: '',
+        email: '',
+        firstName: '',
+        lastName: '',
         userModalOpen: false,
         apiModalOpen: false,
         apiKey: 'Generating ...',
@@ -98,6 +102,35 @@ var app = new Vue({
         contact: {},
     },
     methods: {
+        get: function(){
+            var vm = this;
+            $.ajax({
+                method: 'GET',
+                url: djaodjinSettings.urls.user.api_profile,
+            }).done(function(res){
+                vm.username = res.username;
+                vm.email = res.email;
+                vm.firstName = res.first_name;
+                vm.lastName = res.last_name;
+            });
+        },
+        updateUser: function(){
+            var vm = this;
+            $.ajax({
+                method: 'PATCH',
+                url: djaodjinSettings.urls.user.api_profile,
+                data: {
+                    username: vm.username,
+                    email: vm.email,
+                    first_name: vm.firstName,
+                    last_name: vm.lastName,
+                },
+            }).done(function(res) {
+                showMessages(["User was updated."], "success");
+            }).fail(function(resp){
+                showErrorMessages(resp);
+            });
+        },
         deleteProfile: function() {
             $.ajax({
                 method: 'DELETE',
@@ -160,7 +193,7 @@ var app = new Vue({
                     showErrorMessages(resp);
                 });
             }, 'image/jpeg');
-        }
+        },
     },
     computed: {
         imageSelected: function(){
@@ -168,6 +201,7 @@ var app = new Vue({
         }
     },
     mounted: function(){
+        this.get();
         this.getContact();
     },
 })

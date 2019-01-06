@@ -5,10 +5,12 @@
     ng-app="signupApp">
   <h1>User Profile</h1>
   <div ng-controller="userProfileCtrl">
-    <form method="post" action=".">
-      {% csrf_token %}
-      {{ form.as_p }}
-      <button type="submit">Update</button>
+    <form @submit.prevent="updateUser">
+       <p><label for="id_username">Username:</label> <input type="text" name="username" v-model="username" placeholder="Username" maxlength="254" required="required" id="id_username"></p>
+       <p><label for="id_email">Email address:</label> <input type="email" name="email" v-model="email" maxlength="254" id="id_email"></p>
+       <p><label for="id_first_name">First name:</label> <input type="text" name="first_name" v-model="firstName" maxlength="30" id="id_first_name"></p>
+       <p><label for="id_last_name">Last name:</label> <input type="text" name="last_name" v-model="lastName" maxlength="30" id="id_last_name"></p>
+       <button type="submit">Update</button>
     </form>
     <img :src="contact.picture" v-show="contact.picture && !imageSelected" width="100" height="100">
       <croppa v-model="picture" :width="100" :height="100"></croppa>

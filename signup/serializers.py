@@ -162,7 +162,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = get_user_model()
-        fields = ('username', 'email', 'full_name')
+        fields = ('username', 'email', 'full_name', 'first_name', 'last_name')
 
     def get_full_name(self, obj):#pylint:disable=no-self-use
         return obj.get_full_name()
