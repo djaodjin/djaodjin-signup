@@ -66,13 +66,16 @@ class PasswordChangeAPIView(UpdateAPIView):
 
     def perform_update(self, serializer):
         password = serializer.validated_data['password']
-        serializer.instance.set_password(password)
-        serializer.instance.save()
-        # Updating the password logs out all other sessions for the user
-        # except the current one if
-        # django.contrib.auth.middleware.SessionAuthenticationMiddleware
-        # is enabled.
-        update_session_auth_hash(self.request, serializer.instance)
+        new_password = serializer.validated_data.get('new_password')
+        pwd_correct = serializer.instance.check_password(password)
+        if pwd_correct and new_password:
+            serializer.instance.set_password(new_password)
+            serializer.instance.save()
+            # Updating the password logs out all other sessions for the user
+            # except the current one if
+            # django.contrib.auth.middleware.SessionAuthenticationMiddleware
+            # is enabled.
+            update_session_auth_hash(self.request, serializer.instance)
 
 
 class UserNotificationsAPIView(UpdateAPIView):
