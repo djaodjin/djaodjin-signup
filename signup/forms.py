@@ -104,6 +104,10 @@ class PasswordConfirmMixin(object):
 
 class PasswordUpdateForm(PasswordConfirmMixin, forms.ModelForm):
 
+    password = forms.CharField(strip=False,
+        label=_("Old password"),
+        widget=forms.PasswordInput(
+            attrs={'placeholder': _("Old password")}))
     new_password = forms.CharField(strip=False,
         label=_("New password"),
         widget=forms.PasswordInput(
@@ -118,15 +122,22 @@ class PasswordUpdateForm(PasswordConfirmMixin, forms.ModelForm):
 
     class Meta:
         model = User
-        fields = ['new_password', 'new_password2']
+        fields = ['password', 'new_password', 'new_password2']
 
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop('instance')
         super(PasswordUpdateForm, self).__init__(*args, **kwargs)
 
+    def clean_password(self):
+        password = self.cleaned_data['password']
+        pwd_correct = self.user.check_password(password)
+        if not pwd_correct:
+            raise forms.ValidationError(_("Old password is incorrect."))
+        return password
+
     def save(self, commit=True):
-        password = self.cleaned_data['new_password']
-        self.user.set_password(password)
+        new_password = self.cleaned_data['new_password']
+        self.user.set_password(new_password)
         if commit:
             self.user.save()
         return self.user
@@ -197,9 +208,21 @@ class PublicKeyForm(forms.Form):
         strip=False,
         help_text=password_validation.password_validators_help_text_html())
 
+    user_password = forms.CharField(
+        label=_("User Password"),
+        widget=forms.PasswordInput(attrs={'placeholder': _("User Password")}),
+        strip=False)
+
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop('instance')
         super(PublicKeyForm, self).__init__(*args, **kwargs)
+
+    def clean_user_password(self):
+        password = self.cleaned_data['user_password']
+        pwd_correct = self.user.check_password(password)
+        if not pwd_correct:
+            raise forms.ValidationError(_("User password is incorrect."))
+        return password
 
 
 class UserForm(forms.ModelForm):
