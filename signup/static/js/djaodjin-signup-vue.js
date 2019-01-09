@@ -93,8 +93,7 @@ var app = new Vue({
     data: {
         username: '',
         email: '',
-        firstName: '',
-        lastName: '',
+        fullName: '',
         userModalOpen: false,
         apiModalOpen: false,
         apiKey: 'Generating ...',
@@ -110,8 +109,7 @@ var app = new Vue({
             }).done(function(res){
                 vm.username = res.username;
                 vm.email = res.email;
-                vm.firstName = res.first_name;
-                vm.lastName = res.last_name;
+                vm.fullName = res.full_name;
             });
         },
         updateUser: function(){
@@ -122,8 +120,7 @@ var app = new Vue({
                 data: {
                     username: vm.username,
                     email: vm.email,
-                    first_name: vm.firstName,
-                    last_name: vm.lastName,
+                    full_name: vm.fullName,
                 },
             }).done(function(res) {
                 showMessages(["User was updated."], "success");
@@ -286,13 +283,13 @@ if($('#update-password-container').length > 0){
 var app = new Vue({
     el: "#update-password-container",
     data: {
-        password: '',
-        password_confirmation: '',
+        newPassword: '',
+        newPassword2: '',
     },
     methods: {
         updatePassword: function(){
             var vm = this;
-            if(vm.password != vm.password_confirmation){
+            if(vm.newPassword != vm.newPassword2){
                 alert("the passwords don't match");
                 return;
             }
@@ -300,7 +297,7 @@ var app = new Vue({
                 method: 'PUT',
                 url: djaodjinSettings.urls.user.api_password_change,
                 data: {
-                    password: vm.password
+                    password: vm.newPassword
                 },
             }).done(function(res){
                 showMessages(["Password was updated."], "success");
