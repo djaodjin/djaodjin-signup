@@ -25,9 +25,11 @@
 from django.conf.urls import url
 
 from ... import settings
-from ...api.keys import ResetAPIKeysAPIView
+from ...api.keys import ResetAPIKeysAPIView, PublicKeyAPIView
 
 urlpatterns = [
+    url(r'^auth/pubkey/(?P<user>%s)/' % settings.USERNAME_PAT,
+        PublicKeyAPIView.as_view(), name='api_pubkey'),
     url(r'^auth/keys/(?P<user>%s)/' % settings.USERNAME_PAT,
         ResetAPIKeysAPIView.as_view(), name='api_generate_keys')
 ]

@@ -87,6 +87,8 @@ class UserProfileView(UserMixin, UpdateView):
                     'api_user_password_change', args=(self.object,)),
                 'api_contact': reverse(
                     'api_contact', args=(self.object.username,)), #XXX
+                'api_pubkey': reverse(
+                    'api_pubkey', args=(self.object,)),
                 'password_change': reverse(
                     'password_change', args=(self.object,)),
             }})

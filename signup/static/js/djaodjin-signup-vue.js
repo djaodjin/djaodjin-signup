@@ -306,3 +306,30 @@ var app = new Vue({
     }
 })
 }
+
+if($('#update-pubkey-container').length > 0){
+var app = new Vue({
+    el: "#update-pubkey-container",
+    data: {
+        pubkey: '',
+        password: '',
+    },
+    methods: {
+        updatePubkey: function(){
+            var vm = this;
+            $.ajax({
+                method: 'PUT',
+                url: djaodjinSettings.urls.user.api_pubkey,
+                data: {
+                    pubkey: vm.pubkey,
+                    password: vm.password,
+                },
+            }).done(function(res){
+                showMessages(["Public key was updated."], "success");
+            }).fail(function(res){
+                showErrorMessages(res);
+            });
+        },
+    }
+})
+}

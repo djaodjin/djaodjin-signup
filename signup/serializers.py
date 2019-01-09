@@ -186,3 +186,9 @@ class ValidationErrorSerializer(NoModelSerializer):
     """
     detail = serializers.CharField(help_text=_("Describes the reason for"\
         " the error in plain text"))
+
+
+class PublicKeySerializer(NoModelSerializer):
+    pubkey = serializers.CharField(max_length=500, help_text=_("Public key"))
+    password = serializers.CharField(required=False, max_length=500,
+        help_text=_("Password"))
