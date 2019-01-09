@@ -64,7 +64,7 @@ class APIKeysSerializer(NoModelSerializer):
         help_text=_("Secret API Key used to authenticate user on every HTTP"\
         " request"))
     password = serializers.CharField(max_length=128, required=False,
-        help_text=_("User password"))
+        help_text=_("Your password"))
 
     class Meta:
         #pylint:disable=old-style-class,no-init

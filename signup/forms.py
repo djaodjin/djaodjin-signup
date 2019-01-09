@@ -105,9 +105,9 @@ class PasswordConfirmMixin(object):
 class PasswordUpdateForm(PasswordConfirmMixin, forms.ModelForm):
 
     password = forms.CharField(strip=False,
-        label=_("Old password"),
+        label=_("Your password"),
         widget=forms.PasswordInput(
-            attrs={'placeholder': _("Old password")}))
+            attrs={'placeholder': _("Your password")}))
     new_password = forms.CharField(strip=False,
         label=_("New password"),
         widget=forms.PasswordInput(
@@ -209,8 +209,8 @@ class PublicKeyForm(forms.Form):
         help_text=password_validation.password_validators_help_text_html())
 
     user_password = forms.CharField(
-        label=_("User Password"),
-        widget=forms.PasswordInput(attrs={'placeholder': _("User Password")}),
+        label=_("Your Password"),
+        widget=forms.PasswordInput(attrs={'placeholder': _("Your Password")}),
         strip=False)
 
     def __init__(self, *args, **kwargs):

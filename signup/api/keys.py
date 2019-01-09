@@ -62,7 +62,7 @@ class ResetAPIKeysAPIView(UserMixin, CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
             password = serializer.validated_data.get('password')
-            pwd_correct = self.user.check_password(password)
+            pwd_correct = request.user.check_password(password)
             if pwd_correct:
                 allowed_chars = 'abcdefghjkmnpqrstuvwxyz'\
                     'ABCDEFGHJKLMNPQRSTUVWXYZ'\

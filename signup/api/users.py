@@ -67,7 +67,7 @@ class PasswordChangeAPIView(UpdateAPIView):
     def perform_update(self, serializer):
         password = serializer.validated_data['password']
         new_password = serializer.validated_data.get('new_password')
-        pwd_correct = serializer.instance.check_password(password)
+        pwd_correct = self.request.user.check_password(password)
         if pwd_correct and new_password:
             serializer.instance.set_password(new_password)
             serializer.instance.save()
