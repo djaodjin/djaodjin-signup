@@ -236,8 +236,8 @@ class Contact(models.Model):
         " followed by last name)"))
     nick_name = models.CharField(_("Nick name"), max_length=60, blank=True,
         help_text=_("Short casual name used to address the contact"))
-    picture = models.URLField(_("Profile picture"), max_length=300, blank=True,
-        help_text=_("Profile picture S3 URL"))
+    picture = models.FileField(_("Profile picture"), max_length=300, blank=True,
+        help_text=_("Profile picture"))
     user = models.OneToOneField(settings.AUTH_USER_MODEL,
         null=True, on_delete=models.CASCADE, related_name='contact')
     verification_key = models.CharField(_("Verification key"), max_length=40)

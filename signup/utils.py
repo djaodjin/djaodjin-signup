@@ -24,8 +24,6 @@
 
 import logging, re
 
-import boto3
-from botocore.exceptions import ClientError
 from django.apps import apps as django_apps
 from django.core.exceptions import ImproperlyConfigured, NON_FIELD_ERRORS
 from django.db import IntegrityError
@@ -35,7 +33,6 @@ import jwt
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.settings import api_settings
-from hashlib import sha256
 
 from . import settings
 from .compat import User
@@ -161,19 +158,3 @@ def verify_token(token):
     except User.DoesNotExist:
         raise serializers.ValidationError(_("User does not exist."))
     return user
-
-
-def upload_contact_picture(picture, slug):
-    region = settings.AWS_REGION
-    bucket = settings.AWS_S3_BUCKET_NAME
-    client = boto3.client('s3', region_name=region)
-    try:
-        key = '%s.%s' % (sha256(slug.encode()).hexdigest(), 'jpg')
-        res = client.put_object(Body=picture, Key=key, ACL='public-read',
-            Bucket=bucket)
-        if res['ResponseMetadata']['HTTPStatusCode'] == 200:
-            return 'https://s3.%s.amazonaws.com/%s/%s' % (region, bucket,
-                key)
-    except ClientError as err:
-        LOGGER.error('error while uploading picture: %s', err)
-        raise serializers.ValidationError(_("error while uploading picture."))
