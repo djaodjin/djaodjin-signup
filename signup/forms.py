@@ -201,11 +201,6 @@ class PublicKeyForm(forms.Form):
         strip=False,
         help_text=password_validation.password_validators_help_text_html())
 
-    user_password = forms.CharField(
-        label=_("Your Password"),
-        widget=forms.PasswordInput(attrs={'placeholder': _("Your Password")}),
-        strip=False)
-
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop('instance')
         super(PublicKeyForm, self).__init__(*args, **kwargs)

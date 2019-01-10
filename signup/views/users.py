@@ -211,7 +211,7 @@ class UserPublicKeyUpdateView(UserProfileView):
         """
         If the form is valid, save the associated model.
         """
-        password = form.cleaned_data['user_password']
+        password = form.cleaned_data['password']
         pwd_correct = self.request.user.check_password(password)
         if not pwd_correct:
             form.add_error(None, _("Your password is incorrect."))
