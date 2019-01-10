@@ -128,13 +128,6 @@ class PasswordUpdateForm(PasswordConfirmMixin, forms.ModelForm):
         self.user = kwargs.pop('instance')
         super(PasswordUpdateForm, self).__init__(*args, **kwargs)
 
-    def clean_password(self):
-        password = self.cleaned_data['password']
-        pwd_correct = self.user.check_password(password)
-        if not pwd_correct:
-            raise forms.ValidationError(_("Old password is incorrect."))
-        return password
-
     def save(self, commit=True):
         new_password = self.cleaned_data['new_password']
         self.user.set_password(new_password)
@@ -216,13 +209,6 @@ class PublicKeyForm(forms.Form):
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop('instance')
         super(PublicKeyForm, self).__init__(*args, **kwargs)
-
-    def clean_user_password(self):
-        password = self.cleaned_data['user_password']
-        pwd_correct = self.user.check_password(password)
-        if not pwd_correct:
-            raise forms.ValidationError(_("User password is incorrect."))
-        return password
 
 
 class UserForm(forms.ModelForm):
