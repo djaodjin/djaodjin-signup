@@ -97,6 +97,15 @@ class PublicKeyAPIView(UserMixin, GenericAPIView):
     .. code-block:: json
 
         {
+          "pubkey": "ssh-rsa AAAAB3N...",
+          "password": "secret"
+        }
+
+    responds
+
+    .. code-block:: json
+
+        {
           "detail": "ok"
         }
     """

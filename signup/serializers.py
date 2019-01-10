@@ -189,6 +189,6 @@ class ValidationErrorSerializer(NoModelSerializer):
 
 
 class PublicKeySerializer(NoModelSerializer):
-    pubkey = serializers.CharField(max_length=500, help_text=_("Public key"))
+    pubkey = serializers.CharField(max_length=None, help_text=_("Public key"))
     password = serializers.CharField(required=False, max_length=500,
         help_text=_("Password"))
