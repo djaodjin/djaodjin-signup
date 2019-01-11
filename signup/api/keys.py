@@ -88,7 +88,7 @@ class ResetAPIKeysAPIView(UserMixin, CreateAPIView):
                     'secret': api_pub_key + api_priv_key
                 }), status=status.HTTP_201_CREATED)
             else:
-                raise ValidationError('wrong password')
+                raise ValidationError('Wrong user password')
 
 
 class PublicKeyAPIView(UserMixin, GenericAPIView):
@@ -121,6 +121,10 @@ class PublicKeyAPIView(UserMixin, GenericAPIView):
     def put(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
+            password = serializer.validated_data.get('password')
+            pwd_correct = request.user.check_password(password)
+            if not pwd_correct:
+                raise ValidationError('Wrong user password')
             try:
                 self.user.set_pubkey(serializer.validated_data['pubkey'],
                     bind_password=serializer.validated_data['password'])
