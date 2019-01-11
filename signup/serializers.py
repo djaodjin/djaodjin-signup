@@ -29,6 +29,7 @@ from rest_framework import serializers
 
 from .models import Activity, Contact, Notification
 from .utils import get_account_model, upload_contact_picture
+from .helpers import full_name_natural_split
 
 
 class NoModelSerializer(serializers.Serializer):
@@ -161,7 +162,7 @@ class UserSerializer(serializers.ModelSerializer):
             'invalid')])
     email = serializers.EmailField(
         help_text=_("Primary e-mail to contact user"))
-    full_name = serializers.SerializerMethodField(
+    full_name = serializers.CharField(source='get_full_name',
         help_text=_("Full name"))
 
     class Meta:
@@ -171,6 +172,17 @@ class UserSerializer(serializers.ModelSerializer):
     def get_full_name(self, obj):#pylint:disable=no-self-use
         return obj.get_full_name()
 
+    def save(self):
+        full_name = self.validated_data.get('get_full_name')
+        if full_name:
+            user = self.instance
+            first_name, mid_name, last_name = full_name_natural_split(full_name)
+            if mid_name:
+                first_name = first_name + ' ' + mid_name
+            user.first_name = first_name
+            user.last_name = last_name
+        return super(UserSerializer, self).save()
+
 
 class ValidationErrorSerializer(NoModelSerializer):
     """
@@ -178,3 +190,9 @@ class ValidationErrorSerializer(NoModelSerializer):
     """
     detail = serializers.CharField(help_text=_("Describes the reason for"\
         " the error in plain text"))
+
+
+class PublicKeySerializer(NoModelSerializer):
+    pubkey = serializers.CharField(max_length=None, help_text=_("Public key"))
+    password = serializers.CharField(required=False, max_length=500,
+        help_text=_("Password"))

@@ -91,6 +91,9 @@ if($('#user-profile-container').length > 0){
 var app = new Vue({
     el: "#user-profile-container",
     data: {
+        username: '',
+        email: '',
+        fullName: '',
         userModalOpen: false,
         apiModalOpen: false,
         apiKey: 'Generating ...',
@@ -98,6 +101,33 @@ var app = new Vue({
         contact: {},
     },
     methods: {
+        get: function(){
+            var vm = this;
+            $.ajax({
+                method: 'GET',
+                url: djaodjinSettings.urls.user.api_profile,
+            }).done(function(res){
+                vm.username = res.username;
+                vm.email = res.email;
+                vm.fullName = res.full_name;
+            });
+        },
+        updateUser: function(){
+            var vm = this;
+            $.ajax({
+                method: 'PATCH',
+                url: djaodjinSettings.urls.user.api_profile,
+                data: {
+                    username: vm.username,
+                    email: vm.email,
+                    full_name: vm.fullName,
+                },
+            }).done(function(res) {
+                showMessages(["User was updated."], "success");
+            }).fail(function(resp){
+                showErrorMessages(resp);
+            });
+        },
         deleteProfile: function() {
             $.ajax({
                 method: 'DELETE',
@@ -160,7 +190,7 @@ var app = new Vue({
                     showErrorMessages(resp);
                 });
             }, 'image/jpeg');
-        }
+        },
     },
     computed: {
         imageSelected: function(){
@@ -168,6 +198,7 @@ var app = new Vue({
         }
     },
     mounted: function(){
+        this.get();
         this.getContact();
     },
 })
@@ -245,5 +276,60 @@ var app = new Vue({
     mounted: function(){
         this.get();
     },
+})
+}
+
+if($('#update-password-container').length > 0){
+var app = new Vue({
+    el: "#update-password-container",
+    data: {
+        newPassword: '',
+        newPassword2: '',
+    },
+    methods: {
+        updatePassword: function(){
+            var vm = this;
+            if(vm.newPassword != vm.newPassword2){
+                alert("the passwords don't match");
+                return;
+            }
+            $.ajax({
+                method: 'PUT',
+                url: djaodjinSettings.urls.user.api_password_change,
+                data: {
+                    password: vm.newPassword
+                },
+            }).done(function(res){
+                showMessages(["Password was updated."], "success");
+            });
+        },
+    }
+})
+}
+
+if($('#update-pubkey-container').length > 0){
+var app = new Vue({
+    el: "#update-pubkey-container",
+    data: {
+        pubkey: '',
+        password: '',
+    },
+    methods: {
+        updatePubkey: function(){
+            var vm = this;
+            $.ajax({
+                method: 'PUT',
+                url: djaodjinSettings.urls.user.api_pubkey,
+                data: {
+                    pubkey: vm.pubkey,
+                    password: vm.password,
+                },
+            }).done(function(res){
+                showMessages(["Public key was updated."], "success");
+            }).fail(function(res){
+                showErrorMessages(res);
+            });
+        },
+    }
 })
 }
