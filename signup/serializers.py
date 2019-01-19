@@ -26,7 +26,6 @@ from django.core import validators
 from django.contrib.auth import get_user_model
 from django.utils.translation import ugettext_lazy as _
 from rest_framework import serializers
-from hashlib import sha256
 
 from .models import Activity, Contact, Notification
 from .utils import get_account_model
@@ -73,15 +72,6 @@ class APIKeysSerializer(NoModelSerializer):
 class ContactSerializer(serializers.ModelSerializer):
 
     activities = ActivitySerializer(many=True, read_only=True)
-    picture = serializers.FileField(allow_empty_file=False, use_url=True)
-
-    def save(self):
-        picture = self.validated_data.get('picture')
-        if picture:
-            slug = self.instance.slug
-            name = '%s.%s' % (sha256(slug.encode()).hexdigest(), 'jpg')
-            picture.name = name
-        return super(ContactSerializer, self).save()
 
     class Meta:
         #pylint:disable=old-style-class,no-init

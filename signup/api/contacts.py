@@ -24,11 +24,13 @@
 
 """API about contact activities"""
 
+from hashlib import sha256
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateAPIView
 
 from ..mixins import ContactMixin
 from ..models import Activity, Contact
 from ..serializers import ActivitySerializer, ContactSerializer
+from .. import settings
 
 # XXX smart list? search and order?
 class ActivityListAPIView(ContactMixin, ListCreateAPIView):
@@ -143,6 +145,12 @@ class ContactDetailAPIView(ContactMixin, RetrieveUpdateAPIView):
               "nick_name": "Xia",
             }
         """
+        storage = settings.PICTURE_STORAGE_CALLABLE
+        picture = request.data.get('picture')
+        if picture:
+            name = '%s.%s' % (sha256(picture.read()).hexdigest(), 'jpg')
+            storage.save(name, picture)
+            request.data['picture'] = storage.url(name)
         return self.update(request, *args, **kwargs)
 
     def delete(self, request, *args, **kwargs):
