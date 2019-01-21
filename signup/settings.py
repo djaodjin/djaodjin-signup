@@ -44,6 +44,12 @@ REQUIRE_RECAPTCHA
 
 from django.conf import settings
 
+def get_disabled_authentication():
+    return False
+
+def get_disabled_registration():
+    return False
+
 _SETTINGS = {
     'ACCOUNT_ACTIVATION_DAYS': getattr(settings, 'ACCOUNT_ACTIVATION_DAYS', 2),
     'ACCOUNT_MODEL': getattr(settings, 'AUTH_USER_MODEL', None),
@@ -54,8 +60,10 @@ _SETTINGS = {
     'AWS_UPLOAD_ROLE': None,
     'AWS_S3_BUCKET_NAME': getattr(settings, 'AWS_S3_BUCKET_NAME', None),
     'DEFAULT_FROM_EMAIL': getattr(settings, 'DEFAULT_FROM_EMAIL'),
-    'DISABLED_AUTHENTICATION': False,
-    'DISABLED_REGISTRATION': False,
+    'DISABLED_AUTHENTICATION_CALLABLE': getattr(settings,
+        'DISABLED_AUTHENTICATION_CALLABLE', get_disabled_authentication),
+    'DISABLED_REGISTRATION_CALLABLE': getattr(settings,
+        'DISABLED_REGISTRATION_CALLABLE', get_disabled_registration),
     'EXTRA_FIELD': None,
     'JWT_ALGORITHM': 'HS256',
     'JWT_SECRET_KEY': getattr(settings, 'SECRET_KEY'),
