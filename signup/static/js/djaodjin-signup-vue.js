@@ -96,9 +96,10 @@ var app = new Vue({
         fullName: '',
         userModalOpen: false,
         apiModalOpen: false,
-        apiKey: 'Generating ...',
+        apiKey: "Enter a password to generate a key",
         picture: null,
         contact: {},
+        password: '',
     },
     methods: {
         get: function(){
@@ -139,7 +140,6 @@ var app = new Vue({
             });
         },
         resetKey: function(){
-            this.generateKey();
             this.apiModalOpen = true;
         },
         generateKey: function() {
@@ -147,6 +147,9 @@ var app = new Vue({
             $.ajax({
                 method: 'POST',
                 url: djaodjinSettings.urls.user.api_generate_keys,
+                data: {
+                    password: vm.password,
+                }
             }).done(function(resp) {
                 vm.apiKey = resp.secret;
             }).fail(function(resp){

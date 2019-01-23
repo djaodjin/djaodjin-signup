@@ -23,9 +23,9 @@
     <a href="{% url 'users_notifications' user %}">Notifications</a>
     <div id="generate-key">
       <input name="key" maxlength="128" type="text" disabled
-          value="Generating ..."
           ng-model="api_key"
           v-model="apiKey" />
+      <input name="password" maxlength="128" type="text" placeholder="Password" v-model="password" />
       <button id="regenerate-key" type="button"
               ng-click="generateKey('#generate-key')"
               @click="generateKey">Generate</button>
