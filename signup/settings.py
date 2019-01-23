@@ -60,10 +60,10 @@ _SETTINGS = {
     'AWS_UPLOAD_ROLE': None,
     'AWS_S3_BUCKET_NAME': getattr(settings, 'AWS_S3_BUCKET_NAME', None),
     'DEFAULT_FROM_EMAIL': getattr(settings, 'DEFAULT_FROM_EMAIL'),
-    'DISABLED_AUTHENTICATION_CALLABLE': getattr(settings,
-        'DISABLED_AUTHENTICATION_CALLABLE', get_disabled_authentication),
-    'DISABLED_REGISTRATION_CALLABLE': getattr(settings,
-        'DISABLED_REGISTRATION_CALLABLE', get_disabled_registration),
+    'DISABLED_AUTHENTICATION': getattr(settings, 'SIGNUP', {}).get(
+        'DISABLED_AUTHENTICATION', False),
+    'DISABLED_REGISTRATION': getattr(settings, 'SIGNUP', {}).get(
+        'DISABLED_REGISTRATION', False),
     'EXTRA_FIELD': None,
     'JWT_ALGORITHM': 'HS256',
     'JWT_SECRET_KEY': getattr(settings, 'SECRET_KEY'),

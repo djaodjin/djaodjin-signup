@@ -177,3 +177,13 @@ def upload_contact_picture(picture, slug):
     except ClientError as err:
         LOGGER.error('error while uploading picture: %s', err)
         raise serializers.ValidationError(_("error while uploading picture."))
+
+def get_disabled_authentication():
+    if isinstance(organization, six.string_types):
+        return import_string(settings.DISABLED_AUTHENTICATION)()
+    return bool(settings.DISABLED_AUTHENTICATION)
+
+def get_disabled_registration():
+    if isinstance(organization, six.string_types):
+        return import_string(settings.DISABLED_REGISTRATION)()
+    return bool(settings.DISABLED_REGISTRATION)

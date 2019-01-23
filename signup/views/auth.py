@@ -53,7 +53,8 @@ from ..forms import (ActivationForm, NameEmailForm,
     PasswordResetForm, PasswordResetConfirmForm)
 from ..helpers import full_name_natural_split
 from ..models import Contact
-from ..utils import fill_form_errors
+from ..utils import (fill_form_errors, get_disabled_authentication,
+    get_disabled_registration)
 
 
 LOGGER = logging.getLogger(__name__)
@@ -78,7 +79,7 @@ class RedirectFormMixin(FormMixin):
 
 class AuthTemplateResponseMixin(TemplateResponseMixin):
     """
-    Returns a *disabled* page regardless when DISABLED_AUTHENTICATION
+    Returns a *disabled* page regardless when get_disabled_authentication
     is True.
     """
 
@@ -104,7 +105,7 @@ class AuthTemplateResponseMixin(TemplateResponseMixin):
 
     def dispatch(self, request, *args, **kwargs):
         if request.method.lower() in self.http_method_names:
-            if settings.DISABLED_AUTHENTICATION:
+            if get_disabled_authentication():
                 context = {}
                 response_kwargs = {}
                 response_kwargs.setdefault('content_type', self.content_type)
@@ -236,7 +237,7 @@ class SignupBaseView(RedirectFormMixin, ProcessFormView):
 
     def dispatch(self, request, *args, **kwargs):
         if request.method.lower() in self.http_method_names:
-            if settings.DISABLED_REGISTRATION:
+            if get_disabled_registration():
                 context = {}
                 response_kwargs = {}
                 response_kwargs.setdefault('content_type', self.content_type)
