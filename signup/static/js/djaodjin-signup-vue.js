@@ -160,10 +160,6 @@ var app = new Vue({
                 method: 'GET',
                 url: djaodjinSettings.urls.user.api_contact,
             }).done(function(res) {
-                if(res.picture){
-                    var rand = '?r=' + Math.ceil(Math.random()*1000000)
-                    res.picture += rand
-                }
                 vm.contact = res;
                 if(cb) cb();
             }).fail(function(resp){

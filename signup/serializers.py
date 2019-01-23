@@ -28,8 +28,8 @@ from django.utils.translation import ugettext_lazy as _
 from rest_framework import serializers
 
 from .models import Activity, Contact, Notification
-from .utils import get_account_model, upload_contact_picture
 from .helpers import full_name_natural_split
+from .utils import get_account_model
 
 
 class NoModelSerializer(serializers.Serializer):
@@ -75,17 +75,6 @@ class APIKeysSerializer(NoModelSerializer):
 class ContactSerializer(serializers.ModelSerializer):
 
     activities = ActivitySerializer(many=True, read_only=True)
-
-    def __init__(self, *args, **kwargs):
-        self.picture_file = kwargs.get('data', {}).pop('picture', None)
-        super(ContactSerializer, self).__init__(*args, **kwargs)
-
-    def update(self, instance, validated_data):
-        url = upload_contact_picture(self.picture_file[0].read(),
-            instance.slug)
-        if url:
-            instance.picture = url
-        return super(ContactSerializer, self).update(instance, validated_data)
 
     class Meta:
         #pylint:disable=old-style-class,no-init
