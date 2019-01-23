@@ -236,8 +236,12 @@ class Contact(models.Model):
         " followed by last name)"))
     nick_name = models.CharField(_("Nick name"), max_length=60, blank=True,
         help_text=_("Short casual name used to address the contact"))
-    picture = models.URLField(_("Profile picture"), max_length=300, blank=True,
-        help_text=_("Profile picture S3 URL"))
+    # 2083 number is used because it is a safe option to choose based
+    # on some older browsers behavior
+    # https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=4&cad=rja&uact=8&ved=2ahUKEwi2hbjPwIPgAhULXCsKHQ-lAj4QFjADegQIBhAL&url=https%3A%2F%2Fstackoverflow.com%2Fquestions%2F417142%2Fwhat-is-the-maximum-length-of-a-url-in-different-browsers&usg=AOvVaw0QgMo_L7jjK0YsXchrJgOQ
+    picture = models.URLField(_("Profile picture"), max_length=2083,
+        null=True, blank=True,
+        help_text=_("Profile picture"))
     user = models.OneToOneField(settings.AUTH_USER_MODEL,
         null=True, on_delete=models.CASCADE, related_name='contact')
     verification_key = models.CharField(_("Verification key"), max_length=40)

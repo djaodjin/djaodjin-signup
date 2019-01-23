@@ -53,6 +53,7 @@ _SETTINGS = {
     'AWS_REGION': getattr(settings, 'AWS_REGION', None),
     'AWS_UPLOAD_ROLE': None,
     'AWS_S3_BUCKET_NAME': getattr(settings, 'AWS_S3_BUCKET_NAME', None),
+    'PICTURE_STORAGE_CALLABLE': None,
     'DEFAULT_FROM_EMAIL': getattr(settings, 'DEFAULT_FROM_EMAIL'),
     'DISABLED_AUTHENTICATION': getattr(settings, 'SIGNUP', {}).get(
         'DISABLED_AUTHENTICATION', False),
@@ -79,6 +80,7 @@ AWS_UPLOAD_ROLE = _SETTINGS.get('AWS_UPLOAD_ROLE')
 AWS_ACCOUNT_ID = _SETTINGS.get('AWS_ACCOUNT_ID')
 AWS_EXTERNAL_ID = _SETTINGS.get('AWS_EXTERNAL_ID')
 AWS_S3_BUCKET_NAME = _SETTINGS.get('AWS_S3_BUCKET_NAME')
+PICTURE_STORAGE_CALLABLE = _SETTINGS.get('PICTURE_STORAGE_CALLABLE')
 DEFAULT_FROM_EMAIL = _SETTINGS.get('DEFAULT_FROM_EMAIL')
 DISABLED_AUTHENTICATION = _SETTINGS.get('DISABLED_AUTHENTICATION')
 DISABLED_REGISTRATION = _SETTINGS.get('DISABLED_REGISTRATION')
@@ -107,6 +109,6 @@ def get_extra_field_class():
         from django.db.models import TextField
         extra_class = TextField
     elif isinstance(extra_class, str):
-        from saas.compat import import_string
+        from .compat import import_string
         extra_class = import_string(extra_class)
     return extra_class

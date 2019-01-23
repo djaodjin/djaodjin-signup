@@ -160,6 +160,14 @@ class PasswordChangeView(UserProfileView):
     def dispatch(self, *args, **kwargs):
         return super(PasswordChangeView, self).dispatch(*args, **kwargs)
 
+    def form_valid(self, form):
+        password = form.cleaned_data['password']
+        pwd_correct = self.request.user.check_password(password)
+        if not pwd_correct:
+            form.add_error(None, _("Your password is incorrect."))
+            return self.form_invalid(form)
+        return super(PasswordChangeView, self).form_valid(form)
+
     def get_success_url(self):
         LOGGER.info("%s updated password for %s.",
             self.request.user, self.object, extra={
@@ -207,6 +215,11 @@ class UserPublicKeyUpdateView(UserProfileView):
         """
         If the form is valid, save the associated model.
         """
+        password = form.cleaned_data['password']
+        pwd_correct = self.request.user.check_password(password)
+        if not pwd_correct:
+            form.add_error(None, _("Your password is incorrect."))
+            return self.form_invalid(form)
         try:
             self.user.set_pubkey(form.cleaned_data['pubkey'],
                 bind_password=form.cleaned_data['password'])

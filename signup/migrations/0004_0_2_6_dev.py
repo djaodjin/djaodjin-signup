@@ -17,61 +17,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='contact',
             name='picture',
-            field=models.URLField(blank=True, help_text='Profile picture S3 URL', max_length=300, verbose_name='Profile picture'),
-        ),
-        migrations.AlterField(
-            model_name='activity',
-            name='created_at',
-            field=models.DateTimeField(auto_now_add=True, help_text='Date/time of creation (in ISO format)'),
-        ),
-        migrations.AlterField(
-            model_name='activity',
-            name='created_by',
-            field=models.ForeignKey(help_text='User that created the activity', null=True, on_delete=django.db.models.deletion.SET_NULL, to=settings.AUTH_USER_MODEL),
-        ),
-        migrations.AlterField(
-            model_name='activity',
-            name='text',
-            field=models.TextField(blank=True, help_text='Free form text description of the activity'),
-        ),
-        migrations.AlterField(
-            model_name='contact',
-            name='created_at',
-            field=models.DateTimeField(auto_now_add=True, help_text='Date/time of creation (in ISO format)'),
-        ),
-        migrations.AlterField(
-            model_name='contact',
-            name='email',
-            field=models.EmailField(blank=True, help_text='E-mail address for the contact', max_length=254, verbose_name='E-mail address'),
-        ),
-        migrations.AlterField(
-            model_name='contact',
-            name='extra',
-            field=models.TextField(help_text='Extra meta data (can be stringify JSON)', null=True),
-        ),
-        migrations.AlterField(
-            model_name='contact',
-            name='full_name',
-            field=models.CharField(blank=True, help_text='Full name for the contact (effectively first name followed by last name)', max_length=60, verbose_name='Full name'),
-        ),
-        migrations.AlterField(
-            model_name='contact',
-            name='nick_name',
-            field=models.CharField(blank=True, help_text='Short casual name used to address the contact', max_length=60, verbose_name='Nick name'),
-        ),
-        migrations.AlterField(
-            model_name='contact',
-            name='slug',
-            field=models.SlugField(help_text='Unique identifier shown in the URL bar', unique=True),
-        ),
-        migrations.AlterField(
-            model_name='contact',
-            name='verification_key',
-            field=models.CharField(max_length=40, verbose_name='Verification key'),
-        ),
-        migrations.AlterField(
-            model_name='notification',
-            name='slug',
-            field=models.SlugField(help_text='Unique identifier shown in the URL bar', unique=True),
+            field=models.URLField(blank=True, null=True, help_text='Profile picture S3 URL', max_length=300, verbose_name='Profile picture'),
         ),
     ]

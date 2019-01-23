@@ -28,8 +28,8 @@ from django.utils.translation import ugettext_lazy as _
 from rest_framework import serializers
 
 from .models import Activity, Contact, Notification
-from .utils import get_account_model, upload_contact_picture
 from .helpers import full_name_natural_split
+from .utils import get_account_model
 
 
 class NoModelSerializer(serializers.Serializer):
@@ -64,26 +64,17 @@ class APIKeysSerializer(NoModelSerializer):
     secret = serializers.CharField(max_length=128, read_only=True,
         help_text=_("Secret API Key used to authenticate user on every HTTP"\
         " request"))
+    password = serializers.CharField(max_length=128, required=False,
+        help_text=_("Your password"))
 
     class Meta:
         #pylint:disable=old-style-class,no-init
-        fields = ('secret',)
+        fields = ('secret', 'password')
 
 
 class ContactSerializer(serializers.ModelSerializer):
 
     activities = ActivitySerializer(many=True, read_only=True)
-
-    def __init__(self, *args, **kwargs):
-        self.picture_file = kwargs.get('data', {}).pop('picture', None)
-        super(ContactSerializer, self).__init__(*args, **kwargs)
-
-    def update(self, instance, validated_data):
-        url = upload_contact_picture(self.picture_file[0].read(),
-            instance.slug)
-        if url:
-            instance.picture = url
-        return super(ContactSerializer, self).update(instance, validated_data)
 
     class Meta:
         #pylint:disable=old-style-class,no-init
@@ -136,7 +127,9 @@ class CreateUserSerializer(serializers.ModelSerializer):
 
 class PasswordChangeSerializer(NoModelSerializer):
 
-    password = serializers.CharField(required=False, write_only=True,
+    password = serializers.CharField(required=True, write_only=True,
+        style={'input_type': 'password'})
+    new_password = serializers.CharField(required=False, write_only=True,
         style={'input_type': 'password'})
 
 
