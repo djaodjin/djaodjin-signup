@@ -75,7 +75,7 @@ class PasswordChangeAPIView(UpdateAPIView):
             # except the current one if
             # django.contrib.auth.middleware.SessionAuthenticationMiddleware
             # is enabled.
-            update_session_auth_hash(self.request, self.request.user)
+            update_session_auth_hash(self.request, serializer.instance)
 
 
 class UserNotificationsAPIView(UpdateAPIView):
