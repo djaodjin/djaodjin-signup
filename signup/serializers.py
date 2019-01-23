@@ -24,12 +24,13 @@
 
 from django.core import validators
 from django.contrib.auth import get_user_model
+from django.db import IntegrityError
 from django.utils.translation import ugettext_lazy as _
 from rest_framework import serializers
 
 from .models import Activity, Contact, Notification
 from .helpers import full_name_natural_split
-from .utils import get_account_model
+from .utils import get_account_model, handle_uniq_error
 
 
 class NoModelSerializer(serializers.Serializer):
@@ -170,7 +171,11 @@ class UserSerializer(serializers.ModelSerializer):
                 first_name = first_name + ' ' + mid_name
             user.first_name = first_name
             user.last_name = last_name
-        return super(UserSerializer, self).save()
+        try:
+            return super(UserSerializer, self).save()
+        except IntegrityError as err:
+            handle_uniq_error(err)
+        return None
 
 
 class ValidationErrorSerializer(NoModelSerializer):

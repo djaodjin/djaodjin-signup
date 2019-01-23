@@ -5,7 +5,7 @@
     ng-app="signupApp">
   <h1>User Profile</h1>
   <div ng-controller="userProfileCtrl">
-    <form @submit.prevent="updateUser">
+    <form id="update-user-info" @submit.prevent="updateUser" method="POST">
        <p><label for="id_username">Username:</label> <input type="text" name="username" v-model="username" placeholder="Username" maxlength="254" required="required" id="id_username"></p>
        <p><label for="id_email">Email address:</label> <input type="email" name="email" v-model="email" maxlength="254" id="id_email"></p>
        <p><label for="id_full_name">Full name:</label> <input type="text" name="full_name" v-model="fullName" maxlength="30" id="id_full_name"></p>

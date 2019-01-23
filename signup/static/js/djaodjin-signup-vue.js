@@ -123,7 +123,7 @@ var app = new Vue({
                     full_name: vm.fullName,
                 },
             }).done(function(res) {
-                showMessages(["User was updated."], "success");
+                showMessages(["Profile updated."], "info"); // XXX should really be success but then it needs to be changed in Django views as well.
             }).fail(function(resp){
                 showErrorMessages(resp);
             });
@@ -166,7 +166,7 @@ var app = new Vue({
                 showErrorMessages(resp);
             });
         },
-        uploadImage() {
+        uploadImage: function() {
             var vm = this;
             this.picture.generateBlob(function(blob){
                 if(!blob) return;
@@ -195,9 +195,11 @@ var app = new Vue({
     },
     mounted: function(){
         this.get();
-        this.getContact();
+        //XXX this call should not exist, Contact data fields should
+        //    be merged in previous call.
+        //this.getContact();
     },
-})
+});
 }
 
 if($('#contact-list-container').length > 0){
