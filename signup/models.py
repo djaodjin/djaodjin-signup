@@ -39,10 +39,21 @@ from django.utils.translation import ugettext_lazy as _
 from django.contrib.auth.hashers import check_password, make_password
 
 from . import settings, signals
+from .compat import User, import_string
 from .helpers import datetime_or_now
 
 LOGGER = logging.getLogger(__name__)
 EMAIL_VERIFICATION_RE = re.compile('^%s$' % settings.EMAIL_VERIFICATION_PAT)
+
+
+def _get_extra_field_class():
+    extra_class = settings.EXTRA_FIELD
+    if extra_class is None:
+        from django.db.models import TextField
+        extra_class = TextField
+    elif isinstance(extra_class, str):
+        extra_class = import_string(extra_class)
+    return extra_class
 
 
 class ActivatedUserManager(UserManager):
@@ -245,7 +256,7 @@ class Contact(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL,
         null=True, on_delete=models.CASCADE, related_name='contact')
     verification_key = models.CharField(_("Verification key"), max_length=40)
-    extra = settings.get_extra_field_class()(null=True,
+    extra = _get_extra_field_class()(null=True,
         help_text=_("Extra meta data (can be stringify JSON)"))
 
     def __str__(self):
@@ -310,7 +321,7 @@ class Activity(models.Model):
         settings.ACCOUNT_MODEL, null=True, on_delete=models.CASCADE,
         related_name='activities',
         help_text=_("Account the activity is associated to"))
-    extra = settings.get_extra_field_class()(null=True)
+    extra = _get_extra_field_class()(null=True)
 
     def __str__(self):
         return "%s-%s" % (self.created_at, self.created_by)
@@ -329,7 +340,7 @@ class Notification(models.Model):
     description = models.TextField(null=True, blank=True)
     users = models.ManyToManyField(settings.AUTH_USER_MODEL,
         related_name='notifications')
-    extra = settings.get_extra_field_class()(null=True)
+    extra = _get_extra_field_class()(null=True)
 
     def __str__(self):
         return self.slug
@@ -366,3 +377,8 @@ class Credentials(models.Model):
             self._api_priv_key = None
             self.save(update_fields=["api_priv_key"])
         return check_password(raw_api_priv_key, self.api_priv_key, setter)
+
+
+# Hack to install our create_user method.
+User.objects = ActivatedUserManager()
+User.objects.model = User

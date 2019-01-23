@@ -80,6 +80,7 @@ AWS_UPLOAD_ROLE = _SETTINGS.get('AWS_UPLOAD_ROLE')
 AWS_ACCOUNT_ID = _SETTINGS.get('AWS_ACCOUNT_ID')
 AWS_EXTERNAL_ID = _SETTINGS.get('AWS_EXTERNAL_ID')
 AWS_S3_BUCKET_NAME = _SETTINGS.get('AWS_S3_BUCKET_NAME')
+EXTRA_FIELD = _SETTINGS.get('EXTRA_FIELD')
 PICTURE_STORAGE_CALLABLE = _SETTINGS.get('PICTURE_STORAGE_CALLABLE')
 DEFAULT_FROM_EMAIL = _SETTINGS.get('DEFAULT_FROM_EMAIL')
 DISABLED_AUTHENTICATION = _SETTINGS.get('DISABLED_AUTHENTICATION')
@@ -101,14 +102,3 @@ FULL_NAME_PAT = r"^([^\W\d_]|[ \.\'\-])+$"
 
 LDAP_SERVER_URI = _SETTINGS.get('LDAP', {}).get('SERVER_URI', None)
 LDAP_USER_SEARCH_DN = _SETTINGS.get('LDAP', {}).get('USER_SERCH_DN', None)
-
-
-def get_extra_field_class():
-    extra_class = _SETTINGS.get('EXTRA_FIELD')
-    if extra_class is None:
-        from django.db.models import TextField
-        extra_class = TextField
-    elif isinstance(extra_class, str):
-        from .compat import import_string
-        extra_class = import_string(extra_class)
-    return extra_class

@@ -35,7 +35,6 @@ from rest_framework.exceptions import ValidationError
 from ..mixins import UserMixin
 from ..models import Credentials
 from ..serializers import APIKeysSerializer, PublicKeySerializer
-from ..compat import User
 
 
 LOGGER = logging.getLogger(__name__)
@@ -75,9 +74,11 @@ class ResetAPIKeysAPIView(UserMixin, CreateAPIView):
                     'ABCDEFGHJKLMNPQRSTUVWXYZ'\
                     '23456789'
                 api_pub_key = get_random_string(
-                    length=Credentials.API_PUB_KEY_LENGTH, allowed_chars=allowed_chars)
+                    length=Credentials.API_PUB_KEY_LENGTH,
+                    allowed_chars=allowed_chars)
                 api_priv_key = get_random_string(
-                    length=Credentials.API_PRIV_KEY_LENGTH, allowed_chars=allowed_chars)
+                    length=Credentials.API_PRIV_KEY_LENGTH,
+                    allowed_chars=allowed_chars)
                 Credentials.objects.update_or_create(
                     user=self.user,
                     defaults={
@@ -119,6 +120,7 @@ class PublicKeyAPIView(UserMixin, GenericAPIView):
     serializer_class = PublicKeySerializer
 
     def put(self, request, *args, **kwargs):
+        #pylint:disable=unused-argument
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
             password = serializer.validated_data.get('password')
@@ -133,7 +135,8 @@ class PublicKeyAPIView(UserMixin, GenericAPIView):
                     'event': 'update-pubkey', 'request': self.request,
                     'modified': self.user.username})
             except AttributeError:
-                raise ValidationError('Cannot store public key in the User model.')
+                raise ValidationError(
+                    'Cannot store public key in the User model.')
             except PermissionDenied as err:
                 raise ValidationError(str(err))
 
