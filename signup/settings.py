@@ -44,12 +44,6 @@ REQUIRE_RECAPTCHA
 
 from django.conf import settings
 
-def get_disabled_authentication():
-    return False
-
-def get_disabled_registration():
-    return False
-
 _SETTINGS = {
     'ACCOUNT_ACTIVATION_DAYS': getattr(settings, 'ACCOUNT_ACTIVATION_DAYS', 2),
     'ACCOUNT_MODEL': getattr(settings, 'AUTH_USER_MODEL', None),
