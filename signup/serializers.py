@@ -64,10 +64,12 @@ class APIKeysSerializer(NoModelSerializer):
     secret = serializers.CharField(max_length=128, read_only=True,
         help_text=_("Secret API Key used to authenticate user on every HTTP"\
         " request"))
+    password = serializers.CharField(max_length=128, required=False,
+        help_text=_("Your password"))
 
     class Meta:
         #pylint:disable=old-style-class,no-init
-        fields = ('secret',)
+        fields = ('secret', 'password')
 
 
 class ContactSerializer(serializers.ModelSerializer):
@@ -136,7 +138,9 @@ class CreateUserSerializer(serializers.ModelSerializer):
 
 class PasswordChangeSerializer(NoModelSerializer):
 
-    password = serializers.CharField(required=False, write_only=True,
+    password = serializers.CharField(required=True, write_only=True,
+        style={'input_type': 'password'})
+    new_password = serializers.CharField(required=False, write_only=True,
         style={'input_type': 'password'})
 
 
