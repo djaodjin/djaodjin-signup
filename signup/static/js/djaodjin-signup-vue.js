@@ -96,7 +96,7 @@ var app = new Vue({
         fullName: '',
         userModalOpen: false,
         apiModalOpen: false,
-        apiKey: "Enter a password to generate a key",
+        apiKey: "Generating ...",
         picture: null,
         contact: {},
         password: '',
