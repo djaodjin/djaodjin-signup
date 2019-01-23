@@ -104,6 +104,10 @@ class PasswordConfirmMixin(object):
 
 class PasswordUpdateForm(PasswordConfirmMixin, forms.ModelForm):
 
+    password = forms.CharField(strip=False,
+        label=_("Your password"),
+        widget=forms.PasswordInput(
+            attrs={'placeholder': _("Your password")}))
     new_password = forms.CharField(strip=False,
         label=_("New password"),
         widget=forms.PasswordInput(
@@ -118,15 +122,15 @@ class PasswordUpdateForm(PasswordConfirmMixin, forms.ModelForm):
 
     class Meta:
         model = User
-        fields = ['new_password', 'new_password2']
+        fields = ['password', 'new_password', 'new_password2']
 
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop('instance')
         super(PasswordUpdateForm, self).__init__(*args, **kwargs)
 
     def save(self, commit=True):
-        password = self.cleaned_data['new_password']
-        self.user.set_password(password)
+        new_password = self.cleaned_data['new_password']
+        self.user.set_password(new_password)
         if commit:
             self.user.save()
         return self.user

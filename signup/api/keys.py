@@ -22,15 +22,23 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import logging
+
 from django.contrib.auth.hashers import make_password
 from django.utils.crypto import get_random_string
+from django.core.exceptions import PermissionDenied
 from rest_framework import status
-from rest_framework.generics import CreateAPIView
+from rest_framework.generics import CreateAPIView, GenericAPIView
 from rest_framework.response import Response
+from rest_framework.exceptions import ValidationError
 
 from ..mixins import UserMixin
 from ..models import Credentials
-from ..serializers import APIKeysSerializer
+from ..serializers import APIKeysSerializer, PublicKeySerializer
+from ..compat import User
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 class ResetAPIKeysAPIView(UserMixin, CreateAPIView):
@@ -58,19 +66,75 @@ class ResetAPIKeysAPIView(UserMixin, CreateAPIView):
     serializer_class = APIKeysSerializer
 
     def create(self, request, *args, **kwargs):
-        allowed_chars = 'abcdefghjkmnpqrstuvwxyz'\
-            'ABCDEFGHJKLMNPQRSTUVWXYZ'\
-            '23456789'
-        api_pub_key = get_random_string(
-            length=Credentials.API_PUB_KEY_LENGTH, allowed_chars=allowed_chars)
-        api_priv_key = get_random_string(
-            length=Credentials.API_PRIV_KEY_LENGTH, allowed_chars=allowed_chars)
-        Credentials.objects.update_or_create(
-            user=self.user,
-            defaults={
-                'api_pub_key': api_pub_key,
-                'api_priv_key': make_password(api_priv_key)
-            })
-        return Response(APIKeysSerializer().to_representation({
-            'secret': api_pub_key + api_priv_key
-        }), status=status.HTTP_201_CREATED)
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            password = serializer.validated_data.get('password')
+            pwd_correct = request.user.check_password(password)
+            if pwd_correct:
+                allowed_chars = 'abcdefghjkmnpqrstuvwxyz'\
+                    'ABCDEFGHJKLMNPQRSTUVWXYZ'\
+                    '23456789'
+                api_pub_key = get_random_string(
+                    length=Credentials.API_PUB_KEY_LENGTH, allowed_chars=allowed_chars)
+                api_priv_key = get_random_string(
+                    length=Credentials.API_PRIV_KEY_LENGTH, allowed_chars=allowed_chars)
+                Credentials.objects.update_or_create(
+                    user=self.user,
+                    defaults={
+                        'api_pub_key': api_pub_key,
+                        'api_priv_key': make_password(api_priv_key)
+                    })
+                return Response(APIKeysSerializer().to_representation({
+                    'secret': api_pub_key + api_priv_key
+                }), status=status.HTTP_201_CREATED)
+            else:
+                raise ValidationError('Wrong user password')
+
+
+class PublicKeyAPIView(UserMixin, GenericAPIView):
+    """
+    Update public key for a User
+
+    **Example
+
+    .. code-block:: http
+
+        PUT /api/auth/pubkey/donny/  HTTP/1.1
+
+    .. code-block:: json
+
+        {
+          "pubkey": "ssh-rsa AAAAB3N...",
+          "password": "secret"
+        }
+
+    responds
+
+    .. code-block:: json
+
+        {
+          "detail": "ok"
+        }
+    """
+    serializer_class = PublicKeySerializer
+
+    def put(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            password = serializer.validated_data.get('password')
+            pwd_correct = request.user.check_password(password)
+            if not pwd_correct:
+                raise ValidationError('Wrong user password')
+            try:
+                self.user.set_pubkey(serializer.validated_data['pubkey'],
+                    bind_password=serializer.validated_data['password'])
+                LOGGER.info("%s updated pubkey for %s.",
+                    self.request.user, self.user, extra={
+                    'event': 'update-pubkey', 'request': self.request,
+                    'modified': self.user.username})
+            except AttributeError:
+                raise ValidationError('Cannot store public key in the User model.')
+            except PermissionDenied as err:
+                raise ValidationError(str(err))
+
+        return Response({'detail': 'ok'})
