@@ -160,6 +160,19 @@ def verify_token(token):
         raise serializers.ValidationError(_("User does not exist."))
     return user
 
+
+def get_disabled_authentication():
+    if isinstance(organization, six.string_types):
+        return import_string(settings.DISABLED_AUTHENTICATION)()
+    return bool(settings.DISABLED_AUTHENTICATION)
+
+
+def get_disabled_registration():
+    if isinstance(organization, six.string_types):
+        return import_string(settings.DISABLED_REGISTRATION)()
+    return bool(settings.DISABLED_REGISTRATION)
+
+
 def get_picture_storage():
     if settings.PICTURE_STORAGE_CALLABLE:
         try:
