@@ -30,7 +30,7 @@ from rest_framework.generics import ListCreateAPIView, RetrieveUpdateAPIView
 from ..mixins import ContactMixin
 from ..models import Activity, Contact
 from ..serializers import ActivitySerializer, ContactSerializer
-from .. import settings
+from ..utils import get_picture_storage
 
 # XXX smart list? search and order?
 class ActivityListAPIView(ContactMixin, ListCreateAPIView):
@@ -145,7 +145,7 @@ class ContactDetailAPIView(ContactMixin, RetrieveUpdateAPIView):
               "nick_name": "Xia",
             }
         """
-        storage = settings.PICTURE_STORAGE_CALLABLE
+        storage = get_picture_storage()
         picture = request.data.get('picture')
         if picture:
             name = '%s.%s' % (sha256(picture.read()).hexdigest(), 'jpg')

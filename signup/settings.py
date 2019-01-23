@@ -43,7 +43,6 @@ REQUIRE_RECAPTCHA
 """
 
 from django.conf import settings
-from django.core.files.storage import default_storage
 
 _SETTINGS = {
     'ACCOUNT_ACTIVATION_DAYS': getattr(settings, 'ACCOUNT_ACTIVATION_DAYS', 2),
@@ -54,8 +53,7 @@ _SETTINGS = {
     'AWS_REGION': getattr(settings, 'AWS_REGION', None),
     'AWS_UPLOAD_ROLE': None,
     'AWS_S3_BUCKET_NAME': getattr(settings, 'AWS_S3_BUCKET_NAME', None),
-    'PICTURE_STORAGE_CALLABLE': getattr(settings, 'PICTURE_STORAGE_CALLABLE',
-        default_storage),
+    'PICTURE_STORAGE_CALLABLE': None,
     'DEFAULT_FROM_EMAIL': getattr(settings, 'DEFAULT_FROM_EMAIL'),
     'DISABLED_AUTHENTICATION': False,
     'DISABLED_REGISTRATION': False,
@@ -109,6 +107,6 @@ def get_extra_field_class():
         from django.db.models import TextField
         extra_class = TextField
     elif isinstance(extra_class, str):
-        from saas.compat import import_string
+        from .compat import import_string
         extra_class = import_string(extra_class)
     return extra_class

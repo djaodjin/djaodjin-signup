@@ -26,6 +26,7 @@ import logging, re
 
 from django.apps import apps as django_apps
 from django.core.exceptions import ImproperlyConfigured, NON_FIELD_ERRORS
+from django.core.files.storage import default_storage
 from django.db import IntegrityError
 from django.utils import six
 from django.utils.translation import ugettext_lazy as _
@@ -35,7 +36,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.settings import api_settings
 
 from . import settings
-from .compat import User
+from .compat import User, import_string
 
 LOGGER = logging.getLogger(__name__)
 
@@ -158,3 +159,11 @@ def verify_token(token):
     except User.DoesNotExist:
         raise serializers.ValidationError(_("User does not exist."))
     return user
+
+def get_picture_storage():
+    if settings.PICTURE_STORAGE_CALLABLE:
+        try:
+            return import_string(settings.PICTURE_STORAGE_CALLABLE)()
+        except ImportError:
+            pass
+    return default_storage
