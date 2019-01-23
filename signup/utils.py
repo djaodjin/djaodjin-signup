@@ -162,13 +162,13 @@ def verify_token(token):
 
 
 def get_disabled_authentication():
-    if isinstance(organization, six.string_types):
+    if isinstance(settings.DISABLED_REGISTRATION, six.string_types):
         return import_string(settings.DISABLED_AUTHENTICATION)()
     return bool(settings.DISABLED_AUTHENTICATION)
 
 
 def get_disabled_registration():
-    if isinstance(organization, six.string_types):
+    if isinstance(settings.DISABLED_REGISTRATION, six.string_types):
         return import_string(settings.DISABLED_REGISTRATION)()
     return bool(settings.DISABLED_REGISTRATION)
 
