@@ -279,6 +279,7 @@ if($('#update-password-container').length > 0){
 var app = new Vue({
     el: "#update-password-container",
     data: {
+        password: '',
         newPassword: '',
         newPassword2: '',
     },
@@ -293,10 +294,13 @@ var app = new Vue({
                 method: 'PUT',
                 url: djaodjinSettings.urls.user.api_password_change,
                 data: {
-                    password: vm.newPassword
+                    password: vm.password,
+                    new_password: vm.newPassword
                 },
             }).done(function(res){
                 showMessages(["Password was updated."], "success");
+            }).fail(function(resp){
+                showErrorMessages(resp);
             });
         },
     }
