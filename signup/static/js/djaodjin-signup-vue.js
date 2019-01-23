@@ -153,7 +153,13 @@ var app = new Vue({
             }).done(function(resp) {
                 vm.apiKey = resp.secret;
             }).fail(function(resp){
-                vm.apiKey = "ERROR";
+                if(resp.responseJSON && resp.responseJSON.length > 0)
+                {
+                    // this most likely tells that the password
+                    // is incorrect
+                    vm.apiKey = resp.responseJSON[0];
+                    return;
+                }
                 showErrorMessages(resp);
             });
         },
