@@ -30,6 +30,7 @@ from django.http import Http404
 from django.contrib.auth import update_session_auth_hash
 from rest_framework.generics import (ListAPIView, RetrieveUpdateDestroyAPIView,
     UpdateAPIView)
+from rest_framework.exceptions import ValidationError
 
 from .. import settings
 from ..compat import User
@@ -68,7 +69,9 @@ class PasswordChangeAPIView(UpdateAPIView):
         password = serializer.validated_data['password']
         new_password = serializer.validated_data.get('new_password')
         pwd_correct = self.request.user.check_password(password)
-        if pwd_correct and new_password:
+        if not pwd_correct:
+            raise ValidationError('Wrong user password')
+        if new_password:
             serializer.instance.set_password(new_password)
             serializer.instance.save()
             # Updating the password logs out all other sessions for the user

@@ -96,9 +96,10 @@ var app = new Vue({
         fullName: '',
         userModalOpen: false,
         apiModalOpen: false,
-        apiKey: 'Generating ...',
+        apiKey: "Enter a password to generate a key",
         picture: null,
         contact: {},
+        password: '',
     },
     methods: {
         get: function(){
@@ -139,7 +140,6 @@ var app = new Vue({
             });
         },
         resetKey: function(){
-            this.generateKey();
             this.apiModalOpen = true;
         },
         generateKey: function() {
@@ -147,10 +147,19 @@ var app = new Vue({
             $.ajax({
                 method: 'POST',
                 url: djaodjinSettings.urls.user.api_generate_keys,
+                data: {
+                    password: vm.password,
+                }
             }).done(function(resp) {
                 vm.apiKey = resp.secret;
             }).fail(function(resp){
-                vm.apiKey = "ERROR";
+                if(resp.responseJSON && resp.responseJSON.length > 0)
+                {
+                    // this most likely tells that the password
+                    // is incorrect
+                    vm.apiKey = resp.responseJSON[0];
+                    return;
+                }
                 showErrorMessages(resp);
             });
         },
@@ -281,6 +290,7 @@ if($('#update-password-container').length > 0){
 var app = new Vue({
     el: "#update-password-container",
     data: {
+        password: '',
         newPassword: '',
         newPassword2: '',
     },
@@ -295,10 +305,13 @@ var app = new Vue({
                 method: 'PUT',
                 url: djaodjinSettings.urls.user.api_password_change,
                 data: {
-                    password: vm.newPassword
+                    password: vm.password,
+                    new_password: vm.newPassword
                 },
             }).done(function(res){
                 showMessages(["Password was updated."], "success");
+            }).fail(function(resp){
+                showErrorMessages(resp);
             });
         },
     }
