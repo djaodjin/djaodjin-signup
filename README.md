@@ -73,11 +73,4 @@ Release Notes
   * `DISABLED_AUTHENTICATION` and `DISABLED_REGISTRATION` support callables.
   * Adds profile picture to user profiles.
 
-0.2.5
-
-  * Replaces AngularJS by Vue.js front-end
-
-    AngularJS is still currently available through a settings.py
-    variable.
-
-        JS_FRAMEWORK = 'angularjs'
+[previous release notes](changelog)
