@@ -67,6 +67,12 @@ run the testsite webapp.
 Release Notes
 =============
 
+0.2.6
+
+  * Asks for `request.user` password before updating a user credentials.
+  * `DISABLED_AUTHENTICATION` and `DISABLED_REGISTRATION` support callables.
+  * Adds profile picture to user profiles.
+
 0.2.5
 
   * Replaces AngularJS by Vue.js front-end

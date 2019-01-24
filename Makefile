@@ -47,4 +47,4 @@ initdb: install-conf
 	-rm -f $(srcDir)/db.sqlite $(srcDir)/testsite-app.log
 	cd $(srcDir) && $(PYTHON) ./manage.py migrate $(RUNSYNCDB) --noinput
 	echo "CREATE UNIQUE INDEX uniq_email ON auth_user(email);" | $(SQLITE) $(srcDir)/db.sqlite
-	cd $(srcDir) && $(PYTHON) ./manage.py loaddata testsite/fixtures/test_data.json
+	cd $(srcDir) && $(PYTHON) ./manage.py loaddata testsite/fixtures/default-db.json
