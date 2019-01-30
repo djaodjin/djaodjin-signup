@@ -237,25 +237,37 @@ signupControllers.controller("contactsCtrl",
 
 
 signupControllers.controller("userProfileCtrl",
-    ["$scope", "$controller", "$http", "$timeout", "settings",
-    function($scope, $controller, $http, $timeout, settings) {
+    ["$scope", "$element", "$controller", "$http", "$timeout", "settings",
+    function($scope, $element, $controller, $http, $timeout, settings) {
 
+    $scope.password = "";
     $scope.api_key = "Generating ...";
 
-    $scope.generateKey = function() {
-        $http.post(settings.urls.user.api_generate_keys).then(
+    $scope.generateKey = function(dialog) {
+        $http.post(settings.urls.user.api_generate_keys, {
+           password: $scope.password}).then(
            function success(resp) {
+               if( dialog ) {
+                   var dialog = jQuery(dialog);
+                   if( dialog.data('bs.modal') ) {
+                       dialog.modal("hide");
+                   }
+               }
+               $scope.password = "";
                $scope.api_key = resp.data.secret;
            },
            function error(resp) {
+              if( dialog ) {
+                   var dialog = jQuery(dialog);
+                   if( dialog.data('bs.modal') ) {
+                       dialog.modal("hide");
+                   }
+               }
+               $scope.password = "";
                $scope.api_key = "ERROR";
                showErrorMessages(resp);
            });
     };
-    angular.element(document.querySelector(settings.modals.generate_key)).on(
-      'show.bs.modal', function() {
-        $scope.generateKey();
-    });
 
     $scope.deleteProfile = function(event) {
         event.preventDefault();
