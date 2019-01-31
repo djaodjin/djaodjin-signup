@@ -1,4 +1,4 @@
-# Copyright (c) 2018, Djaodjin Inc.
+# Copyright (c) 2019, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -27,6 +27,7 @@ import logging
 from django.contrib.auth.hashers import make_password
 from django.utils.crypto import get_random_string
 from django.core.exceptions import PermissionDenied
+from django.utils.translation import ugettext_lazy as _
 from rest_framework import status
 from rest_framework.generics import CreateAPIView, GenericAPIView
 from rest_framework.response import Response
@@ -66,30 +67,28 @@ class ResetAPIKeysAPIView(UserMixin, CreateAPIView):
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
-        if serializer.is_valid():
-            password = serializer.validated_data.get('password')
-            pwd_correct = request.user.check_password(password)
-            if pwd_correct:
-                allowed_chars = 'abcdefghjkmnpqrstuvwxyz'\
-                    'ABCDEFGHJKLMNPQRSTUVWXYZ'\
-                    '23456789'
-                api_pub_key = get_random_string(
-                    length=Credentials.API_PUB_KEY_LENGTH,
-                    allowed_chars=allowed_chars)
-                api_priv_key = get_random_string(
-                    length=Credentials.API_PRIV_KEY_LENGTH,
-                    allowed_chars=allowed_chars)
-                Credentials.objects.update_or_create(
-                    user=self.user,
-                    defaults={
-                        'api_pub_key': api_pub_key,
-                        'api_priv_key': make_password(api_priv_key)
-                    })
-                return Response(APIKeysSerializer().to_representation({
-                    'secret': api_pub_key + api_priv_key
-                }), status=status.HTTP_201_CREATED)
-            else:
-                raise ValidationError('Wrong user password')
+        serializer.is_valid(raise_exception=True)
+        password = serializer.validated_data.get('password')
+        if not request.user.check_password(password):
+            raise PermissionDenied(_("Incorrect credentials"))
+        allowed_chars = 'abcdefghjkmnpqrstuvwxyz'\
+            'ABCDEFGHJKLMNPQRSTUVWXYZ'\
+            '23456789'
+        api_pub_key = get_random_string(
+            length=Credentials.API_PUB_KEY_LENGTH,
+            allowed_chars=allowed_chars)
+        api_priv_key = get_random_string(
+            length=Credentials.API_PRIV_KEY_LENGTH,
+            allowed_chars=allowed_chars)
+        Credentials.objects.update_or_create(
+            user=self.user,
+            defaults={
+                'api_pub_key': api_pub_key,
+                'api_priv_key': make_password(api_priv_key)
+            })
+        return Response(APIKeysSerializer().to_representation({
+            'secret': api_pub_key + api_priv_key
+        }), status=status.HTTP_201_CREATED)
 
 
 class PublicKeyAPIView(UserMixin, GenericAPIView):
@@ -122,22 +121,21 @@ class PublicKeyAPIView(UserMixin, GenericAPIView):
     def put(self, request, *args, **kwargs):
         #pylint:disable=unused-argument
         serializer = self.get_serializer(data=request.data)
-        if serializer.is_valid():
-            password = serializer.validated_data.get('password')
-            pwd_correct = request.user.check_password(password)
-            if not pwd_correct:
-                raise ValidationError('Wrong user password')
-            try:
-                self.user.set_pubkey(serializer.validated_data['pubkey'],
-                    bind_password=serializer.validated_data['password'])
-                LOGGER.info("%s updated pubkey for %s.",
-                    self.request.user, self.user, extra={
-                    'event': 'update-pubkey', 'request': self.request,
-                    'modified': self.user.username})
-            except AttributeError:
-                raise ValidationError(
-                    'Cannot store public key in the User model.')
-            except PermissionDenied as err:
-                raise ValidationError(str(err))
+        serializer.is_valid(raise_exception=True)
+        password = serializer.validated_data.get('password')
+        if not request.user.check_password(password):
+            raise PermissionDenied(_("Incorrect credentials"))
+        try:
+            self.user.set_pubkey(serializer.validated_data['pubkey'],
+                bind_password=serializer.validated_data['password'])
+            LOGGER.info("%s updated pubkey for %s.",
+                self.request.user, self.user, extra={
+                'event': 'update-pubkey', 'request': self.request,
+                'modified': self.user.username})
+        except AttributeError:
+            raise ValidationError(
+                'Cannot store public key in the User model.')
+        except PermissionDenied as err:
+            raise ValidationError(str(err))
 
-        return Response({'detail': 'ok'})
+        return Response({'detail': _("Public key updated successfully.")})

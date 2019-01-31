@@ -1,4 +1,4 @@
-# Copyright (c) 2018, DjaoDjin inc.
+# Copyright (c) 2019, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -25,12 +25,13 @@
 import logging, re
 
 from django.contrib.auth import logout as auth_logout
+from django.core.exceptions import PermissionDenied
 from django.db.models import Q
 from django.http import Http404
 from django.contrib.auth import update_session_auth_hash
+from django.utils.translation import ugettext_lazy as _
 from rest_framework.generics import (ListAPIView, RetrieveUpdateDestroyAPIView,
     UpdateAPIView)
-from rest_framework.exceptions import ValidationError
 
 from .. import settings
 from ..compat import User
@@ -68,9 +69,8 @@ class PasswordChangeAPIView(UpdateAPIView):
     def perform_update(self, serializer):
         password = serializer.validated_data['password']
         new_password = serializer.validated_data.get('new_password')
-        pwd_correct = self.request.user.check_password(password)
-        if not pwd_correct:
-            raise ValidationError('Wrong user password')
+        if not self.request.user.check_password(password):
+            raise PermissionDenied(_("Incorrect credentials"))
         if new_password:
             serializer.instance.set_password(new_password)
             serializer.instance.save()

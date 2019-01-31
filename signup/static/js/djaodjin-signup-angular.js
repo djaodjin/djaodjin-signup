@@ -243,26 +243,24 @@ signupControllers.controller("userProfileCtrl",
     $scope.password = "";
     $scope.api_key = "Generating ...";
 
-    $scope.generateKey = function(dialog) {
+    $scope.generateKey = function(event, dialog) {
+        var passwordDialog = jQuery(event.target).parents('.modal');
+        if( passwordDialog ) {
+            if( passwordDialog.data('bs.modal') ) {
+                passwordDialog.modal("hide");
+            }
+        }
         $http.post(settings.urls.user.api_generate_keys, {
            password: $scope.password}).then(
            function success(resp) {
-               if( dialog ) {
-                   var dialog = jQuery(dialog);
-                   if( dialog.data('bs.modal') ) {
-                       dialog.modal("hide");
-                   }
-               }
                $scope.password = "";
                $scope.api_key = resp.data.secret;
+               if( dialog ) {
+                   var showKey = jQuery(dialog);
+                   showKey.modal("show");
+               }
            },
            function error(resp) {
-              if( dialog ) {
-                   var dialog = jQuery(dialog);
-                   if( dialog.data('bs.modal') ) {
-                       dialog.modal("hide");
-                   }
-               }
                $scope.password = "";
                $scope.api_key = "ERROR";
                showErrorMessages(resp);
