@@ -1,4 +1,4 @@
-# Copyright (c) 2018, Djaodjin Inc.
+# Copyright (c) 2019, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -379,10 +379,21 @@ class ActivationBaseView(RedirectFormMixin, UpdateView):
     def form_valid(self, form):
         verification_key = self.kwargs.get(self.key_url_kwarg)
         user = self.activate_user(form)
-        signals.user_activated.send(sender=__name__,
-            user=user, verification_key=verification_key,
-            request=self.request)
-        messages.info(self.request, _("Thank you. Your account is now active."))
+        if not user.last_login:
+            # XXX copy/paste from models.ActivatedUserManager.create_user
+            LOGGER.info("'%s %s <%s>' registered with username '%s'",
+                user.first_name, user.last_name, user.email, user,
+                extra={'event': 'register', 'user': user})
+            signals.user_registered.send(sender=__name__, user=user)
+        else:
+            LOGGER.info("'%s %s <%s>' activated with username '%s'",
+                user.first_name, user.last_name, user.email, user,
+                extra={'event': 'activate', 'user': user})
+            signals.user_activated.send(sender=__name__,
+                user=user, verification_key=verification_key,
+                request=self.request)
+            messages.info(
+                self.request, _("Thank you. Your account is now active."))
 
         # Okay, security check complete. Log the user in.
         user_with_backend = authenticate(

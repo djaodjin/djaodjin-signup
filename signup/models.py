@@ -1,4 +1,4 @@
-# Copyright (c) 2018, Djaodjin Inc.
+# Copyright (c) 2019, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -100,7 +100,7 @@ class ActivatedUserManager(UserManager):
         password.
         """
         with transaction.atomic():
-            if not password and not username:
+            if not username:
                 user = self.create_user_from_email(
                     email, password=password, **kwargs)
             else:
