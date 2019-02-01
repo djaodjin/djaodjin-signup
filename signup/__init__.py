@@ -1,4 +1,4 @@
-# Copyright (c) 2018, Djaodjin Inc.
+# Copyright (c) 2019, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -26,4 +26,4 @@
 PEP 386-compliant version number for the signup django app.
 """
 
-__version__ = '0.2.7-dev'
+__version__ = '0.2.7'
