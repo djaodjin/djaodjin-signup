@@ -127,6 +127,13 @@ def handle_uniq_error(err, renames=None):
                 r'UNIQUE constraint failed: [a-z_]+\.([a-z_]+)', err_msg)
             if look:
                 field_name = look.group(1)
+            else:
+                # On CentOS 7, installed sqlite 3.7.17
+                # returns differently-formatted error message.
+                look = re.match(
+                    r'column ([a-z_]+) is not unique', err_msg)
+                if look:
+                    field_name = look.group(1)
     if field_name:
         if renames and field_name in renames:
             field_name = renames[field_name]
