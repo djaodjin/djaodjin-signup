@@ -141,7 +141,11 @@ class PasswordChangeForm(PasswordUpdateForm):
 
 
 class PasswordResetConfirmForm(PasswordUpdateForm):
-    pass
+    password = None
+
+    class Meta:
+        model = User
+        fields = ['new_password', 'new_password2']
 
 
 class PasswordResetForm(PasswordResetBaseForm):
