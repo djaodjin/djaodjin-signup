@@ -102,7 +102,7 @@ class PasswordConfirmMixin(object):
         return self.cleaned_data
 
 
-class PasswordResetConfirmForm(PasswordConfirmMixin, forms.ModelForm):
+class PasswordUpdateForm(PasswordConfirmMixin, forms.ModelForm):
 
     new_password = forms.CharField(strip=False,
         label=_("New password"),
@@ -132,7 +132,12 @@ class PasswordResetConfirmForm(PasswordConfirmMixin, forms.ModelForm):
         return self.user
 
 
-class PasswordUpdateForm(PasswordResetConfirmForm):
+class PasswordResetConfirmForm(PasswordUpdateForm):
+
+    pass
+
+
+class PasswordChangeForm(PasswordUpdateForm):
 
     password = forms.CharField(strip=False,
         label=_("Your password"),
@@ -142,10 +147,6 @@ class PasswordUpdateForm(PasswordResetConfirmForm):
     class Meta:
         model = User
         fields = ['password', 'new_password', 'new_password2']
-
-
-class PasswordChangeForm(PasswordUpdateForm):
-    pass
 
 
 class PasswordResetForm(PasswordResetBaseForm):
