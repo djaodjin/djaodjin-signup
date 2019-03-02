@@ -105,7 +105,7 @@ class AuthTemplateResponseMixin(TemplateResponseMixin):
 
     def dispatch(self, request, *args, **kwargs):
         if request.method.lower() in self.http_method_names:
-            if get_disabled_authentication():
+            if get_disabled_authentication(request):
                 context = {}
                 response_kwargs = {}
                 response_kwargs.setdefault('content_type', self.content_type)
@@ -237,7 +237,7 @@ class SignupBaseView(RedirectFormMixin, ProcessFormView):
 
     def dispatch(self, request, *args, **kwargs):
         if request.method.lower() in self.http_method_names:
-            if get_disabled_registration():
+            if get_disabled_registration(request):
                 context = {}
                 response_kwargs = {}
                 response_kwargs.setdefault('content_type', self.content_type)

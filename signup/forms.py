@@ -102,12 +102,8 @@ class PasswordConfirmMixin(object):
         return self.cleaned_data
 
 
-class PasswordUpdateForm(PasswordConfirmMixin, forms.ModelForm):
+class PasswordResetConfirmForm(PasswordConfirmMixin, forms.ModelForm):
 
-    password = forms.CharField(strip=False,
-        label=_("Your password"),
-        widget=forms.PasswordInput(
-            attrs={'placeholder': _("Your password")}))
     new_password = forms.CharField(strip=False,
         label=_("New password"),
         widget=forms.PasswordInput(
@@ -122,7 +118,7 @@ class PasswordUpdateForm(PasswordConfirmMixin, forms.ModelForm):
 
     class Meta:
         model = User
-        fields = ['password', 'new_password', 'new_password2']
+        fields = ['new_password', 'new_password2']
 
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop('instance')
@@ -136,11 +132,19 @@ class PasswordUpdateForm(PasswordConfirmMixin, forms.ModelForm):
         return self.user
 
 
+class PasswordUpdateForm(PasswordResetConfirmForm):
+
+    password = forms.CharField(strip=False,
+        label=_("Your password"),
+        widget=forms.PasswordInput(
+            attrs={'placeholder': _("Your password")}))
+
+    class Meta:
+        model = User
+        fields = ['password', 'new_password', 'new_password2']
+
+
 class PasswordChangeForm(PasswordUpdateForm):
-    pass
-
-
-class PasswordResetConfirmForm(PasswordUpdateForm):
     pass
 
 

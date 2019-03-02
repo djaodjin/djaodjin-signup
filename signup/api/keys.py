@@ -50,7 +50,7 @@ class ResetAPIKeysAPIView(UserMixin, CreateAPIView):
 
     .. code-block:: http
 
-        POST /api/auth/keys/donny/  HTTP/1.1
+        POST /api/users/donny/api-keys/  HTTP/1.1
 
     responds
 
@@ -99,7 +99,7 @@ class PublicKeyAPIView(UserMixin, GenericAPIView):
 
     .. code-block:: http
 
-        PUT /api/auth/pubkey/donny/  HTTP/1.1
+        PUT /api/users/donny/ssh-keys/  HTTP/1.1
 
     .. code-block:: json
 

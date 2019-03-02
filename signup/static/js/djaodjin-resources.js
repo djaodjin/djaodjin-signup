@@ -75,6 +75,8 @@ function _showErrorMessages(resp) {
                         }
                         messages.push(key + ": " + message);
                         $("[name=\"" + key + "\"]").parents('.form-group').addClass("has-error");
+                        var help = $("[name=\"" + key + "\"]").parents('.form-group').find('.help-block');
+                        if( help.length > 0 ) { help.text(message); }
                     }
                 }
             }
@@ -87,13 +89,13 @@ function _showErrorMessages(resp) {
 
 
 function showErrorMessages(resp) {
-    var messages = _showErrorMessages(resp);
-    if( messages.length === 0 ) {
-        if( resp.status == 500 ) {
-            messages = ["Error " + resp.status + ": " + resp.statusText
-                + ". We have been notified and have started on fixing"
-                + " the error. We apologize for the inconvinience."];
-        } else {
+    if( resp.status >= 500 && resp.status < 600 ) {
+        messages = ["Error " + resp.status + ": " + resp.statusText
+            + ". We have been notified and have started on fixing"
+            + " the error. We apologize for the inconvinience."];
+    } else {
+        var messages = _showErrorMessages(resp);
+        if( messages.length === 0 ) {
             messages = ["Error " + resp.status + ": " + resp.statusText];
         }
     }

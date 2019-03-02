@@ -114,6 +114,9 @@ class JWTRegister(JWTBase):
     .. code-block:: http
 
         POST /api/auth/register/ HTTP/1.1
+
+    .. code-block:: json
+
         {
           "username": "joe1",
           "password": "yoyo",
@@ -123,7 +126,7 @@ class JWTRegister(JWTBase):
 
     responds
 
-    .. code-block:: http
+    .. code-block:: json
 
         {
             "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VybmFtZSI6\

@@ -1,4 +1,4 @@
-# Copyright (c) 2018, Djaodjin Inc.
+# Copyright (c) 2019, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -28,8 +28,8 @@ from ... import settings
 from ...api.keys import ResetAPIKeysAPIView, PublicKeyAPIView
 
 urlpatterns = [
-    url(r'^auth/pubkey/(?P<user>%s)/' % settings.USERNAME_PAT,
+    url(r'^users/(?P<user>%s)/ssh-keys/' % settings.USERNAME_PAT,
         PublicKeyAPIView.as_view(), name='api_pubkey'),
-    url(r'^auth/keys/(?P<user>%s)/' % settings.USERNAME_PAT,
+    url(r'^users/(?P<user>%s)/api-keys/' % settings.USERNAME_PAT,
         ResetAPIKeysAPIView.as_view(), name='api_generate_keys')
 ]
