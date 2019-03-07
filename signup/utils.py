@@ -169,7 +169,7 @@ def verify_token(token):
 
 
 def get_disabled_authentication(request):
-    if isinstance(settings.DISABLED_REGISTRATION, six.string_types):
+    if isinstance(settings.DISABLED_AUTHENTICATION, six.string_types):
         return import_string(settings.DISABLED_AUTHENTICATION)(request)
     return bool(settings.DISABLED_AUTHENTICATION)
 
