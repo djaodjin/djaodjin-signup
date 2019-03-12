@@ -1,4 +1,4 @@
-# Copyright (c) 2018, DjaoDjin inc.
+# Copyright (c) 2019, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -36,11 +36,13 @@ from rest_framework.response import Response
 from .. import settings
 from ..compat import User, reverse
 from ..decorators import check_user_active
+from ..docs import OpenAPIResponse, swagger_auto_schema
 from ..helpers import as_timestamp, datetime_or_now, full_name_natural_split
+from ..models import Contact
 from ..serializers import (CredentialsSerializer, CreateUserSerializer,
     TokenSerializer, UserSerializer, ValidationErrorSerializer)
 from ..utils import verify_token as verify_token_base
-from ..docs import OpenAPIResponse, swagger_auto_schema
+
 
 LOGGER = logging.getLogger(__name__)
 
@@ -59,6 +61,8 @@ class JWTBase(GenericAPIView):
         payload.update({'exp': exp})
         token = jwt.encode(payload, settings.JWT_SECRET_KEY,
             settings.JWT_ALGORITHM).decode('utf-8')
+        LOGGER.info("%s signed in.", user,
+            extra={'event': 'login', 'request': self.request})
         return Response(TokenSerializer().to_representation({'token': token}))
 
 
@@ -92,14 +96,34 @@ sbF9uYW1lIjoiRG9ubnkgQ29vcGVyIiwiZXhwIjoxNTI5NjU4NzEwfQ.F2y\
     serializer_class = CredentialsSerializer
 
     @swagger_auto_schema(responses={
-        201: OpenAPIResponse("", TokenSerializer)})
+        201: OpenAPIResponse("", TokenSerializer),
+        400: OpenAPIResponse("parameters error", ValidationErrorSerializer)})
     def post(self, request, *args, **kwargs): #pylint:disable=unused-argument
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
-            username = serializer.validated_data['username']
-            password = serializer.validated_data['password']
+            username = serializer.validated_data.get('username')
+            password = serializer.validated_data.get('password')
             user = authenticate(username=username, password=password)
             if user:
+                contact = Contact.objects.filter(user=user).first()
+                if contact and contact.mfa_backend:
+                    if not contact.mfa_priv_key:
+                        contact.create_mfa_token()
+                        raise ValidationError({'detail': _(
+                            "missing MFA token")})
+                    code = serializer.validated_data.get('code')
+                    if code != contact.mfa_priv_key:
+                        if (contact.mfa_nb_attempts
+                            >= settings.MFA_MAX_ATTEMPTS):
+                            contact.clear_mfa_token()
+                            raise PermissionDenied({'detail': _(
+"You have exceeded the number of attempts to enter the MFA code."\
+" Please start again.")})
+                        contact.mfa_nb_attempts += 1
+                        contact.save()
+                        raise ValidationError({'detail': _(
+                            "MFA code does not match.")})
+                    contact.clear_mfa_token()
                 return self.create_token(user)
         raise PermissionDenied()
 

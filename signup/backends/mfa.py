@@ -23,18 +23,23 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 """
-Signals for user registration and activation.
+Backends to send one-time authentication codes
 """
+from __future__ import unicode_literals
 
-from django.dispatch import Signal
+from .. import signals
+from ..utils import generate_random_code
 
-#pylint: disable=invalid-name
-user_registered = Signal(providing_args=['user'])
-user_activated = Signal(providing_args=[
-    'user', 'verification_key', 'request'])
-user_verification = Signal(providing_args=[
-    'user', 'request', 'back_url', 'expiration_days'])
-user_reset_password = Signal(providing_args=[
-    'user', 'request', 'back_url', 'expiration_days'])
-user_mfa_code = Signal(providing_args=[
-    'user', 'code', 'request'])
+
+class EmailMFABackend(object):
+    """
+    Backend to authenticate a user through either her username
+    or email address.
+    """
+    #pylint: disable=no-self-use
+
+    def create_token(self, user, request=None):
+        user.mfa_priv_key = generate_random_code()
+        user.save()
+        signals.user_mfa_code.send(
+            sender=__name__, user=user, code=user.mfa_priv_key, request=request)

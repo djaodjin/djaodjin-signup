@@ -1,4 +1,4 @@
-# Copyright (c) 2018, Djaodjin Inc.
+# Copyright (c) 2019, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -157,8 +157,9 @@ class PasswordChangeView(UserProfileView):
     template_name = 'users/password_change_form.html'
 
     @method_decorator(csrf_protect)
-    def dispatch(self, *args, **kwargs):
-        return super(PasswordChangeView, self).dispatch(*args, **kwargs)
+    def dispatch(self, request, *args, **kwargs):
+        return super(PasswordChangeView, self).dispatch(
+            request, *args, **kwargs)
 
     def form_valid(self, form):
         password = form.cleaned_data['password']

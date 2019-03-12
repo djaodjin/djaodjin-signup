@@ -39,8 +39,11 @@ from django.utils.translation import ugettext_lazy as _
 from django.contrib.auth.hashers import check_password, make_password
 
 from . import settings, signals
+from .backends.mfa import EmailMFABackend
 from .compat import User, import_string
 from .helpers import datetime_or_now
+from .utils import generate_random_slug
+
 
 LOGGER = logging.getLogger(__name__)
 EMAIL_VERIFICATION_RE = re.compile('^%s$' % settings.EMAIL_VERIFICATION_PAT)
@@ -76,14 +79,11 @@ class ActivatedUserManager(UserManager):
                     username, email=email, password=password, **kwargs)
             except IntegrityError as exp:
                 err = exp
-                suffix = '-%s' % ''.join(
-                    random.choice('0123456789') for count in range(3))
-                if len(username_base) + len(suffix) > max_length:
-                    username = '%s%s' % (
-                        username_base[:(max_length - len(suffix))],
-                        suffix)
-                else:
-                    username = '%s%s' % (username_base, suffix)
+                if len(username_base) + 4 > max_length:
+                    username_base = username_base[:(max_length - 4)]
+                username = generate_random_slug(
+                    length=len(username_base) + 4, prefix=username_base + '-',
+                    allowed_chars='0123456789')
                 trials = trials + 1
         raise err
 
@@ -231,6 +231,13 @@ class Contact(models.Model):
     """
     Used in workflow to verify the email address of a ``User``.
     """
+    NO_MFA = 0
+    EMAIL_BACKEND = 1
+
+    MFA_BACKEND_TYPE = (
+        (NO_MFA, "password only"),
+        (EMAIL_BACKEND, "send one-time authentication code through email"),
+    )
 
     VERIFIED = "VERIFIED"
 
@@ -256,11 +263,31 @@ class Contact(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL,
         null=True, on_delete=models.CASCADE, related_name='contact')
     verification_key = models.CharField(_("Verification key"), max_length=40)
+    mfa_backend = models.PositiveSmallIntegerField(
+        choices=MFA_BACKEND_TYPE, default=NO_MFA,
+        help_text=_("Backend to use for multi-factor authentication"))
+    mfa_priv_key = models.IntegerField(
+        _("One-time authentication code"), null=True)
+    mfa_nb_attempts = models.IntegerField(
+        _("Number of attempts to pass the MFA code"), default=0)
     extra = _get_extra_field_class()(null=True,
         help_text=_("Extra meta data (can be stringify JSON)"))
 
     def __str__(self):
         return self.slug
+
+    def get_mfa_backend(self):
+        if self.mfa_backend == self.EMAIL_BACKEND:
+            return EmailMFABackend()
+        return None
+
+    def create_mfa_token(self):
+        return self.get_mfa_backend().create_token(self)
+
+    def clear_mfa_token(self):
+        self.mfa_priv_key = None
+        self.mfa_nb_attempts = 0
+        self.save()
 
     def save(self, force_insert=False, force_update=False,
              using=None, update_fields=None):
@@ -272,8 +299,7 @@ class Contact(models.Model):
         slug_base = slugify(self.email.split('@')[0])
         if not slug_base:
             # email might be empty
-            slug_base = "".join([
-                random.choice("abcdef0123456789") for _ in range(15)])
+            slug_base = generate_random_slug(15)
         elif len(slug_base) > max_length:
             slug_base = slug_base[:max_length]
         self.slug = slug_base
@@ -286,12 +312,10 @@ class Contact(models.Model):
             except IntegrityError as err:
                 if 'uniq' not in str(err).lower():
                     raise
-                suffix = '-%s' % "".join([random.choice("abcdef0123456789")
-                    for _ in range(7)])
-                if len(slug_base) + len(suffix) > max_length:
-                    self.slug = slug_base[:(max_length - len(suffix))] + suffix
-                else:
-                    self.slug = slug_base + suffix
+                if len(slug_base) + 8 > max_length:
+                    slug_base = slug_base[:(max_length - 8)]
+                self.slug = generate_random_slug(
+                    length=len(slug_base) + 8, prefix=slug_base + '-')
         raise ValidationError({'detail':
             _("Unable to create a unique URL slug from email '%s'")
                 % self.email})

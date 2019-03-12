@@ -160,7 +160,7 @@ EMAIL_USE_TLS = False
 
 # Default email address to use for various automated correspondence from
 # the site managers (also django-registration settings)
-DEFAULT_FROM_EMAIL = "admin@example.com"
+DEFAULT_FROM_EMAIL = "admin@localhost.localdomain"
 
 # Optional SMTP authentication information for EMAIL_HOST.
 EMAIL_HOST_USER = ""
@@ -195,8 +195,8 @@ DEBUG_TOOLBAR_CONFIG = {
 }
 
 SIGNUP = {
-    'DISABLED_AUTHENTICATION': False,
-    'DISABLED_REGISTRATION': False
+    'RANDOM_SEQUENCE': getattr(
+        sys.modules[__name__], 'SIGNUP_RANDOM_SEQUENCE', [])
 }
 
 INTERNAL_IPS = ('127.0.0.1', '::1')

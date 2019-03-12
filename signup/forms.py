@@ -1,4 +1,4 @@
-# Copyright (c) 2018, Djaodjin Inc.
+# Copyright (c) 2019, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -27,15 +27,17 @@
 from captcha.fields import ReCaptchaField
 from django import forms
 from django.contrib.auth import password_validation
-from django.contrib.auth.forms import (
+from django.contrib.auth.forms import (AuthenticationForm,
     PasswordResetForm as PasswordResetBaseForm)
 from django.utils.translation import ugettext_lazy as _
 from django.utils import six
 
 from . import settings
 from .compat import User
+from .models import Contact
 
 #pylint: disable=old-style-class,no-init
+
 
 class NameEmailForm(forms.Form):
     """
@@ -241,3 +243,20 @@ class UserNotificationsForm(forms.Form):
             self.fields[item] = forms.BooleanField(
                 label=initial[0].title, help_text=initial[0].description,
                 required=False, initial=initial[1])
+
+
+class MFACodeForm(AuthenticationForm):
+
+    username = forms.CharField(max_length=254, widget=forms.HiddenInput())
+    password = forms.CharField(widget=forms.HiddenInput())
+    code = forms.IntegerField(widget=forms.TextInput(
+        attrs={'placeholder': _("One-time code"), 'autofocus': True}),
+        label=_("One-time code"))
+
+    def clean(self):
+        super(MFACodeForm, self).clean()
+        code = self.cleaned_data.get('code')
+        contact = Contact.objects.filter(user=self.user_cache).first()
+        if not contact or code != contact.mfa_priv_key:
+            raise forms.ValidationError(_("MFA code does not match."))
+        return self.cleaned_data

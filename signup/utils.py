@@ -1,4 +1,4 @@
-# Copyright (c) 2018, DjaoDjin inc.
+# Copyright (c) 2019, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -29,6 +29,7 @@ from django.core.exceptions import ImproperlyConfigured, NON_FIELD_ERRORS
 from django.core.files.storage import default_storage
 from django.db import IntegrityError
 from django.utils import six
+from django.utils.crypto import get_random_string
 from django.utils.translation import ugettext_lazy as _
 import jwt
 from rest_framework import serializers
@@ -44,6 +45,29 @@ LOGGER = logging.getLogger(__name__)
 def get_accept_list(request):
     http_accept = request.META.get('HTTP_ACCEPT', '*/*')
     return [item.strip() for item in http_accept.split(',')]
+
+
+def generate_random_code():
+    return int(generate_random_slug(6, allowed_chars="0123456789"))
+
+
+def generate_random_slug(length=40, prefix=None,
+                         allowed_chars="abcdef0123456789"):
+    """
+    This function is used, for example, to create Coupon code mechanically
+    when a customer pays for the subscriptions of an organization which
+    does not yet exist in the database.
+    """
+    if prefix:
+        length = length - len(prefix)
+    if settings.RANDOM_SEQUENCE:
+        suffix = settings.RANDOM_SEQUENCE[settings.RANDOM_SEQUENCE_IDX]
+        settings.RANDOM_SEQUENCE_IDX += 1
+    else:
+        suffix = get_random_string(length=length, allowed_chars=allowed_chars)
+    if prefix:
+        return str(prefix) + suffix
+    return suffix
 
 
 def get_account_model():

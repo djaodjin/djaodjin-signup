@@ -49,7 +49,7 @@ from ..auth import validate_redirect
 from ..backends.auth import UsernameOrEmailAuthenticationForm
 from ..compat import User, reverse, is_authenticated
 from ..decorators import check_user_active
-from ..forms import (ActivationForm, NameEmailForm,
+from ..forms import (ActivationForm, MFACodeForm, NameEmailForm,
     PasswordResetForm, PasswordResetConfirmForm)
 from ..helpers import full_name_natural_split
 from ..models import Contact
@@ -58,6 +58,16 @@ from ..utils import (fill_form_errors, get_disabled_authentication,
 
 
 LOGGER = logging.getLogger(__name__)
+
+
+def _login(request, user):
+    """
+    Attaches a session cookie to the request and
+    generates an login event in the audit logs.
+    """
+    auth_login(request, user)
+    LOGGER.info("%s signed in.", user,
+        extra={'event': 'login', 'request': request})
 
 
 class RedirectFormMixin(FormMixin):
@@ -303,7 +313,7 @@ class SignupBaseView(RedirectFormMixin, ProcessFormView):
 
     def register(self, **cleaned_data):
         user = self.register_user(**cleaned_data)
-        auth_login(self.request, user)
+        _login(self.request, user)
         return user
 
 
@@ -399,7 +409,7 @@ class ActivationBaseView(RedirectFormMixin, UpdateView):
         user_with_backend = authenticate(
             username=user.username,
             password=form.cleaned_data.get('new_password'))
-        auth_login(self.request, user_with_backend)
+        _login(self.request, user_with_backend)
         if self.request.session.test_cookie_worked():
             self.request.session.delete_test_cookie()
         return HttpResponseRedirect(self.get_success_url())
@@ -429,11 +439,52 @@ class SigninBaseView(RedirectFormMixin, ProcessFormView):
 
     form_class = UsernameOrEmailAuthenticationForm
 
+    def get_form_class(self):
+        username = self.request.POST.get('username', None)
+        if username:
+            contact = Contact.objects.filter(user__username=username).first()
+            if contact and contact.mfa_backend and contact.mfa_priv_key:
+                return MFACodeForm
+        return self.form_class
+
+    def get_mfa_form(self):
+        form = MFACodeForm(**self.get_form_kwargs())
+        # We must pass the username and password back to the browser
+        # as hidden fields, but prevent calls to `form.non_field_errors()`
+        # in the templates to inadvertently trigger a call
+        # to `MFACodeForm.clean()`.
+        form._errors = {} #pylint:disable=protected-access
+        return form
+
     def form_valid(self, form):
-        auth_login(self.request, form.get_user())
-        LOGGER.info("%s signed in.", self.request.user,
-            extra={'event': 'login', 'request': self.request})
+        user = form.get_user()
+        contact = Contact.objects.filter(user=user).first()
+        if contact and contact.mfa_backend:
+            if not contact.mfa_priv_key:
+                form = self.get_mfa_form()
+                contact.create_mfa_token()
+                context = self.get_context_data(form=form)
+                return self.render_to_response(context)
+            # `get_form_class` will have returned `MFACodeForm`
+            # if `mfa_priv_key` is not yet set, which in turn
+            # will not make it this far is the code is incorrect.
+            contact.clear_mfa_token()
+        _login(self.request, user)
         return super(SigninBaseView, self).form_valid(form)
+
+    def form_invalid(self, form):
+        user = form.get_user()
+        contact = Contact.objects.filter(user=user).first()
+        if contact and contact.mfa_backend:
+            if contact.mfa_nb_attempts >= settings.MFA_MAX_ATTEMPTS:
+                contact.clear_mfa_token()
+                form = self.get_form()
+                form.add_error(None, _("You have exceeded the number"\
+                " of attempts to enter the MFA code. Please start again."))
+            else:
+                contact.mfa_nb_attempts += 1
+                contact.save()
+        return super(SigninBaseView, self).form_invalid(form)
 
 
 class SignoutBaseView(RedirectFormMixin, View):

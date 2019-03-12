@@ -1,4 +1,4 @@
-# Copyright (c) 2018, DjaoDjin inc.
+# Copyright (c) 2019, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -107,6 +107,8 @@ class CredentialsSerializer(NoModelSerializer):
     password = serializers.CharField(write_only=True,
         style={'input_type': 'password'},
         help_text=_("Secret password for the account"))
+    code = serializers.IntegerField(required=False, write_only=True,
+        style={'input_type': 'password'}, help_text=_("One-time code"))
 
 
 class CreateUserSerializer(serializers.ModelSerializer):
@@ -162,7 +164,7 @@ class UserSerializer(serializers.ModelSerializer):
     def get_full_name(self, obj):#pylint:disable=no-self-use
         return obj.get_full_name()
 
-    def save(self):
+    def save(self, **kwargs):
         full_name = self.validated_data.get('get_full_name')
         if full_name:
             user = self.instance
@@ -172,7 +174,7 @@ class UserSerializer(serializers.ModelSerializer):
             user.first_name = first_name
             user.last_name = last_name
         try:
-            return super(UserSerializer, self).save()
+            return super(UserSerializer, self).save(**kwargs)
         except IntegrityError as err:
             handle_uniq_error(err)
         return None

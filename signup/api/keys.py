@@ -25,7 +25,6 @@
 import logging
 
 from django.contrib.auth.hashers import make_password
-from django.utils.crypto import get_random_string
 from django.core.exceptions import PermissionDenied
 from django.utils.translation import ugettext_lazy as _
 from rest_framework import status
@@ -36,6 +35,7 @@ from rest_framework.exceptions import ValidationError
 from ..mixins import UserMixin
 from ..models import Credentials
 from ..serializers import APIKeysSerializer, PublicKeySerializer
+from ..utils import generate_random_slug
 
 
 LOGGER = logging.getLogger(__name__)
@@ -74,10 +74,10 @@ class ResetAPIKeysAPIView(UserMixin, CreateAPIView):
         allowed_chars = 'abcdefghjkmnpqrstuvwxyz'\
             'ABCDEFGHJKLMNPQRSTUVWXYZ'\
             '23456789'
-        api_pub_key = get_random_string(
+        api_pub_key = generate_random_slug(
             length=Credentials.API_PUB_KEY_LENGTH,
             allowed_chars=allowed_chars)
-        api_priv_key = get_random_string(
+        api_priv_key = generate_random_slug(
             length=Credentials.API_PRIV_KEY_LENGTH,
             allowed_chars=allowed_chars)
         Credentials.objects.update_or_create(
