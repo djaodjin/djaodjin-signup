@@ -52,7 +52,7 @@ class UrlsMixin(object):
 class ContactMixin(UrlsMixin):
 
     lookup_field = 'slug'
-    lookup_url_kwarg = 'contact'
+    lookup_url_kwarg = 'user'
 
     @property
     def contact(self):
@@ -60,6 +60,12 @@ class ContactMixin(UrlsMixin):
             kwargs = {self.lookup_field: self.kwargs.get(self.lookup_url_kwarg)}
             self._contact = get_object_or_404(Contact.objects.all(), **kwargs)
         return self._contact
+
+    @staticmethod
+    def as_contact(user):
+        return Contact(slug=user.username, email=user.email,
+            full_name=user.get_full_name(), nick_name=user.first_name,
+            user=user)
 
 
 class UserMixin(UrlsMixin):

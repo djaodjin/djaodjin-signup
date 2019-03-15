@@ -23,14 +23,12 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from django.core import validators
-from django.contrib.auth import get_user_model
-from django.db import IntegrityError
 from django.utils.translation import ugettext_lazy as _
 from rest_framework import serializers
 
+from .compat import User
 from .models import Activity, Contact, Notification
-from .helpers import full_name_natural_split
-from .utils import get_account_model, handle_uniq_error
+from .utils import get_account_model, has_invalid_password
 
 
 class NoModelSerializer(serializers.Serializer):
@@ -76,13 +74,18 @@ class APIKeysSerializer(NoModelSerializer):
 class ContactSerializer(serializers.ModelSerializer):
 
     activities = ActivitySerializer(many=True, read_only=True)
+    credentials = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         #pylint:disable=old-style-class,no-init
         model = Contact
-        fields = ('slug', 'email', 'full_name', 'nick_name', 'extra',
-            'created_at', 'activities', 'picture')
-        read_only_fields = ('slug', 'created_at', 'activities')
+        fields = ('slug', 'email', 'full_name', 'nick_name', 'created_at',
+            'credentials', 'picture', 'extra', 'activities')
+        read_only_fields = ('slug', 'created_at', 'credentials', 'activities')
+
+    @staticmethod
+    def get_credentials(obj):
+        return (not has_invalid_password(obj.user)) if obj.user else False
 
 
 class NotificationsSerializer(serializers.ModelSerializer):
@@ -92,7 +95,7 @@ class NotificationsSerializer(serializers.ModelSerializer):
 
     class Meta:
         #pylint:disable=old-style-class,no-init
-        model = get_user_model()
+        model = User
         fields = ('notifications',)
 
 
@@ -124,7 +127,7 @@ class CreateUserSerializer(serializers.ModelSerializer):
         help_text=_("Full name"))
 
     class Meta:
-        model = get_user_model()
+        model = User
         fields = ('username', 'password', 'email', 'full_name')
 
 
@@ -144,6 +147,20 @@ class TokenSerializer(NoModelSerializer):
         help_text=_("Token used to authenticate user on every HTTP request"))
 
 
+class ValidationErrorSerializer(NoModelSerializer):
+    """
+    Details on why token is invalid.
+    """
+    detail = serializers.CharField(help_text=_("Describes the reason for"\
+        " the error in plain text"))
+
+
+class PublicKeySerializer(NoModelSerializer):
+    pubkey = serializers.CharField(max_length=None, help_text=_("Public key"))
+    password = serializers.CharField(required=False, max_length=500,
+        help_text=_("Password"))
+
+
 class UserSerializer(serializers.ModelSerializer):
     #pylint: disable=no-init,old-style-class
 
@@ -158,37 +175,8 @@ class UserSerializer(serializers.ModelSerializer):
         help_text=_("Full name"))
 
     class Meta:
-        model = get_user_model()
+        model = User
         fields = ('username', 'email', 'full_name')
 
     def get_full_name(self, obj):#pylint:disable=no-self-use
         return obj.get_full_name()
-
-    def save(self, **kwargs):
-        full_name = self.validated_data.get('get_full_name')
-        if full_name:
-            user = self.instance
-            first_name, mid_name, last_name = full_name_natural_split(full_name)
-            if mid_name:
-                first_name = first_name + ' ' + mid_name
-            user.first_name = first_name
-            user.last_name = last_name
-        try:
-            return super(UserSerializer, self).save(**kwargs)
-        except IntegrityError as err:
-            handle_uniq_error(err)
-        return None
-
-
-class ValidationErrorSerializer(NoModelSerializer):
-    """
-    Details on why token is invalid.
-    """
-    detail = serializers.CharField(help_text=_("Describes the reason for"\
-        " the error in plain text"))
-
-
-class PublicKeySerializer(NoModelSerializer):
-    pubkey = serializers.CharField(max_length=None, help_text=_("Public key"))
-    password = serializers.CharField(required=False, max_length=500,
-        help_text=_("Password"))

@@ -91,6 +91,7 @@ DATABASES = {
 
 MIDDLEWARE = (
     'django.middleware.common.CommonMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'signup.middleware.AuthenticationMiddleware',
@@ -182,7 +183,9 @@ REST_FRAMEWORK = {
         # one in the list because it will raise a PermissionDenied if the CSRF
         # is absent.
         'rest_framework.authentication.SessionAuthentication',
-    )
+    ),
+    'SEARCH_PARAM': 'q',
+    'ORDERING_PARAM': 'o'
 }
 
 # Debug toolbar and panel

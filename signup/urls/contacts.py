@@ -29,7 +29,7 @@ from ..views.contacts import ContactListView, ContactDetailView
 
 urlpatterns = [
     # These three URLs must be protected.
-    url(r'^(?P<contact>%s)/' % settings.USERNAME_PAT,
+    url(r'^(?P<user>%s)/' % settings.USERNAME_PAT,
         ContactDetailView.as_view(), name='contact'),
     url(r'^', ContactListView.as_view(), name='contacts'),
 ]

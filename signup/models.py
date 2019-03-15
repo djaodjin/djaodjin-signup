@@ -41,7 +41,7 @@ from django.contrib.auth.hashers import check_password, make_password
 from . import settings, signals
 from .backends.mfa import EmailMFABackend
 from .compat import User, import_string
-from .helpers import datetime_or_now
+from .helpers import datetime_or_now, full_name_natural_split
 from .utils import generate_random_slug
 
 
@@ -244,10 +244,11 @@ class Contact(models.Model):
     objects = ContactManager()
 
     slug = models.SlugField(unique=True,
-        help_text=_("Unique identifier shown in the URL bar"))
+        help_text=_("Unique identifier shown in the URL bar, effectively"\
+            " the username for profiles with login credentials."))
     created_at = models.DateTimeField(auto_now_add=True,
         help_text=_("Date/time of creation (in ISO format)"))
-    email = models.EmailField(_("E-mail address"), blank=True,
+    email = models.EmailField(_("E-mail address"),
         help_text=_("E-mail address for the contact"))
     full_name = models.CharField(_("Full name"), max_length=60, blank=True,
         help_text=_("Full name for the contact (effectively first name"\
@@ -257,7 +258,7 @@ class Contact(models.Model):
     # 2083 number is used because it is a safe option to choose based
     # on some older browsers behavior
     # https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=4&cad=rja&uact=8&ved=2ahUKEwi2hbjPwIPgAhULXCsKHQ-lAj4QFjADegQIBhAL&url=https%3A%2F%2Fstackoverflow.com%2Fquestions%2F417142%2Fwhat-is-the-maximum-length-of-a-url-in-different-browsers&usg=AOvVaw0QgMo_L7jjK0YsXchrJgOQ
-    picture = models.URLField(_("Profile picture"), max_length=2083,
+    picture = models.URLField(_("URL to a profile picture"), max_length=2083,
         null=True, blank=True,
         help_text=_("Profile picture"))
     user = models.OneToOneField(settings.AUTH_USER_MODEL,
@@ -296,7 +297,8 @@ class Contact(models.Model):
                 force_insert=force_insert, force_update=force_update,
                 using=using, update_fields=update_fields)
         max_length = self._meta.get_field('slug').max_length
-        slug_base = slugify(self.email.split('@')[0])
+        slug_base = (self.user.username
+            if self.user else slugify(self.email.split('@')[0]))
         if not slug_base:
             # email might be empty
             slug_base = generate_random_slug(15)
@@ -306,6 +308,14 @@ class Contact(models.Model):
         for idx in range(1, 10): #pylint:disable=unused-variable
             try:
                 with transaction.atomic():
+                    if self.user:
+                        # pylint:disable=unused-variable
+                        first_name, mid_name, last_name = \
+                            full_name_natural_split(self.full_name)
+                        if (self.user.first_name != first_name or
+                            self.last_name != last_name):
+                            self.user.save(
+                                first_name=first_name, last_name=last_name)
                     return super(Contact, self).save(
                         force_insert=force_insert, force_update=force_update,
                         using=using, update_fields=update_fields)
@@ -317,8 +327,8 @@ class Contact(models.Model):
                 self.slug = generate_random_slug(
                     length=len(slug_base) + 8, prefix=slug_base + '-')
         raise ValidationError({'detail':
-            _("Unable to create a unique URL slug from email '%s'")
-                % self.email})
+            _("Unable to create a unique URL slug with a base of '%s'")
+                % slug_base})
 
     def verification_key_expired(self):
         expiration_date = datetime.timedelta(days=settings.KEY_EXPIRATION)
