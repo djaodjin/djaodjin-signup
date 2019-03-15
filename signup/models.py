@@ -314,8 +314,9 @@ class Contact(models.Model):
                             full_name_natural_split(self.full_name)
                         if (self.user.first_name != first_name or
                             self.last_name != last_name):
-                            self.user.save(
-                                first_name=first_name, last_name=last_name)
+                            self.user.first_name = first_name
+                            self.user.last_name = last_name
+                            self.user.save()
                     return super(Contact, self).save(
                         force_insert=force_insert, force_update=force_update,
                         using=using, update_fields=update_fields)
