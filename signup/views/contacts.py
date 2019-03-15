@@ -34,13 +34,14 @@ from ..models import Contact
 class ContactDetailView(ContactMixin, DetailView):
 
     template_name = 'contacts/contact.html'
-    slug_field = 'slug'
-    slug_url_kwarg = 'contact'
     model = Contact
+
+    def get_object(self):
+        return self.contact
 
     def get_context_data(self, **kwargs):
         context = super(ContactDetailView, self).get_context_data(**kwargs)
-        context.update({'contact': self.object})
+        context.update({'contact': self.contact})
         self.update_context_urls(context, {
             'api_activities': reverse('api_activities', args=(self.contact,)),
             'api_contact': reverse('api_contact', args=(self.contact,)),

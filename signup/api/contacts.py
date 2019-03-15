@@ -105,7 +105,10 @@ class ActivityListAPIView(ContactMixin, ListCreateAPIView):
             }]
         }
     """
-
+    filter_backends = (filters.SearchFilter, filters.OrderingFilter)
+    search_fields = ('text',)
+    ordering_fields = ('created_at',)
+    ordering = ('created_at',)
     serializer_class = ActivitySerializer
 
     def get_queryset(self):
@@ -317,7 +320,7 @@ class ContactListAPIView(ListCreateAPIView):
     filter_backends = (filters.SearchFilter, filters.OrderingFilter)
     search_fields = ('email',)
     ordering_fields = ('email',)
-    ordering = ('email', 'email')
+    ordering = ('email',)
     serializer_class = ContactSerializer
     queryset = Contact.objects.all().select_related('user')
 
