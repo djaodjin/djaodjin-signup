@@ -28,7 +28,7 @@ import logging, re
 from hashlib import sha256
 
 from django.contrib.auth import logout as auth_logout
-from django.db import transaction
+from django.db import transaction, IntegrityError
 from django.http import Http404
 from rest_framework import filters
 from rest_framework.settings import api_settings
@@ -37,10 +37,11 @@ from rest_framework.generics import (get_object_or_404, ListCreateAPIView,
 
 from .. import settings
 from ..compat import User
+from ..helpers import full_name_natural_split
 from ..mixins import ContactMixin
 from ..models import Activity, Contact
 from ..serializers import ActivitySerializer, ContactSerializer
-from ..utils import get_picture_storage, generate_random_code
+from ..utils import get_picture_storage, generate_random_code, handle_uniq_error
 
 
 LOGGER = logging.getLogger(__name__)
@@ -173,10 +174,9 @@ class ContactDetailAPIView(ContactMixin, RetrieveUpdateDestroyAPIView):
         except Http404:
             # We might still have a `User` model that matches.
             lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
-            filter_kwargs = {self.lookup_field: self.kwargs[lookup_url_kwarg]}
-            user = get_object_or_404(
-                User.objects.filter(
-                    is_active=True), **filter_kwargs)
+            filter_kwargs = {'username': self.kwargs[lookup_url_kwarg]}
+            user = get_object_or_404(User.objects.filter(is_active=True),
+                **filter_kwargs)
             obj = self.as_contact(user)
         return obj
 
@@ -256,6 +256,27 @@ class ContactDetailAPIView(ContactMixin, RetrieveUpdateDestroyAPIView):
                 if requires_logout:
                     auth_logout(self.request)
 
+    def perform_update(self, serializer):
+        with transaction.atomic():
+            # There will always be a `User` attached to `serializer.instance`
+            # because `get_object` make sure of it.
+            user = serializer.instance.user
+            if serializer.validated_data.get('email'):
+                user.email = serializer.validated_data.get('email')
+            if serializer.validated_data.get('slug'):
+                user.username = serializer.validated_data.get('slug')
+            if serializer.validated_data.get('full_name'):
+                #pylint:disable=unused-variable
+                first_name, mid_name, last_name = full_name_natural_split(
+                    serializer.validated_data.get('full_name'))
+                user.first_name = first_name
+                user.last_name = last_name
+            try:
+                user.save()
+                serializer.save()
+            except IntegrityError as err:
+                handle_uniq_error(err)
+
 
 class ContactListAPIView(ListCreateAPIView):
     """
@@ -331,6 +352,7 @@ class ContactListAPIView(ListCreateAPIView):
         return User.objects.filter(is_active=True, contact__isnull=True)
 
     def list(self, request, *args, **kwargs):
+        #pylint:disable=too-many-locals
         contacts_queryset = self.filter_queryset(self.get_queryset())
         contacts_page = self.paginate_queryset(contacts_queryset)
         users_queryset = self.filter_queryset(self.get_users_queryset())
@@ -393,3 +415,12 @@ class ContactListAPIView(ListCreateAPIView):
 
         serializer = self.get_serializer(page, many=True)
         return self.get_paginated_response(serializer.data)
+
+    def perform_create(self, serializer):
+        with transaction.atomic():
+            try:
+                user = User.objects.get(
+                    email=serializer.validated_data.get('email'))
+            except User.DoesNotExist:
+                user = None
+            serializer.save(user=user)

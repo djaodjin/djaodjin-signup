@@ -277,6 +277,10 @@ class Contact(models.Model):
     def __str__(self):
         return self.slug
 
+    @property
+    def username(self):
+        return self.slug
+
     def get_mfa_backend(self):
         if self.mfa_backend == self.EMAIL_BACKEND:
             return EmailMFABackend()
@@ -313,9 +317,11 @@ class Contact(models.Model):
                         first_name, mid_name, last_name = \
                             full_name_natural_split(self.full_name)
                         if (self.user.first_name != first_name or
-                            self.last_name != last_name):
+                            self.user.last_name != last_name or
+                            self.user.email != self.email):
                             self.user.first_name = first_name
                             self.user.last_name = last_name
+                            self.user.email = self.email
                             self.user.save()
                     return super(Contact, self).save(
                         force_insert=force_insert, force_update=force_update,
