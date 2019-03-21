@@ -281,6 +281,17 @@ class Contact(models.Model):
     def username(self):
         return self.slug
 
+    @property
+    def printable_name(self):
+        if self.nick_name:
+            return self.nick_name
+        if self.full_name:
+            # pylint:disable=unused-variable
+            first_name, mid_name, last_name = full_name_natural_split(
+                self.full_name)
+            return first_name
+        return self.username
+
     def get_mfa_backend(self):
         if self.mfa_backend == self.EMAIL_BACKEND:
             return EmailMFABackend()

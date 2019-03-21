@@ -80,7 +80,7 @@ class ContactSerializer(serializers.ModelSerializer):
         #pylint:disable=old-style-class,no-init
         model = Contact
         fields = ('slug', 'email', 'full_name', 'nick_name', 'created_at',
-            'credentials', 'picture', 'extra', 'activities')
+            'credentials', 'picture', 'printable_name', 'extra', 'activities')
         read_only_fields = ('slug', 'created_at', 'credentials', 'activities')
 
     @staticmethod

@@ -348,7 +348,7 @@ class ContactListAPIView(ListCreateAPIView):
     def as_contact(user):
         return Contact(slug=user.username, email=user.email,
             full_name=user.get_full_name(), nick_name=user.first_name,
-            user=user)
+            created_at=user.date_joined, user=user)
 
     @staticmethod
     def get_users_queryset():
@@ -358,16 +358,22 @@ class ContactListAPIView(ListCreateAPIView):
         #pylint:disable=too-many-locals
         contacts_queryset = self.filter_queryset(self.get_queryset())
         contacts_page = self.paginate_queryset(contacts_queryset)
-        users_queryset = self.filter_queryset(self.get_users_queryset())
-        users_page = self.paginate_queryset(users_queryset)
-
         # XXX When we use a `rest_framework.PageNumberPagination`,
         # it will hold a reference to the page created by a `DjangoPaginator`.
         # The `LimitOffsetPagination` paginator holds its own count.
         if hasattr(self.paginator, 'page'):
-            self.paginator.page.paginator.count += users_queryset.count()
+            contacts_count = self.paginator.page.paginator.count
         else:
-            self.paginator.count += users_queryset.count()
+            contacts_count = self.paginator.count
+
+        users_queryset = self.filter_queryset(self.get_users_queryset())
+        users_page = self.paginate_queryset(users_queryset)
+        # Since we run a second `paginate_queryset`, the paginator.count
+        # is not the number of users.
+        if hasattr(self.paginator, 'page'):
+            self.paginator.page.paginator.count += contacts_count
+        else:
+            self.paginator.count += contacts_count
 
         order_func = get_order_func(filters.OrderingFilter().get_ordering(
             self.request, users_queryset, self))
@@ -380,23 +386,23 @@ class ContactListAPIView(ListCreateAPIView):
         contacts_iterator = iter(contacts_page)
         try:
             contact = next(contacts_iterator)
-            user = next(users_iterator)
+            user = self.as_contact(next(users_iterator))
             while contact and user:
                 if order_func(contact, user):
                     page += [contact]
                     contact = None
                     contact = next(contacts_iterator)
                 elif order_func(user, contact):
-                    page += [self.as_contact(user)]
+                    page += [user]
                     user = None
-                    user = next(users_iterator)
+                    user = self.as_contact(next(users_iterator))
                 else:
                     page += [contact]
                     contact = None
                     contact = next(contacts_iterator)
-                    page += [self.as_contact(user)]
+                    page += [user]
                     user = None
-                    user = next(users_iterator)
+                    user = self.as_contact(next(users_iterator))
         except StopIteration:
             pass
         try:
@@ -407,8 +413,8 @@ class ContactListAPIView(ListCreateAPIView):
             pass
         try:
             while user:
-                page += [self.as_contact(user)]
-                user = next(users_iterator)
+                page += [user]
+                user = self.as_contact(next(users_iterator))
         except StopIteration:
             pass
 
