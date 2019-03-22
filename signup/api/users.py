@@ -40,6 +40,8 @@ class PasswordChangeAPIView(UpdateAPIView):
     """
     Changes the password for a user.
 
+    **Tags: auth
+
     **Example
 
     .. code-block:: http
@@ -78,6 +80,8 @@ class PasswordChangeAPIView(UpdateAPIView):
 class UserNotificationsAPIView(UpdateAPIView):
     """
     Changes notifications preferences for a user.
+
+    **Tags: profile
 
     **Example
 

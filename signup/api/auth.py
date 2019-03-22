@@ -71,6 +71,8 @@ class JWTLogin(JWTBase):
     Returns a JSON Web Token that can be used in requests that require
     authentication.
 
+    **Tags: auth
+
     **Example
 
     .. code-block:: http
@@ -132,6 +134,8 @@ class JWTRegister(JWTBase):
     """
     Creates a new user and returns a JSON Web Token that can subsequently
     be used to authenticate the new user in HTTP requests.
+
+    **Tags: auth
 
     **Example
 
@@ -211,7 +215,12 @@ JwcBUUMECj8AKxsHtRHUSypco"
 
 class JWTLogout(JWTBase):
     """
-    XXX Removes all cookies associated with the session.
+    Removes all cookies associated with the session.
+
+    This API endpoint is only useful when the user is using Cookie-based
+    authentication. Tokens expire; they cannot be revoked.
+
+    **Tags: auth
 
     **Example
 

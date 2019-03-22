@@ -44,6 +44,8 @@ class JWTVerify(JWTBase):
     The authenticated user and the user associated to the token should be
     identical.
 
+    **Tags: auth
+
     **Example
 
     .. code-block:: http
@@ -95,6 +97,8 @@ class JWTRefresh(JWTVerify):
 
     The authenticated user and the user associated to the token should be
     identical.
+
+    **Tags: auth
 
     **Example
 

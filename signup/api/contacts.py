@@ -78,6 +78,8 @@ class ActivityListAPIView(ContactMixin, ListCreateAPIView):
     """
     Lists activities for a contact.
 
+    **Tags: profile
+
     **Example
 
     .. code-block:: http
@@ -121,6 +123,8 @@ class ActivityListAPIView(ContactMixin, ListCreateAPIView):
         """
         Records new activity with a contact.
 
+        **Tags: profile
+
         **Examples
 
         .. code-block:: http
@@ -140,6 +144,8 @@ class ActivityListAPIView(ContactMixin, ListCreateAPIView):
 class ContactDetailAPIView(ContactMixin, RetrieveUpdateDestroyAPIView):
     """
     Retrieves a single profile.
+
+    **Tags: profile
 
     **Examples
 
@@ -187,6 +193,8 @@ class ContactDetailAPIView(ContactMixin, RetrieveUpdateDestroyAPIView):
         """
         Updates a profile.
 
+        **Tags: profile
+
         **Examples
 
         .. code-block:: http
@@ -212,6 +220,8 @@ class ContactDetailAPIView(ContactMixin, RetrieveUpdateDestroyAPIView):
     def delete(self, request, *args, **kwargs):
         """
         Deletes a profile.
+
+        **Tags: profile
 
         **Examples
 
@@ -285,7 +295,9 @@ class ContactListAPIView(ListCreateAPIView):
     """
     Lists and searches profiles.
 
-    **Examples
+    **Tags: profile
+
+    **Example
 
     .. code-block:: http
 
@@ -327,6 +339,8 @@ class ContactListAPIView(ListCreateAPIView):
     def post(self, request, *args, **kwargs):
         """
         Creates a new profile.
+
+        **Tags: profile
 
         **Examples
 

@@ -46,6 +46,8 @@ class ResetAPIKeysAPIView(UserMixin, CreateAPIView):
     Reset the secret API key with which a user can authenticate
     with the service.
 
+    **Tags: auth
+
     **Example
 
     .. code-block:: http
@@ -94,6 +96,8 @@ class ResetAPIKeysAPIView(UserMixin, CreateAPIView):
 class PublicKeyAPIView(UserMixin, GenericAPIView):
     """
     Update public key for a User
+
+    **Tags: auth
 
     **Example
 
