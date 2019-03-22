@@ -386,7 +386,13 @@ class ContactListAPIView(ListCreateAPIView):
         contacts_iterator = iter(contacts_page)
         try:
             contact = next(contacts_iterator)
+        except StopIteration:
+            pass
+        try:
             user = self.as_contact(next(users_iterator))
+        except StopIteration:
+            pass
+        try:
             while contact and user:
                 if order_func(contact, user):
                     page += [contact]
