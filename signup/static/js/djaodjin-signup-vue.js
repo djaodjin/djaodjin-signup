@@ -102,6 +102,17 @@ var app = new Vue({
         password: '',
     },
     methods: {
+        activate: function() {
+            $.ajax({
+                method: 'POST',
+                url: djaodjinSettings.urls.user.api_activate,
+            }).done(function(resp) {
+                showMessages(["Activation e-mail successfuly sent to "
+                    + resp.email], "info");
+            }).fail(function(resp){
+                showErrorMessages(resp);
+            });
+        },
         get: function(){
             var vm = this;
             $.ajax({

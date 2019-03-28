@@ -1,4 +1,4 @@
-# Copyright (c) 2018, Djaodjin Inc.
+# Copyright (c) 2019, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,6 +22,7 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+from django.http import Http404
 from django.utils import six
 from rest_framework.generics import get_object_or_404
 
@@ -66,6 +67,18 @@ class ContactMixin(UrlsMixin):
         return Contact(slug=user.username, email=user.email,
             full_name=user.get_full_name(), nick_name=user.first_name,
             created_at=user.date_joined, user=user)
+
+    def get_object(self):
+        try:
+            obj = super(ContactMixin, self).get_object()
+        except Http404:
+            # We might still have a `User` model that matches.
+            lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
+            filter_kwargs = {'username': self.kwargs[lookup_url_kwarg]}
+            user = get_object_or_404(User.objects.filter(is_active=True),
+                **filter_kwargs)
+            obj = self.as_contact(user)
+        return obj
 
 
 class UserMixin(UrlsMixin):

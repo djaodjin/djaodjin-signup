@@ -27,13 +27,56 @@ import logging
 from django.core.exceptions import PermissionDenied
 from django.contrib.auth import update_session_auth_hash
 from django.utils.translation import ugettext_lazy as _
-from rest_framework.generics import UpdateAPIView
+from rest_framework.generics import GenericAPIView, UpdateAPIView
+from rest_framework.response import Response
 
 from ..compat import User
-from ..serializers import (PasswordChangeSerializer, NotificationsSerializer)
+from ..decorators import check_user_active
+from ..docs import OpenAPIResponse, swagger_auto_schema
+from ..mixins import ContactMixin
+from ..models import Contact
+from ..serializers import (ContactSerializer, PasswordChangeSerializer,
+    NotificationsSerializer, ValidationErrorSerializer)
 
 
 LOGGER = logging.getLogger(__name__)
+
+
+class UserActivateAPIView(ContactMixin, GenericAPIView):
+    """
+    Re-send an activation e-mail if the user is not already activated.
+
+    **Tags: auth
+
+    **Example
+
+    .. code-block:: http
+
+        POST /api/users/donny/activate/ HTTP/1.1
+
+    responds
+
+    .. code-block:: json
+
+        {
+            "slug": "xia",
+            "email": "xia@locahost.localdomain",
+            "full_name": "Xia Lee",
+            "nick_name": "Xia",
+            "created_at": "2018-01-01T00:00:00Z",
+        }
+    """
+    serializer_class = ContactSerializer
+    queryset = Contact.objects.all().select_related('user')
+
+    @swagger_auto_schema(responses={
+        400: OpenAPIResponse("parameters error", ValidationErrorSerializer)})
+    def post(self, request, *args, **kwargs):#pylint:disable=unused-argument
+        instance = self.get_object()
+        if check_user_active(request, instance.user):
+            raise ValidationError({'detail': _("User is already active")})
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
 
 
 class PasswordChangeAPIView(UpdateAPIView):

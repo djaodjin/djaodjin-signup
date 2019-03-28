@@ -47,7 +47,7 @@ from ..forms import (PasswordChangeForm, PublicKeyForm, UserForm,
     UserNotificationsForm)
 from ..mixins import UserMixin
 from ..models import Contact, Notification
-from ..utils import update_db_row
+from ..utils import has_invalid_password, update_db_row
 
 
 LOGGER = logging.getLogger(__name__)
@@ -92,6 +92,11 @@ class UserProfileView(UserMixin, UpdateView):
                 'password_change': reverse(
                     'password_change', args=(self.object,)),
             }})
+            if has_invalid_password(self.object):
+                self.update_context_urls(context, {'user': {
+                    'api_activate': reverse(
+                        'api_user_activate', args=(self.object,)),
+                }})
         return context
 
     def get_success_url(self):

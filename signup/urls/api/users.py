@@ -26,13 +26,16 @@ from django.conf.urls import url
 
 from ...settings import USERNAME_PAT
 from ...api.contacts import (ContactDetailAPIView, ContactListAPIView)
-from ...api.users import (PasswordChangeAPIView, UserNotificationsAPIView)
+from ...api.users import (UserActivateAPIView, PasswordChangeAPIView,
+    UserNotificationsAPIView)
 
 urlpatterns = [
     url(r'^users/(?P<user>%s)/notifications/' % USERNAME_PAT,
         UserNotificationsAPIView.as_view(), name='api_user_notifications'),
     url(r'^users/(?P<user>%s)/password/' % USERNAME_PAT,
         PasswordChangeAPIView.as_view(), name='api_user_password_change'),
+    url(r'^users/(?P<user>%s)/activate/' % USERNAME_PAT,
+        UserActivateAPIView.as_view(), name='api_user_activate'),
     url(r'^users/(?P<user>%s)/' % USERNAME_PAT,
         ContactDetailAPIView.as_view(), name='api_user_profile'),
     url(r'^users/?', ContactListAPIView.as_view(), name='saas_api_user_list'),
