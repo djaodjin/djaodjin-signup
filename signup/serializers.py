@@ -74,13 +74,14 @@ class APIKeysSerializer(NoModelSerializer):
 class ContactSerializer(serializers.ModelSerializer):
 
     activities = ActivitySerializer(many=True, read_only=True)
-    credentials = serializers.SerializerMethodField(read_only=True)
+    credentials = serializers.SerializerMethodField(read_only=True,
+        help_text=_("True if the user has valid login credentials"))
 
     class Meta:
         #pylint:disable=old-style-class,no-init
         model = Contact
-        fields = ('slug', 'email', 'full_name', 'nick_name', 'created_at',
-            'credentials', 'picture', 'printable_name', 'extra', 'activities')
+        fields = ('slug', 'created_at', 'full_name', 'email', 'nick_name',
+            'credentials', 'printable_name', 'picture', 'extra', 'activities')
         read_only_fields = ('slug', 'created_at', 'credentials', 'activities')
 
     @staticmethod

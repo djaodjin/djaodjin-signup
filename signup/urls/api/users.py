@@ -1,4 +1,4 @@
-# Copyright (c) 2018, Djaodjin Inc.
+# Copyright (c) 2019, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -25,9 +25,8 @@
 from django.conf.urls import url
 
 from ...settings import USERNAME_PAT
-from ...api.contacts import (ContactDetailAPIView, ContactListAPIView)
 from ...api.users import (UserActivateAPIView, PasswordChangeAPIView,
-    UserNotificationsAPIView)
+    UserDetailAPIView, UserListAPIView, UserNotificationsAPIView)
 
 urlpatterns = [
     url(r'^users/(?P<user>%s)/notifications/' % USERNAME_PAT,
@@ -37,6 +36,6 @@ urlpatterns = [
     url(r'^users/(?P<user>%s)/activate/' % USERNAME_PAT,
         UserActivateAPIView.as_view(), name='api_user_activate'),
     url(r'^users/(?P<user>%s)/' % USERNAME_PAT,
-        ContactDetailAPIView.as_view(), name='api_user_profile'),
-    url(r'^users/?', ContactListAPIView.as_view(), name='saas_api_user_list'),
+        UserDetailAPIView.as_view(), name='api_user_profile'),
+    url(r'^users/?', UserListAPIView.as_view(), name='saas_api_user_list'),
 ]
