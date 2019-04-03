@@ -37,5 +37,5 @@ urlpatterns = [
         UserActivateAPIView.as_view(), name='api_user_activate'),
     url(r'^users/(?P<user>%s)/' % USERNAME_PAT,
         UserDetailAPIView.as_view(), name='api_user_profile'),
-    url(r'^users/?', UserListAPIView.as_view(), name='saas_api_user_list'),
+    url(r'^users/?', UserListAPIView.as_view(), name='saas_api_users'),
 ]
