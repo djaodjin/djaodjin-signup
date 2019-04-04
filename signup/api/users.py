@@ -370,7 +370,7 @@ class UserListAPIView(ListCreateAPIView):
             self.paginator.count += contacts_count
 
         order_func = get_order_func(filters.OrderingFilter().get_ordering(
-            self.request, users_queryset, self))
+            self.request, contacts_queryset, self))
 
         # XXX merge `users_page` into page.
         page = []
