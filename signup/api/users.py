@@ -233,21 +233,21 @@ class UserDetailAPIView(ContactMixin, RetrieveUpdateDestroyAPIView):
 
     def perform_update(self, serializer):
         with transaction.atomic():
-            # There will always be a `User` attached to `serializer.instance`
-            # because `get_object` make sure of it.
             user = serializer.instance.user
-            if serializer.validated_data.get('email'):
-                user.email = serializer.validated_data.get('email')
-            if serializer.validated_data.get('slug'):
-                user.username = serializer.validated_data.get('slug')
-            if serializer.validated_data.get('full_name'):
-                #pylint:disable=unused-variable
-                first_name, mid_name, last_name = full_name_natural_split(
-                    serializer.validated_data.get('full_name'))
-                user.first_name = first_name
-                user.last_name = last_name
             try:
-                user.save()
+                if user:
+                    if serializer.validated_data.get('email'):
+                        user.email = serializer.validated_data.get('email')
+                    if serializer.validated_data.get('slug'):
+                        user.username = serializer.validated_data.get('slug')
+                    if serializer.validated_data.get('full_name'):
+                        #pylint:disable=unused-variable
+                        first_name, mid_name, last_name = \
+                            full_name_natural_split(
+                                serializer.validated_data.get('full_name'))
+                        user.first_name = first_name
+                        user.last_name = last_name
+                    user.save()
                 serializer.save()
             except IntegrityError as err:
                 handle_uniq_error(err)
