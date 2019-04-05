@@ -99,24 +99,19 @@ class AuthTemplateResponseMixin(TemplateResponseMixin):
         # URLs for user
         user_urls = {}
         if not is_authenticated(self.request):
-            user_urls = {
+            disabled_registration = get_disabled_registration(self.request)
+            self.update_context_urls(context, {'user': {
                'login': reverse('login'),
                'password_reset': reverse('password_reset'),
-               'register': reverse('registration_register'),
-            }
-        if 'urls' in context:
-            if 'user' in context['urls']:
-                context['urls']['user'].update(user_urls)
-            else:
-                context['urls'].update({'user': user_urls})
-        else:
-            context.update({'urls': {'user': user_urls}})
+               'register': (reverse('registration_register')
+                    if not disabled_registration else None),
+            }})
         return context
 
     def dispatch(self, request, *args, **kwargs):
         if request.method.lower() in self.http_method_names:
             if get_disabled_authentication(request):
-                context = {}
+                context = {'disabled_authentication': True}
                 response_kwargs = {}
                 response_kwargs.setdefault('content_type', self.content_type)
                 return TemplateResponse(
@@ -248,11 +243,11 @@ class SignupBaseView(RedirectFormMixin, ProcessFormView):
     def dispatch(self, request, *args, **kwargs):
         if request.method.lower() in self.http_method_names:
             if get_disabled_registration(request):
-                context = {}
+                context = {'disabled_registration': True}
                 response_kwargs = {}
                 response_kwargs.setdefault('content_type', self.content_type)
                 return TemplateResponse(request=request,
-                    template='accounts/disabled_registration.html',
+                    template='accounts/disabled.html',
                     context=context, **response_kwargs)
         return super(SignupBaseView, self).dispatch(request, *args, **kwargs)
 

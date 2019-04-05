@@ -112,7 +112,7 @@ class UserNotificationsView(UserMixin, UpdateView):
     form_class = UserNotificationsForm
     slug_field = 'username'
     slug_url_kwarg = 'user'
-    template_name = 'users/user_notifications.html'
+    template_name = 'users/notifications.html'
 
     @staticmethod
     def get_notifications():
