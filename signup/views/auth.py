@@ -52,6 +52,7 @@ from ..decorators import check_user_active
 from ..forms import (ActivationForm, MFACodeForm, NameEmailForm,
     PasswordResetForm, PasswordResetConfirmForm)
 from ..helpers import full_name_natural_split
+from ..mixins import UrlsMixin
 from ..models import Contact
 from ..utils import (fill_form_errors, get_disabled_authentication,
     get_disabled_registration)
@@ -87,7 +88,7 @@ class RedirectFormMixin(FormMixin):
         return context
 
 
-class AuthTemplateResponseMixin(TemplateResponseMixin):
+class AuthTemplateResponseMixin(UrlsMixin, TemplateResponseMixin):
     """
     Returns a *disabled* page regardless when get_disabled_authentication
     is True.
