@@ -56,7 +56,7 @@ function _showErrorMessages(resp) {
         var data = resp.data || resp.responseJSON;
         if( data && typeof data === "object" ) {
             if( data.detail ) {
-                messages = [gettext("Error: ") + data.detail];
+                messages = [gettext("Error:") + " " + data.detail];
             } else if( $.isArray(data) ) {
                 for( var idx = 0; idx < data.length; ++idx ) {
                     messages = messages.concat(_showErrorMessages(data[idx]));
@@ -87,7 +87,7 @@ function _showErrorMessages(resp) {
                 }
             }
         } else if( resp.detail ) {
-            messages = [gettext("Error: ") + resp.detail];
+            messages = [gettext("Error:") + " " + resp.detail];
         }
     }
     return messages;
