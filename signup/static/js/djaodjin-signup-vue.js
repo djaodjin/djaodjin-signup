@@ -96,7 +96,7 @@ var app = new Vue({
         fullName: '',
         userModalOpen: false,
         apiModalOpen: false,
-        apiKey: "Generating ...",
+        apiKey: gettext("Generating ..."),
         picture: null,
         contact: {},
         password: '',
@@ -107,7 +107,7 @@ var app = new Vue({
                 method: 'POST',
                 url: djaodjinSettings.urls.user.api_activate,
             }).done(function(resp) {
-                showMessages(["Activation e-mail successfuly sent to "
+                showMessages([gettext("Activation e-mail successfuly sent to") + ' ' +
                     + resp.email], "info");
             }).fail(function(resp){
                 showErrorMessages(resp);
@@ -135,7 +135,7 @@ var app = new Vue({
                     full_name: vm.fullName,
                 },
             }).done(function(res) {
-                showMessages(["Profile updated."], "info"); // XXX should really be success but then it needs to be changed in Django views as well.
+                showMessages([gettext("Profile updated.")], "info"); // XXX should really be success but then it needs to be changed in Django views as well.
             }).fail(function(resp){
                 showErrorMessages(resp);
             });
@@ -309,7 +309,7 @@ var app = new Vue({
         updatePassword: function(){
             var vm = this;
             if(vm.newPassword != vm.newPassword2){
-                alert("the passwords don't match");
+                alert(gettext("the passwords don't match"));
                 return;
             }
             $.ajax({
@@ -320,7 +320,7 @@ var app = new Vue({
                     new_password: vm.newPassword
                 },
             }).done(function(res){
-                showMessages(["Password was updated."], "success");
+                showMessages([gettext("Password was updated.")], "success");
             }).fail(function(resp){
                 showErrorMessages(resp);
             });
@@ -347,7 +347,7 @@ var app = new Vue({
                     password: vm.password,
                 },
             }).done(function(res){
-                showMessages(["Public key was updated."], "success");
+                showMessages([gettext("Public key was updated.")], "success");
             }).fail(function(res){
                 showErrorMessages(res);
             });
