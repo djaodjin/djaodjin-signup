@@ -47,7 +47,7 @@ urlpatterns = [
         decorators=['django.contrib.auth.decorators.login_required']),
     url(r'^api/',
         include('signup.urls.api.auth')),
-    url(r'jsi18n/$', JavaScriptCatalog.as_view(), name='javascript-catalog'),
+    url(r'^jsi18n/$', JavaScriptCatalog.as_view(), name='javascript-catalog'),
     url(r'^contacts/',
         include('signup.urls.contacts'),
         decorators=['django.contrib.auth.decorators.login_required']),
