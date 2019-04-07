@@ -23,6 +23,7 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from django.views.generic.base import RedirectView, TemplateView
+from django.views.i18n import JavaScriptCatalog
 from signup.compat import reverse_lazy
 from signup.forms import NameEmailForm
 from signup.views.auth import SignupView
@@ -46,6 +47,7 @@ urlpatterns = [
         decorators=['django.contrib.auth.decorators.login_required']),
     url(r'^api/',
         include('signup.urls.api.auth')),
+    url(r'jsi18n/$', JavaScriptCatalog.as_view(), name='javascript-catalog'),
     url(r'^contacts/',
         include('signup.urls.contacts'),
         decorators=['django.contrib.auth.decorators.login_required']),

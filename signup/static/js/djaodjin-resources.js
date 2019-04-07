@@ -98,11 +98,11 @@ function showErrorMessages(resp) {
     if( resp.status >= 500 && resp.status < 600 ) {
         messages = [interpolate(gettext("Error %s: %s" +
             + ". We have been notified and have started on fixing"
-            + " the error. We apologize for the inconvinience."), resp.status, resp.statusText)];
+            + " the error. We apologize for the inconvinience."), [resp.status, resp.statusText])];
     } else {
         var messages = _showErrorMessages(resp);
         if( messages.length === 0 ) {
-            messages = ["Error " + resp.status + ": " + resp.statusText];
+            messages = [gettext("Error") + " " + resp.status + ": " + resp.statusText];
         }
     }
     showMessages(messages, "error");
