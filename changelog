@@ -1,3 +1,17 @@
+0.3.0
+
+  * renames users/*.html templates to match naming conventions
+  * adds i18n in Javascript
+  * removes deprecated url /users/{user}/activate/
+
+0.2.9
+
+  * adds /api/users/{user}/activate/ API to send activation e-mail
+  * fixes in /api/users to return Contact and User models.
+  * merges disabled templates
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Fri,   5 Apr 2019 12:50:16 -0700
+
 0.2.6
 
   * Asks for `request.user` password before updating a user credentials.

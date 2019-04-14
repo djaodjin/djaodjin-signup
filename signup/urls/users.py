@@ -1,4 +1,4 @@
-# Copyright (c) 2018, Djaodjin Inc.
+# Copyright (c) 2019, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -25,14 +25,11 @@
 from django.conf.urls import url
 
 from ..settings import USERNAME_PAT
-from ..views.users import (PasswordChangeView, SendActivationView,
-    UserPublicKeyUpdateView, UserProfileView, UserNotificationsView,
-    redirect_to_user_profile)
+from ..views.users import (PasswordChangeView, UserPublicKeyUpdateView,
+    UserProfileView, UserNotificationsView, redirect_to_user_profile)
 
 urlpatterns = [
     # These three URLs must be protected.
-    url(r'^(?P<user>%s)/activate/' % USERNAME_PAT,
-        SendActivationView.as_view(), name='users_activate'),
     url(r'^(?P<user>%s)/password/' % USERNAME_PAT,
         PasswordChangeView.as_view(), name='password_change'),
     url(r'^(?P<user>%s)/pubkey/' % USERNAME_PAT,

@@ -15,7 +15,7 @@ Tested with
 
 - **Python:** 2.7, **Django:** 1.11 ([LTS](https://www.djangoproject.com/download/)), **Django Rest Framework:** 3.8.2
 - **Python:** 3.6, **Django:** 1.11 ([LTS](https://www.djangoproject.com/download/)), **Django Rest Framework:** 3.8.2
-- **Python:** 3.6, **Django:** 2.1 (latest),       **Django Rest Framework:** 3.8.2
+- **Python:** 3.6, **Django:** 2.2 (latest),       **Django Rest Framework:** 3.8.2
 
 This project contains bare bone templates which are compatible with Django
 and Jinja2 template engines. To see djaodjin-signup in action as part
