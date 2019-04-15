@@ -63,8 +63,8 @@ class APIKeysSerializer(NoModelSerializer):
     secret = serializers.CharField(max_length=128, read_only=True,
         help_text=_("Secret API Key used to authenticate user on every HTTP"\
         " request"))
-    password = serializers.CharField(max_length=128, required=False,
-        help_text=_("Your password"))
+    password = serializers.CharField(max_length=128,
+        help_text=_("Password of the user making the HTTP request"))
 
     class Meta:
         #pylint:disable=old-style-class,no-init
@@ -112,20 +112,23 @@ class CredentialsSerializer(NoModelSerializer):
         style={'input_type': 'password'},
         help_text=_("Secret password for the account"))
     code = serializers.IntegerField(required=False, write_only=True,
-        style={'input_type': 'password'}, help_text=_("One-time code"))
-
+        style={'input_type': 'password'},
+        help_text=_("One-time code. This field will be checked against"\
+            " an expected code when multi-factor authentication (MFA)"\
+            " is enabled."))
 
 class CreateUserSerializer(serializers.ModelSerializer):
     #pylint: disable=no-init,old-style-class
 
-    username = serializers.CharField(required=False)
+    username = serializers.CharField(required=False,
+        help_text=_("Username to identify the account"))
     password = serializers.CharField(required=False, write_only=True,
         style={'input_type': 'password'}, help_text=_("Password with which"\
             " a user can authenticate with the service"))
     email = serializers.EmailField(
         help_text=_("Primary e-mail to contact user"))
     full_name = serializers.CharField(
-        help_text=_("Full name"))
+        help_text=_("Full name - typically first name and last name"))
 
     class Meta:
         model = User
@@ -134,10 +137,12 @@ class CreateUserSerializer(serializers.ModelSerializer):
 
 class PasswordChangeSerializer(NoModelSerializer):
 
-    password = serializers.CharField(required=True, write_only=True,
-        style={'input_type': 'password'})
-    new_password = serializers.CharField(required=False, write_only=True,
-        style={'input_type': 'password'})
+    password = serializers.CharField(write_only=True,
+        style={'input_type': 'password'},
+        help_text=_("Password of the user making the HTTP request"))
+    new_password = serializers.CharField(write_only=True,
+        style={'input_type': 'password'},
+        help_text=_("New password for the user referenced in the URL"))
 
 
 class TokenSerializer(NoModelSerializer):
@@ -157,9 +162,13 @@ class ValidationErrorSerializer(NoModelSerializer):
 
 
 class PublicKeySerializer(NoModelSerializer):
-    pubkey = serializers.CharField(max_length=None, help_text=_("Public key"))
-    password = serializers.CharField(required=False, max_length=500,
-        help_text=_("Password"))
+
+    password = serializers.CharField(write_only=True,
+        style={'input_type': 'password'},
+        help_text=_("Password of the user making the HTTP request"))
+    pubkey = serializers.CharField(write_only=True, max_length=500,
+        style={'input_type': 'password'},
+        help_text=_("New public key for the user referenced in the URL"))
 
 
 class UserSerializer(serializers.ModelSerializer):

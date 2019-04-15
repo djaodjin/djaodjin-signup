@@ -81,6 +81,9 @@ class UserActivateAPIView(ContactMixin, GenericAPIView):
     """
     Re-send an activation e-mail if the user is not already activated.
 
+    The template for the e-mail sent to the user can be found in
+    notification/verification.eml.
+
     **Tags: auth
 
     **Example
