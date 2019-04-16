@@ -97,10 +97,6 @@ var modalMixin = {
     methods: {
         modalShow: function() {
             var vm = this;
-            if(vm.newPassword != vm.newPassword2){
-                alert("the passwords don't match");
-                return;
-            }
             vm.password = '';
             vm.passwordIncorrect = false;
             if(vm.dialog){
@@ -377,6 +373,9 @@ var app = new Vue({
                 showMessages([gettext("Password was updated.")], "success");
             }).fail(vm.failCb);
         },
+        submitPassword: function(){
+            this.updatePassword();
+        },
     },
 })
 }
@@ -403,6 +402,9 @@ var app = new Vue({
                 this.modalHide();
                 showMessages([gettext("Public key was updated.")], "success");
             }).fail(vm.failCb);
+        },
+        submitPassword: function(){
+            this.updatePubkey();
         },
     },
 })
