@@ -64,7 +64,7 @@ class UserProfileView(UserMixin, UpdateView):
     form_class = UserForm
     slug_field = 'username'
     slug_url_kwarg = 'user'
-    template_name = 'users/user_form.html'
+    template_name = 'users/index.html'
 
     def form_valid(self, form):
         form.save(commit=False)
@@ -159,7 +159,7 @@ class PasswordChangeView(UserProfileView):
     """
 
     form_class = PasswordChangeForm
-    template_name = 'users/password_change_form.html'
+    template_name = 'users/password.html'
 
     @method_decorator(csrf_protect)
     def dispatch(self, request, *args, **kwargs):
@@ -187,35 +187,12 @@ class PasswordChangeView(UserProfileView):
         return reverse('users_profile', args=(self.object,))
 
 
-class SendActivationView(BaseDetailView):
-    """Send an account activation code to the user."""
-
-    model = User
-    slug_field = 'username'
-    slug_url_kwarg = 'user'
-
-    def get(self, request, *args, **kwargs):
-        user = self.get_object()
-        unverified_email = Contact.objects.unverified_for_user(
-            self.get_object()).first()
-        if unverified_email is not None:
-            send_verification_email(unverified_email, request)
-            messages.info(self.request, _("Please follow the instructions"\
-                " in the email that has just been sent to you to verify"\
-                " the e-mail address."))
-        else:
-            messages.info(self.request,
-                _("This email address has already been verified."))
-        return HttpResponseRedirect(
-            reverse('users_profile', args=(user,)))
-
-
 class UserPublicKeyUpdateView(UserProfileView):
     """
     Update password for a User
     """
     form_class = PublicKeyForm
-    template_name = 'users/pubkey_change_form.html'
+    template_name = 'users/pubkey.html'
 
     def form_valid(self, form):
         """

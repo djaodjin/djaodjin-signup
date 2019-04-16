@@ -327,13 +327,13 @@
         blackList: ["password", "1234", "123456", "12345", "12345678",
             "qwerty", "baseball", "football"],
         infoText: {
-            blacklist: "Too common",
+            blacklist: gettext("Too common"),
             none: "",
-            level0: "Very weak",
-            level1: "Weak",
-            level2: "Good",
-            level3: "Strong",
-            level4: "Very strong"
+            level0: gettext("Very weak"),
+            level1: gettext("Weak"),
+            level2: gettext("Good"),
+            level3: gettext("Strong"),
+            level4: gettext("Very strong")
         }
     };
 
@@ -396,8 +396,8 @@
             unmatch: "text-danger"
         },
         checkConfirmationText: {
-            match: "Password confirmed.",
-            unmatch: "Password and confirmation do not match."
+            match: gettext("Password confirmed."),
+            unmatch: gettext("Password and confirmation do not match.")
         },
         checkConfirmationTemplate: "<div class=\"password-match\"></div>"
     };
