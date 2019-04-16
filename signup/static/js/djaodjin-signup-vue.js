@@ -87,7 +87,7 @@ var paginationMixin = {
     }
 }
 
-var modalMixin = {
+var userPasswordModalMixin = {
     data: {
         password: '',
         // not the best solution, but no choice if we want
@@ -342,7 +342,7 @@ var app = new Vue({
 if($('#update-password-container').length > 0){
 var app = new Vue({
     el: "#update-password-container",
-    mixins: [modalMixin],
+    mixins: [userPasswordModalMixin],
     data: {
         modalSelector: '.user-password-modal',
         newPassword: '',
@@ -383,7 +383,7 @@ var app = new Vue({
 if($('#update-pubkey-container').length > 0){
 var app = new Vue({
     el: "#update-pubkey-container",
-    mixins: [modalMixin],
+    mixins: [userPasswordModalMixin],
     data: {
         modalSelector: '.user-password-modal',
         pubkey: '',
