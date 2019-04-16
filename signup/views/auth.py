@@ -98,15 +98,13 @@ class AuthTemplateResponseMixin(UrlsMixin, TemplateResponseMixin):
         context = super(AuthTemplateResponseMixin, self).get_context_data(
             **kwargs)
         # URLs for user
-        user_urls = {}
-        if not is_authenticated(self.request):
-            disabled_registration = get_disabled_registration(self.request)
-            self.update_context_urls(context, {'user': {
-               'login': reverse('login'),
-               'password_reset': reverse('password_reset'),
-               'register': (reverse('registration_register')
-                    if not disabled_registration else None),
-            }})
+        disabled_registration = get_disabled_registration(self.request)
+        self.update_context_urls(context, {'user': {
+           'login': reverse('login'),
+           'password_reset': reverse('password_reset'),
+           'register': (reverse('registration_register')
+                if not disabled_registration else None),
+        }})
         return context
 
     def dispatch(self, request, *args, **kwargs):
