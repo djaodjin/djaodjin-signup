@@ -87,6 +87,48 @@ var paginationMixin = {
     }
 }
 
+var userPasswordModalMixin = {
+    data: {
+        password: '',
+        // not the best solution, but no choice if we want
+        // to show the error inside a modal
+        passwordIncorrect: false
+    },
+    methods: {
+        modalShow: function() {
+            var vm = this;
+            vm.password = '';
+            vm.passwordIncorrect = false;
+            if(vm.dialog){
+                vm.dialog.modal("show");
+            }
+        },
+        modalHide: function(){
+            if(this.dialog){
+                this.dialog.modal("hide");
+            }
+        },
+        failCb: function(res){
+            var vm = this;
+            if(res.status === 403){
+                // incorrect password
+                vm.passwordIncorrect = true;
+            } else {
+                vm.modalHide();
+                showErrorMessages(res);
+            }
+        },
+    },
+    computed: {
+        dialog: function(){
+            var dialog = $(this.modalSelector);
+            if(dialog && jQuery().modal){
+                return dialog;
+            }
+        },
+    },
+}
+
 if($('#user-profile-container').length > 0){
 var app = new Vue({
     el: "#user-profile-container",
@@ -300,18 +342,23 @@ var app = new Vue({
 if($('#update-password-container').length > 0){
 var app = new Vue({
     el: "#update-password-container",
+    mixins: [userPasswordModalMixin],
     data: {
-        password: '',
+        modalSelector: '.user-password-modal',
         newPassword: '',
         newPassword2: '',
     },
     methods: {
-        updatePassword: function(){
+        modalShowAndValidate: function() {
             var vm = this;
             if(vm.newPassword != vm.newPassword2){
-                alert(gettext("the passwords don't match"));
+                showMessages([gettext("The passwords don't match.")], "danger");
                 return;
             }
+            vm.modalShow();
+        },
+        updatePassword: function(){
+            var vm = this;
             $.ajax({
                 method: 'PUT',
                 url: djaodjinSettings.urls.user.api_password_change,
@@ -320,21 +367,26 @@ var app = new Vue({
                     new_password: vm.newPassword
                 },
             }).done(function(res){
+                vm.modalHide();
+                vm.newPassword = '';
+                vm.newPassword2 = '';
                 showMessages([gettext("Password was updated.")], "success");
-            }).fail(function(resp){
-                showErrorMessages(resp);
-            });
+            }).fail(vm.failCb);
         },
-    }
+        submitPassword: function(){
+            this.updatePassword();
+        },
+    },
 })
 }
 
 if($('#update-pubkey-container').length > 0){
 var app = new Vue({
     el: "#update-pubkey-container",
+    mixins: [userPasswordModalMixin],
     data: {
+        modalSelector: '.user-password-modal',
         pubkey: '',
-        password: '',
     },
     methods: {
         updatePubkey: function(){
@@ -347,11 +399,13 @@ var app = new Vue({
                     password: vm.password,
                 },
             }).done(function(res){
+                this.modalHide();
                 showMessages([gettext("Public key was updated.")], "success");
-            }).fail(function(res){
-                showErrorMessages(res);
-            });
+            }).fail(vm.failCb);
         },
-    }
+        submitPassword: function(){
+            this.updatePubkey();
+        },
+    },
 })
 }
