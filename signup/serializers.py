@@ -30,8 +30,6 @@ from rest_framework import serializers
 from .models import Activity, Contact, Notification
 from .utils import get_account_model, has_invalid_password
 
-User = get_user_model()
-
 
 class NoModelSerializer(serializers.Serializer):
 
@@ -65,7 +63,7 @@ class APIKeysSerializer(NoModelSerializer):
     secret = serializers.CharField(max_length=128, read_only=True,
         help_text=_("Secret API Key used to authenticate user on every HTTP"\
         " request"))
-    password = serializers.CharField(max_length=128,
+    password = serializers.CharField(max_length=128, write_only=True,
         help_text=_("Password of the user making the HTTP request"))
 
     class Meta:
@@ -98,7 +96,7 @@ class NotificationsSerializer(serializers.ModelSerializer):
 
     class Meta:
         #pylint:disable=old-style-class,no-init
-        model = User
+        model = get_user_model()
         fields = ('notifications',)
 
 
@@ -133,7 +131,7 @@ class CreateUserSerializer(serializers.ModelSerializer):
         help_text=_("Full name - typically first name and last name"))
 
     class Meta:
-        model = User
+        model = get_user_model()
         fields = ('username', 'password', 'email', 'full_name')
 
 
@@ -187,7 +185,7 @@ class UserSerializer(serializers.ModelSerializer):
         help_text=_("Full name"))
 
     class Meta:
-        model = User
+        model = get_user_model()
         fields = ('username', 'email', 'full_name')
 
     def get_full_name(self, obj):#pylint:disable=no-self-use

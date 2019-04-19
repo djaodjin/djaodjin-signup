@@ -433,6 +433,6 @@ class Credentials(models.Model):
 
 
 # Hack to install our create_user method.
-User = get_user_model()
+User = get_user_model() #pylint:disable=invalid-name
 User.objects = ActivatedUserManager()
 User.objects.model = User

@@ -37,22 +37,18 @@ from django.utils import six
 from django.utils.decorators import method_decorator
 from django.utils.translation import ugettext_lazy as _
 from django.views.decorators.csrf import csrf_protect
-from django.views.generic.detail import BaseDetailView
 from django.views.generic.edit import UpdateView
 
 from .. import settings
 from ..compat import reverse, is_authenticated
-from ..decorators import send_verification_email
 from ..forms import (PasswordChangeForm, PublicKeyForm, UserForm,
     UserNotificationsForm)
 from ..mixins import UserMixin
-from ..models import Contact, Notification
+from ..models import Notification
 from ..utils import has_invalid_password, update_db_row
 
 
 LOGGER = logging.getLogger(__name__)
-
-User = get_user_model()
 
 
 class UserProfileView(UserMixin, UpdateView):
@@ -61,8 +57,7 @@ class UserProfileView(UserMixin, UpdateView):
     profile. If a user is manager for an Organization subscribed to another
     Organization, she can access the product provided by that organization.
     """
-
-    model = User
+    model = get_user_model()
     form_class = UserForm
     slug_field = 'username'
     slug_url_kwarg = 'user'
@@ -110,7 +105,7 @@ class UserNotificationsView(UserMixin, UpdateView):
     """
     A view where a user can configure their notification settings
     """
-    model = User
+    model = get_user_model()
     form_class = UserNotificationsForm
     slug_field = 'username'
     slug_url_kwarg = 'user'

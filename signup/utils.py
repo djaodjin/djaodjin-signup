@@ -42,8 +42,6 @@ from .compat import import_string
 
 LOGGER = logging.getLogger(__name__)
 
-User = get_user_model()
-
 
 def get_accept_list(request):
     http_accept = request.META.get('HTTP_ACCEPT', '*/*')
@@ -188,9 +186,10 @@ def verify_token(token):
         raise serializers.ValidationError(
             _("Missing username in payload"))
     # Make sure user exists
+    user_model = get_user_model()
     try:
-        user = User.objects.get(username=username)
-    except User.DoesNotExist:
+        user = user_model.objects.get(username=username)
+    except user_model.DoesNotExist:
         raise serializers.ValidationError(_("User does not exist."))
     return user
 

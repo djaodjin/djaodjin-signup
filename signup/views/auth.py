@@ -60,8 +60,6 @@ from ..utils import (fill_form_errors, get_disabled_authentication,
 
 LOGGER = logging.getLogger(__name__)
 
-User = get_user_model()
-
 
 def _login(request, user):
     """
@@ -132,12 +130,13 @@ class PasswordResetBaseView(RedirectFormMixin, ProcessFormView):
     """
     Enter email address to reset password.
     """
+    model = get_user_model()
     form_class = PasswordResetForm
     token_generator = default_token_generator
 
     def form_valid(self, form):
         try:
-            user = User.objects.get(
+            user = self.model.objects.get(
                 email__iexact=form.cleaned_data['email'], is_active=True)
             next_url = validate_redirect(self.request)
             if check_user_active(self.request, user, next_url=next_url):
@@ -160,7 +159,7 @@ class PasswordResetBaseView(RedirectFormMixin, ProcessFormView):
 "You should now secure and activate your account following the instructions"\
 " we just emailed you. Thank you."))
             return super(PasswordResetBaseView, self).form_valid(form)
-        except User.DoesNotExist:
+        except self.model.DoesNotExist:
             # We don't want to give a clue about registered users, yet
             # it already possible to do a straight register to get the same.
             messages.error(self.request, _("We cannot find an account"\
@@ -172,6 +171,7 @@ class PasswordResetConfirmBaseView(RedirectFormMixin, ProcessFormView):
     """
     Clicked on the link sent in the reset e-mail.
     """
+    model = get_user_model()
     form_class = PasswordResetConfirmForm
     token_generator = default_token_generator
 
@@ -213,8 +213,8 @@ class PasswordResetConfirmBaseView(RedirectFormMixin, ProcessFormView):
         kwargs = super(PasswordResetConfirmBaseView, self).get_form_kwargs()
         try:
             uid = urlsafe_base64_decode(self.kwargs.get('uidb64')).decode()
-            self.object = User.objects.get(pk=uid)
-        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+            self.object = self.model.objects.get(pk=uid)
+        except (TypeError, ValueError, OverflowError, self.model.DoesNotExist):
             self.object = None
         kwargs.update({'instance': self.object})
         return kwargs
@@ -225,7 +225,7 @@ class SignupBaseView(RedirectFormMixin, ProcessFormView):
     A frictionless registration backend With a full name and email
     address, the user is immediately signed up and logged in.
     """
-
+    model = get_user_model()
     form_class = NameEmailForm
     fail_url = ('registration_register', (), {})
 
@@ -271,7 +271,7 @@ class SignupBaseView(RedirectFormMixin, ProcessFormView):
     def register_user(self, **cleaned_data):
         #pylint: disable=maybe-no-member
         email = cleaned_data['email']
-        users = User.objects.filter(email__iexact=email)
+        users = self.model.objects.filter(email__iexact=email)
         if users.exists():
             user = users.get()
             if check_user_active(self.request, user,
@@ -299,7 +299,7 @@ class SignupBaseView(RedirectFormMixin, ProcessFormView):
         username = cleaned_data.get('username', None)
         password = cleaned_data.get('new_password',
             cleaned_data.get('password', None))
-        user = User.objects.create_user(username,
+        user = self.model.objects.create_user(username,
             email=email, password=password,
             first_name=first_name, last_name=last_name)
         # Bypassing authentication here, we are doing frictionless registration

@@ -35,7 +35,6 @@ from django.utils import six
 from . import settings
 from .models import Contact
 
-User = get_user_model()
 
 #pylint: disable=old-style-class,no-init
 
@@ -120,7 +119,7 @@ class PasswordUpdateForm(PasswordConfirmMixin, forms.ModelForm):
     submit_title = 'Update'
 
     class Meta:
-        model = User
+        model = get_user_model()
         fields = ['new_password', 'new_password2']
 
     def __init__(self, *args, **kwargs):
@@ -148,7 +147,7 @@ class PasswordChangeForm(PasswordUpdateForm):
             attrs={'placeholder': _("Your password")}))
 
     class Meta:
-        model = User
+        model = get_user_model()
         fields = ['password', 'new_password', 'new_password2']
 
 
@@ -227,7 +226,7 @@ class UserForm(forms.ModelForm):
 " digits and -/_ characters. Spaces are not allowed.")})
 
     class Meta:
-        model = User
+        model = get_user_model()
         fields = ['username', 'email', 'first_name', 'last_name']
 
 

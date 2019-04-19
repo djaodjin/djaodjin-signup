@@ -30,8 +30,6 @@ from rest_framework.generics import get_object_or_404
 from .compat import reverse, is_authenticated
 from .models import Contact
 
-User = get_user_model()
-
 
 class UrlsMixin(object):
 
@@ -57,6 +55,7 @@ class ContactMixin(UrlsMixin):
 
     lookup_field = 'slug'
     lookup_url_kwarg = 'user'
+    user_queryset = get_user_model().objects.filter(is_active=True)
 
     @property
     def contact(self):
@@ -78,8 +77,7 @@ class ContactMixin(UrlsMixin):
             # We might still have a `User` model that matches.
             lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
             filter_kwargs = {'username': self.kwargs[lookup_url_kwarg]}
-            user = get_object_or_404(User.objects.filter(is_active=True),
-                **filter_kwargs)
+            user = get_object_or_404(self.user_queryset, **filter_kwargs)
             obj = self.as_contact(user)
         return obj
 
@@ -88,6 +86,7 @@ class UserMixin(UrlsMixin):
 
     user_field = 'username'
     user_url_kwarg = 'user'
+    user_queryset = get_user_model().objects.filter(is_active=True)
 
     @property
     def user(self):
@@ -99,7 +98,7 @@ class UserMixin(UrlsMixin):
                 self._user = self.request.user
             else:
                 kwargs = {self.user_field: slug}
-                self._user = get_object_or_404(User.objects.all(), **kwargs)
+                self._user = get_object_or_404(self.user_queryset, **kwargs)
         return self._user
 
     def get_context_data(self, **kwargs):

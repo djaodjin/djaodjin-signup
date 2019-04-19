@@ -5,20 +5,19 @@
     ng-app="signupApp">
   <h1>User Profile</h1>
   <div ng-controller="userProfileCtrl">
-    <form id="update-user-info" @submit.prevent="updateUser" method="POST">
-       <p><label for="id_username">Username:</label> <input type="text" name="username" v-model="username" placeholder="Username" maxlength="254" required="required" id="id_username"></p>
-       <p><label for="id_email">Email address:</label> <input type="email" name="email" v-model="email" maxlength="254" id="id_email"></p>
-       <p><label for="id_full_name">Full name:</label> <input type="text" name="full_name" v-model="fullName" maxlength="30" id="id_full_name"></p>
+    <form id="update-user-info" @submit.prevent="updateProfile" method="POST">
+      {{form.as_p}}
        <button type="submit">Update</button>
     </form>
     <img :src="contact.picture" v-show="contact.picture && !imageSelected" width="100" height="100">
       <croppa v-model="picture" :width="100" :height="100"></croppa>
       <button @click="uploadImage">Save picture</button>
-    <a id="change-password" href="{% url 'password_change' user %}">Change Password</a>
-    {% if urls.user.api_generate_keys %}
-    <button id="generate-key-open"
-        data-target="#generate-key">Reset API Key</button>
-    {% endif %}
+    <div>
+      <a id="change-password" href="{% url 'password_change' user %}">Change Password</a>
+    </div>
+    <div>
+      <a href="{% url 'users_notifications' user %}">Notifications</a>
+    </div>
     {% if urls.user.api_activate %}
     <div>
       <button id="activate-user" @click="activate">Activate</button>
@@ -27,9 +26,11 @@
       </span>
     </div>
     {% endif %}
-    <a href="{% url 'users_notifications' user %}">Notifications</a>
+    {% if urls.user.api_generate_keys %}
+    <button id="generate-key-open"
+        data-target="#generate-key">Reset API Key</button>
     <div id="generate-key">
-      <form method="POST" ng-click="generateKey($event)"
+      <form method="POST" ng-submit="generateKey($event)"
             @submit.prevent="generateKey">
         <input name="key" maxlength="128" type="text" disabled
                ng-model="api_key"
@@ -38,9 +39,10 @@
                placeholder="Password"
                ng-model="password"
                v-model="password" />
-        <button id="regenerate-key" type="button">Generate</button>
+        <button id="regenerate-key" type="submit">Generate</button>
       </form>
     </div>
+    {% endif %}
   </div><!-- userProfileCtrl -->
 </div><!-- signupApp -->
 {% endblock %}

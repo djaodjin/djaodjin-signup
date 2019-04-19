@@ -47,8 +47,6 @@ from ..utils import verify_token as verify_token_base
 
 LOGGER = logging.getLogger(__name__)
 
-User = get_user_model()
-
 
 class JWTBase(GenericAPIView):
 
@@ -166,12 +164,13 @@ SI6IkpvZSAgQ2FyZDEiLCJleHAiOjE1Mjk2NTUyMjR9.GFxjU5AvcCQbVylF1P\
 JwcBUUMECj8AKxsHtRHUSypco"
         }
     """
+    model = get_user_model()
     serializer_class = CreateUserSerializer
 
     def register_user(self, **validated_data):
         #pylint: disable=maybe-no-member
         email = validated_data['email']
-        users = User.objects.filter(email=email)
+        users = self.model.objects.filter(email=email)
         if users.exists():
             user = users.get()
             if check_user_active(self.request, user):
@@ -190,7 +189,7 @@ JwcBUUMECj8AKxsHtRHUSypco"
             validated_data['full_name'])
         username = validated_data.get('username', None)
         password = validated_data.get('password', None)
-        user = User.objects.create_user(username,
+        user = self.model.objects.create_user(username,
             email=email, password=password,
             first_name=first_name + " " + mid_initials, last_name=last_name)
 

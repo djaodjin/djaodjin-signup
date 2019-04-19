@@ -49,8 +49,6 @@ from ..utils import get_picture_storage, generate_random_code, handle_uniq_error
 
 LOGGER = logging.getLogger(__name__)
 
-User = get_user_model()
-
 
 def get_order_func(fields):
     """
@@ -319,6 +317,7 @@ class UserListAPIView(ListCreateAPIView):
     alternate_ordering = ('first_name', 'last_name')
     serializer_class = ContactSerializer
     queryset = Contact.objects.all().select_related('user')
+    user_queryset = get_user_model().objects.filter(is_active=True)
 
     def post(self, request, *args, **kwargs):
         """
@@ -348,9 +347,8 @@ class UserListAPIView(ListCreateAPIView):
             full_name=user.get_full_name(), nick_name=user.first_name,
             created_at=user.date_joined, user=user)
 
-    @staticmethod
-    def get_users_queryset():
-        return User.objects.filter(is_active=True, contact__isnull=True)
+    def get_users_queryset(self):
+        return self.user_queryset.filter(contact__isnull=True)
 
     def list(self, request, *args, **kwargs):
         #pylint:disable=too-many-locals,too-many-statements
@@ -430,11 +428,12 @@ class UserListAPIView(ListCreateAPIView):
         return self.get_paginated_response(serializer.data)
 
     def perform_create(self, serializer):
+        user_model = self.user_queryset.model
         with transaction.atomic():
             try:
-                user = User.objects.get(
+                user = user_model.objects.get(
                     email=serializer.validated_data.get('email'))
-            except User.DoesNotExist:
+            except user_model.DoesNotExist:
                 user = None
             serializer.save(user=user)
 
@@ -463,7 +462,7 @@ class PasswordChangeAPIView(UpdateAPIView):
     lookup_field = 'username'
     lookup_url_kwarg = 'user'
     serializer_class = PasswordChangeSerializer
-    queryset = User.objects.all()
+    queryset = get_user_model().objects.filter(is_active=True)
 
     def perform_update(self, serializer):
         password = serializer.validated_data['password']
@@ -509,4 +508,4 @@ class UserNotificationsAPIView(UpdateAPIView):
     lookup_field = 'username'
     lookup_url_kwarg = 'user'
     serializer_class = NotificationsSerializer
-    queryset = User.objects.all()
+    queryset = get_user_model().objects.filter(is_active=True)

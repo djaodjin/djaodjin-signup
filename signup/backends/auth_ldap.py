@@ -1,4 +1,4 @@
-# Copyright (c) 2018, Djaodjin Inc.
+# Copyright (c) 2019, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -46,8 +46,6 @@ from .. import settings
 
 
 LOGGER = logging.getLogger(__name__)
-
-User = get_user_model()
 
 
 class LDAPUser(object):
@@ -114,6 +112,7 @@ class LDAPBackend(object):
     """
     Backend to authenticate a user through a LDAP server.
     """
+    model = get_user_model()
 
     @staticmethod
     def _get_bind_dn(user):
@@ -131,8 +130,8 @@ class LDAPBackend(object):
 
             defaults = {}
             #pylint:disable=protected-access
-            db_user, created = User._default_manager.get_or_create(**{
-                User.USERNAME_FIELD: username,
+            db_user, created = self.model._default_manager.get_or_create(**{
+                self.model.USERNAME_FIELD: username,
                 'defaults': defaults,
             })
             if created:
@@ -147,6 +146,6 @@ class LDAPBackend(object):
 
     def get_user(self, user_id):#pylint:disable=no-self-use
         try:
-            return LDAPUser(self, db_user=User.objects.get(pk=user_id))
-        except User.DoesNotExist:
+            return LDAPUser(self, db_user=self.model.objects.get(pk=user_id))
+        except self.model.DoesNotExist:
             return None

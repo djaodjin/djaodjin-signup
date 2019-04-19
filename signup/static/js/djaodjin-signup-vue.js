@@ -133,9 +133,7 @@ if($('#user-profile-container').length > 0){
 var app = new Vue({
     el: "#user-profile-container",
     data: {
-        username: '',
-        email: '',
-        fullName: '',
+        formFields: {},
         userModalOpen: false,
         apiModalOpen: false,
         apiKey: gettext("Generating ..."),
@@ -161,26 +159,46 @@ var app = new Vue({
                 method: 'GET',
                 url: djaodjinSettings.urls.user.api_profile,
             }).done(function(res){
-                vm.username = res.username;
-                vm.email = res.email;
-                vm.fullName = res.full_name;
+                vm.formFields = resp;
             });
         },
-        updateUser: function(){
+        validateForm: function(){
             var vm = this;
+            var isEmpty = true;
+            var fields = $(vm.$el).find('[name]').not(
+                '[name="csrfmiddlewaretoken"]');
+            for( var fieldIdx = 0; fieldIdx < fields.length; ++fieldIdx ) {
+                var fieldName = $(fields[fieldIdx]).attr('name');
+                var fieldValue = $(fields[fieldIdx]).val();
+                if( vm.formFields[fieldName] !== fieldValue ) {
+                    vm.formFields[fieldName] = fieldValue;
+                }
+                if( vm.formFields[fieldName] ) {
+                    // We have at least one piece of information
+                    // about the plan already available.
+                    isEmpty = false;
+                }
+            }
+            return !isEmpty;
+        },
+        updateProfile: function(){
+            var vm = this;
+            vm.validateForm();
+            var data = vm.formFields;
             $.ajax({
                 method: 'PATCH',
                 url: djaodjinSettings.urls.user.api_profile,
-                data: {
-                    username: vm.username,
-                    email: vm.email,
-                    full_name: vm.fullName,
-                },
+                data: vm.formFields
             }).done(function(res) {
                 showMessages([gettext("Profile updated.")], "info"); // XXX should really be success but then it needs to be changed in Django views as well.
             }).fail(function(resp){
                 showErrorMessages(resp);
             });
+            if(vm.imageSelected){
+                vm.saveProfileWithPicture(data);
+            } else {
+                vm.saveProfile(data);
+            }
         },
         deleteProfile: function() {
             $.ajax({
@@ -256,10 +274,12 @@ var app = new Vue({
         }
     },
     mounted: function(){
-        this.get();
-        //XXX this call should not exist, Contact data fields should
-        //    be merged in previous call.
-        //this.getContact();
+        var vm = this;
+        if( !vm.validateForm() ) {
+            // It seems the form is completely blank. Let's attempt
+            // to load the profile from the API then.
+            vm.get();
+        }
     },
 });
 }

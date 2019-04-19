@@ -1,4 +1,4 @@
-# Copyright (c) 2018, Djaodjin Inc.
+# Copyright (c) 2019, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -51,8 +51,6 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import AuthenticationForm
 from django.utils.translation import ugettext_lazy as _
 
-User = get_user_model()
-
 
 class UsernameOrEmailAuthenticationForm(AuthenticationForm):
 
@@ -79,6 +77,7 @@ class UsernameOrEmailModelBackend(object):
     or email address.
     """
     #pylint: disable=no-self-use
+    model = get_user_model()
 
     def authenticate(self, username=None, password=None):
         if '@' in username:
@@ -86,17 +85,17 @@ class UsernameOrEmailModelBackend(object):
         else:
             kwargs = {'username__iexact': username}
         try:
-            user = User.objects.get(**kwargs)
+            user = self.model.objects.filter(is_active=True).get(**kwargs)
             if user.check_password(password):
                 return user
-        except User.DoesNotExist:
+        except self.model.DoesNotExist:
             # Run the default password hasher once to reduce the timing
             # difference between an existing and a non-existing user (#20760).
-            User().set_password(password)
+            self.model().set_password(password)
         return None
 
     def get_user(self, user_id):
         try:
-            return User.objects.get(pk=user_id)
-        except User.DoesNotExist:
+            return self.model.objects.get(pk=user_id)
+        except self.model.DoesNotExist:
             return None

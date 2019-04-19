@@ -29,7 +29,7 @@ from functools import reduce
 from django.db import models
 from django.utils import six
 from django.utils.encoding import force_text
-from rest_framework.compat import coreapi, coreschema
+from rest_framework.compat import coreapi, coreschema, distinct
 from rest_framework.filters import (OrderingFilter as BaseOrderingFilter,
     SearchFilter as BaseSearchFilter)
 
