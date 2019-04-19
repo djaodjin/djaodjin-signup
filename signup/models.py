@@ -31,6 +31,7 @@ from __future__ import unicode_literals
 import datetime, hashlib, logging, random, re
 
 from django.core.exceptions import ValidationError
+from django.contrib.auth import get_user_model
 from django.contrib.auth.models import UserManager
 from django.db import models, transaction, IntegrityError
 from django.template.defaultfilters import slugify
@@ -40,7 +41,7 @@ from django.contrib.auth.hashers import check_password, make_password
 
 from . import settings, signals
 from .backends.mfa import EmailMFABackend
-from .compat import User, import_string
+from .compat import import_string
 from .helpers import datetime_or_now, full_name_natural_split
 from .utils import generate_random_slug
 
@@ -432,5 +433,6 @@ class Credentials(models.Model):
 
 
 # Hack to install our create_user method.
+User = get_user_model()
 User.objects = ActivatedUserManager()
 User.objects.model = User

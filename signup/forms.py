@@ -26,15 +26,16 @@
 
 from captcha.fields import ReCaptchaField
 from django import forms
-from django.contrib.auth import password_validation
+from django.contrib.auth import password_validation, get_user_model
 from django.contrib.auth.forms import (AuthenticationForm,
     PasswordResetForm as PasswordResetBaseForm)
 from django.utils.translation import ugettext_lazy as _
 from django.utils import six
 
 from . import settings
-from .compat import User
 from .models import Contact
+
+User = get_user_model()
 
 #pylint: disable=old-style-class,no-init
 

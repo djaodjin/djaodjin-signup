@@ -24,10 +24,13 @@
 
 from django.http import Http404
 from django.utils import six
+from django.contrib.auth import get_user_model
 from rest_framework.generics import get_object_or_404
 
-from .compat import User, reverse, is_authenticated
+from .compat import reverse, is_authenticated
 from .models import Contact
+
+User = get_user_model()
 
 
 class UrlsMixin(object):

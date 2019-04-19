@@ -29,7 +29,7 @@ import logging
 
 from django.contrib import messages
 from django.contrib.auth import (login as auth_login, logout as auth_logout,
-    REDIRECT_FIELD_NAME, authenticate)
+    REDIRECT_FIELD_NAME, authenticate, get_user_model)
 from django.contrib.auth.tokens import default_token_generator
 from django.http import HttpResponseRedirect
 from django.template.response import TemplateResponse
@@ -47,7 +47,7 @@ from rest_framework.settings import api_settings
 from .. import settings, signals
 from ..auth import validate_redirect
 from ..backends.auth import UsernameOrEmailAuthenticationForm
-from ..compat import User, reverse, is_authenticated
+from ..compat import reverse, is_authenticated
 from ..decorators import check_user_active
 from ..forms import (ActivationForm, MFACodeForm, NameEmailForm,
     PasswordResetForm, PasswordResetConfirmForm)
@@ -59,6 +59,8 @@ from ..utils import (fill_form_errors, get_disabled_authentication,
 
 
 LOGGER = logging.getLogger(__name__)
+
+User = get_user_model()
 
 
 def _login(request, user):

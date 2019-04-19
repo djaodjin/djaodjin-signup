@@ -23,12 +23,14 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from django.core import validators
+from django.contrib.auth import get_user_model
 from django.utils.translation import ugettext_lazy as _
 from rest_framework import serializers
 
-from .compat import User
 from .models import Activity, Contact, Notification
 from .utils import get_account_model, has_invalid_password
+
+User = get_user_model()
 
 
 class NoModelSerializer(serializers.Serializer):

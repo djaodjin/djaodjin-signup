@@ -28,7 +28,7 @@ from hashlib import sha256
 from django.contrib.auth import logout as auth_logout
 from django.db import transaction, IntegrityError
 from django.core.exceptions import PermissionDenied
-from django.contrib.auth import update_session_auth_hash
+from django.contrib.auth import update_session_auth_hash, get_user_model
 from django.utils.translation import ugettext_lazy as _
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import (ListCreateAPIView,
@@ -37,7 +37,6 @@ from rest_framework.response import Response
 from rest_framework.settings import api_settings
 
 from .. import filters, settings
-from ..compat import User
 from ..decorators import check_user_active
 from ..docs import OpenAPIResponse, swagger_auto_schema
 from ..helpers import full_name_natural_split
@@ -49,6 +48,8 @@ from ..utils import get_picture_storage, generate_random_code, handle_uniq_error
 
 
 LOGGER = logging.getLogger(__name__)
+
+User = get_user_model()
 
 
 def get_order_func(fields):
