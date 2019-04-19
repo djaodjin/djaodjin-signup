@@ -38,14 +38,16 @@ AUTHENTICATION_BACKENDS = (
 import logging
 
 import ldap  # pip install python-ldap==3.1.0
+from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
 from django.utils.encoding import force_text, force_bytes
 
 from .. import settings
-from ..compat import User
 
 
 LOGGER = logging.getLogger(__name__)
+
+User = get_user_model()
 
 
 class LDAPUser(object):

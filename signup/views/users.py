@@ -27,7 +27,7 @@
 import logging
 
 from django.contrib import messages
-from django.contrib.auth import update_session_auth_hash
+from django.contrib.auth import update_session_auth_hash, get_user_model
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
@@ -41,7 +41,7 @@ from django.views.generic.detail import BaseDetailView
 from django.views.generic.edit import UpdateView
 
 from .. import settings
-from ..compat import User, reverse, is_authenticated
+from ..compat import reverse, is_authenticated
 from ..decorators import send_verification_email
 from ..forms import (PasswordChangeForm, PublicKeyForm, UserForm,
     UserNotificationsForm)
@@ -51,6 +51,8 @@ from ..utils import has_invalid_password, update_db_row
 
 
 LOGGER = logging.getLogger(__name__)
+
+User = get_user_model()
 
 
 class UserProfileView(UserMixin, UpdateView):
