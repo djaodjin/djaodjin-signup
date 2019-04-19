@@ -25,7 +25,8 @@
 import logging
 
 from django.core.exceptions import PermissionDenied
-from django.contrib.auth import authenticate, logout as auth_logout
+from django.contrib.auth import (get_user_model, authenticate,
+    logout as auth_logout)
 from django.utils.safestring import mark_safe
 from django.utils.translation import ugettext_lazy as _
 import jwt
@@ -34,7 +35,7 @@ from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
 
 from .. import settings
-from ..compat import User, reverse
+from ..compat import reverse
 from ..decorators import check_user_active
 from ..docs import OpenAPIResponse, swagger_auto_schema
 from ..helpers import as_timestamp, datetime_or_now, full_name_natural_split
@@ -45,6 +46,8 @@ from ..utils import verify_token as verify_token_base
 
 
 LOGGER = logging.getLogger(__name__)
+
+User = get_user_model()
 
 
 class JWTBase(GenericAPIView):

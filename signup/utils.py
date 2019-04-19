@@ -25,6 +25,7 @@
 import logging, re
 
 from django.apps import apps as django_apps
+from django.contrib.auth import get_user_model
 from django.core.exceptions import ImproperlyConfigured, NON_FIELD_ERRORS
 from django.core.files.storage import default_storage
 from django.db import IntegrityError
@@ -37,9 +38,11 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.settings import api_settings
 
 from . import settings
-from .compat import User, import_string
+from .compat import import_string
 
 LOGGER = logging.getLogger(__name__)
+
+User = get_user_model()
 
 
 def get_accept_list(request):
