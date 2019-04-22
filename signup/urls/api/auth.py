@@ -24,10 +24,11 @@
 
 from django.conf.urls import url
 
-from ...api.auth import JWTLogin, JWTLogout, JWTRegister
+from ...api.auth import JWTLogin, JWTLogout, JWTRegister, PasswordResetAPIView
 
 urlpatterns = [
     url(r'^auth/logout/', JWTLogout.as_view(), name='api_logout'),
     url(r'^auth/register/', JWTRegister.as_view(), name='api_register'),
+    url(r'^auth/recover/', PasswordResetAPIView.as_view(), name='api_recover'),
     url(r'^auth/', JWTLogin.as_view(), name='api_login'),
 ]

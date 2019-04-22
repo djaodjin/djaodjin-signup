@@ -164,6 +164,14 @@ class PasswordChangeSerializer(NoModelSerializer):
         help_text=_("New password for the user referenced in the URL"))
 
 
+class PasswordResetSerializer(serializers.Serializer):
+    """
+    Serializer to send an e-mail to a user in order to recover her account.
+    """
+    email = serializers.EmailField(
+        help_text=_("Primary e-mail to contact user"))
+
+
 class TokenSerializer(NoModelSerializer):
     """
     token to verify or refresh.
