@@ -72,21 +72,40 @@ class APIKeysSerializer(NoModelSerializer):
 
 
 class ContactSerializer(serializers.ModelSerializer):
-
-    activities = ActivitySerializer(many=True, read_only=True)
+    """
+    This serializer is used in lists and other places where a Contact/User
+    profile is referenced.
+    For a detailed profile, see `ContactDetailSerializer`.
+    """
     credentials = serializers.SerializerMethodField(read_only=True,
         help_text=_("True if the user has valid login credentials"))
 
     class Meta:
         #pylint:disable=old-style-class,no-init
         model = Contact
-        fields = ('slug', 'created_at', 'full_name', 'email', 'nick_name',
-            'credentials', 'printable_name', 'picture', 'extra', 'activities')
-        read_only_fields = ('slug', 'created_at', 'credentials', 'activities')
+        fields = ('slug', 'printable_name', 'picture', 'email', 'created_at',
+            'credentials',)
+        read_only_fields = ('slug', 'printable_name', 'created_at',
+            'credentials',)
 
     @staticmethod
     def get_credentials(obj):
         return (not has_invalid_password(obj.user)) if obj.user else False
+
+
+class ContactDetailSerializer(ContactSerializer):
+    """
+    This serializer is used in APIs where a single Contact/User
+    profile is returned.
+    For a summary profile, see `ContactSerializer`.
+    """
+    activities = ActivitySerializer(many=True, read_only=True)
+
+    class Meta(ContactSerializer.Meta):
+        fields = ContactSerializer.Meta.fields + ('full_name', 'nick_name',
+            'extra', 'activities',)
+        read_only_fields = ContactSerializer.Meta.read_only_fields + (
+            'activities',)
 
 
 class NotificationsSerializer(serializers.ModelSerializer):
@@ -172,21 +191,53 @@ class PublicKeySerializer(NoModelSerializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
+    """
+    This serializer is a substitute for `ContactSerializer` whose intent is to
+    facilitate composition of this App with other Django Apps which references
+    a `django.contrib.auth.User model`. It is not used in this App.
+
+    XXX currently used in `api.auth.JWTBase` for payloads.
+    """
     #pylint: disable=no-init,old-style-class
 
     # Only way I found out to remove the ``UniqueValidator``. We are not
     # interested to create new instances here.
+    slug = serializers.CharField(source='username', validators=[
+        validators.RegexValidator(r'^[\w.@+-]+$', _("Enter a valid username."),
+            'invalid')])
+    printable_name = serializers.CharField(source='get_full_name',
+        help_text=_("Full name"))
+    picture = serializers.SerializerMethodField(read_only=True,
+        help_text=_("Picture"))
+    email = serializers.EmailField(
+        help_text=_("Primary e-mail to contact user"))
+    created_at = serializers.DateTimeField(source='date_joined')
+    credentials = serializers.SerializerMethodField(read_only=True,
+        help_text=_("True if the user has valid login credentials"))
+    # XXX username and full_name are duplicates of slug and printable_name
+    # respectively. They are still included in this version for backward
+    # compatibility.
     username = serializers.CharField(validators=[
         validators.RegexValidator(r'^[\w.@+-]+$', _("Enter a valid username."),
             'invalid')])
-    email = serializers.EmailField(
-        help_text=_("Primary e-mail to contact user"))
     full_name = serializers.CharField(source='get_full_name',
         help_text=_("Full name"))
 
     class Meta:
         model = get_user_model()
-        fields = ('username', 'email', 'full_name')
+        fields = ('slug', 'printable_name', 'picture', 'email', 'created_at',
+            'credentials', 'username', 'full_name')
+        read_only_fields = ('slug', 'printable_name', 'created_at',
+            'credentials',)
 
-    def get_full_name(self, obj):#pylint:disable=no-self-use
-        return obj.get_full_name()
+    @staticmethod
+    def get_credentials(obj):
+        return not has_invalid_password(obj)
+
+    @staticmethod
+    def get_picture(obj):
+        try:
+            return obj.contact.picture
+        except Contact.DoesNotExist:
+            pass
+        return None

@@ -42,8 +42,9 @@ from ..docs import OpenAPIResponse, swagger_auto_schema
 from ..helpers import full_name_natural_split
 from ..mixins import ContactMixin
 from ..models import Contact
-from ..serializers import (ContactSerializer, PasswordChangeSerializer,
-    NoModelSerializer, NotificationsSerializer, ValidationErrorSerializer)
+from ..serializers import (ContactSerializer, ContactDetailSerializer,
+    PasswordChangeSerializer, NoModelSerializer, NotificationsSerializer,
+    ValidationErrorSerializer)
 from ..utils import get_picture_storage, generate_random_code, handle_uniq_error
 
 
@@ -150,7 +151,7 @@ class UserDetailAPIView(ContactMixin, RetrieveUpdateDestroyAPIView):
             }]
         }
     """
-    serializer_class = ContactSerializer
+    serializer_class = ContactDetailSerializer
     queryset = Contact.objects.all().select_related('user')
 
     def put(self, request, *args, **kwargs):
