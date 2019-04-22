@@ -67,10 +67,9 @@ run the testsite webapp.
 Release Notes
 =============
 
-0.3.0
+0.3.1
 
-  * renames users/*.html templates to match naming conventions
-  * adds i18n in Javascript
-  * removes deprecated url /users/{user}/activate/
+  * splits summary and detail profile serializers
+  * adds API to recover an account (#30)
 
 [previous release notes](changelog)

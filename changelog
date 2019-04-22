@@ -1,3 +1,10 @@
+0.3.1
+
+  * splits summary and detail profile serializers
+  * adds API to recover an account (#30)
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Mon,  22 Apr 2019 09:14:04 -0700
+
 0.3.0
 
   * renames users/*.html templates to match naming conventions
