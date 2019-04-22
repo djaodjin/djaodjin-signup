@@ -190,3 +190,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     def get_full_name(self, obj):#pylint:disable=no-self-use
         return obj.get_full_name()
+
+
+class PasswordResetSerializer(serializers.Serializer):
+    email = serializers.EmailField()

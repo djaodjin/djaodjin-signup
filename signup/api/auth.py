@@ -26,22 +26,28 @@ import logging
 
 from django.core.exceptions import PermissionDenied
 from django.contrib.auth import (get_user_model, authenticate,
-    logout as auth_logout)
+    REDIRECT_FIELD_NAME, logout as auth_logout)
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
 from django.utils.safestring import mark_safe
 from django.utils.translation import ugettext_lazy as _
 import jwt
 from rest_framework.exceptions import ValidationError
-from rest_framework.generics import GenericAPIView
+from rest_framework.generics import GenericAPIView, CreateAPIView
 from rest_framework.response import Response
 
-from .. import settings
+
+from .. import settings, signals
+from ..auth import validate_redirect
 from ..compat import reverse
 from ..decorators import check_user_active
 from ..docs import OpenAPIResponse, swagger_auto_schema
 from ..helpers import as_timestamp, datetime_or_now, full_name_natural_split
 from ..models import Contact
 from ..serializers import (CredentialsSerializer, CreateUserSerializer,
-    TokenSerializer, UserSerializer, ValidationErrorSerializer)
+    TokenSerializer, UserSerializer, ValidationErrorSerializer,
+    PasswordResetSerializer)
 from ..utils import verify_token as verify_token_base
 
 
@@ -256,3 +262,36 @@ class JWTLogout(JWTBase):
                     response.delete_cookie(cookie)
             return response
         return Response({})
+
+
+class PasswordResetAPIView(CreateAPIView):
+
+    model = get_user_model()
+    serializer_class = PasswordResetSerializer
+    token_generator = default_token_generator
+
+    def perform_create(self, serializer):
+        try:
+            user = self.model.objects.get(
+                email__iexact=serializer.data.get('email'), is_active=True)
+            next_url = validate_redirect(self.request)
+            if check_user_active(self.request, user, next_url=next_url):
+                # Make sure that a reset password email is sent to a user
+                # that actually has an activated account.
+                uid = urlsafe_base64_encode(force_bytes(user.pk)).decode()
+                token = self.token_generator.make_token(user)
+                back_url = self.request.build_absolute_uri(
+                    reverse('password_reset_confirm', args=(uid, token)))
+                if next_url:
+                    back_url += '?%s=%s' % (REDIRECT_FIELD_NAME, next_url)
+                signals.user_reset_password.send(
+                    sender=__name__, user=user, request=self.request,
+                    back_url=back_url, expiration_days=settings.KEY_EXPIRATION)
+            else:
+                raise ValidationError({'detail': _("Please activate your"\
+                    " account first. You should receive an email shortly.")})
+        except self.model.DoesNotExist:
+            # We don't want to give a clue about registered users, yet
+            # it already possible to do a straight register to get the same.
+            raise ValidationError({'detail': _("We cannot find an account"\
+                " for this e-mail address.")})
