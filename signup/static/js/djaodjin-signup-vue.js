@@ -379,18 +379,23 @@ var app = new Vue({
         },
         updatePassword: function(){
             var vm = this;
+            // We are using the view (and not the API) so that the redirect
+            // to the profile page is done correctly and a success message
+            // shows up.
             $.ajax({
-                method: 'PUT',
-                url: djaodjinSettings.urls.user.api_password_change,
+                method: 'POST',
+                url: djaodjinSettings.urls.user.password_change,
                 data: {
                     password: vm.password,
-                    new_password: vm.newPassword
+                    new_password: vm.newPassword,
+                    new_password2: vm.newPassword2
                 },
             }).done(function(res){
                 vm.modalHide();
                 vm.newPassword = '';
                 vm.newPassword2 = '';
                 showMessages([gettext("Password was updated.")], "success");
+                // XXX window.location = djaodjinSettings.urls.user.profile;
             }).fail(vm.failCb);
         },
         submitPassword: function(){
