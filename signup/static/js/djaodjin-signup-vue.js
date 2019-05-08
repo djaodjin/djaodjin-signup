@@ -147,8 +147,9 @@ var app = new Vue({
                 method: 'POST',
                 url: djaodjinSettings.urls.user.api_activate,
             }).done(function(resp) {
-                showMessages([gettext("Activation e-mail successfuly sent to") + ' ' +
-                    + resp.email], "info");
+                showMessages([interpolate(gettext(
+                    "Activation e-mail successfuly sent to %s"),
+                    [resp.email])], "info");
             }).fail(function(resp){
                 showErrorMessages(resp);
             });
@@ -372,7 +373,8 @@ var app = new Vue({
         modalShowAndValidate: function() {
             var vm = this;
             if(vm.newPassword != vm.newPassword2){
-                showMessages([gettext("The passwords don't match.")], "danger");
+                showMessages([gettext(
+                    "Password and confirmation do not match.")], "danger");
                 return;
             }
             vm.modalShow();

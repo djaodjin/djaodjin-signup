@@ -250,8 +250,9 @@ class MFACodeForm(AuthenticationForm):
     username = forms.CharField(max_length=254, widget=forms.HiddenInput())
     password = forms.CharField(widget=forms.HiddenInput())
     code = forms.IntegerField(widget=forms.TextInput(
-        attrs={'placeholder': _("One-time code"), 'autofocus': True}),
-        label=_("One-time code"))
+        attrs={'placeholder': _("One-time authentication code"),
+            'autofocus': True}),
+        label=_("One-time authentication code"))
 
     def clean(self):
         super(MFACodeForm, self).clean()

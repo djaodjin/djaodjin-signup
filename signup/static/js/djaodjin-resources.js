@@ -56,7 +56,8 @@ function _showErrorMessages(resp) {
         var data = resp.data || resp.responseJSON;
         if( data && typeof data === "object" ) {
             if( data.detail ) {
-                messages = [gettext("Error:") + " " + data.detail];
+                messages = [interpolate(gettext("Error %s: %s"),
+                    ["", data.detail])];
             } else if( $.isArray(data) ) {
                 for( var idx = 0; idx < data.length; ++idx ) {
                     messages = messages.concat(_showErrorMessages(data[idx]));
@@ -80,15 +81,18 @@ function _showErrorMessages(resp) {
                             message = data[key].detail;
                         }
                         messages.push(key + ": " + message);
-                        var parent = $("[name=\"" + key + "\"]").parents('.form-group');
+                        var inputField = $("[name=\"" + key + "\"]");
+                        var parent = inputField.parents('.form-group');
+                        inputField.addClass("is-invalid");
                         parent.addClass("has-error");
-                        var help = parent.find('.help-block');
+                        var help = parent.find('.invalid-feedback');
                         if( help.length > 0 ) { help.text(message); }
                     }
                 }
             }
         } else if( resp.detail ) {
-            messages = [gettext("Error:") + " " + resp.detail];
+            messages = [interpolate(gettext("Error %s: %s"),
+                ["", resp.detail])];
         }
     }
     return messages;
@@ -97,15 +101,17 @@ function _showErrorMessages(resp) {
 
 function showErrorMessages(resp) {
     if( resp.status >= 500 && resp.status < 600 ) {
-        messages = [interpolate(gettext("Error %s: %s. We have been notified"
+        messages = [interpolate(gettext("Error %s: %s"),
+            [resp.status, resp.statusText])
+            + "<br />" + gettext("We have been notified"
             + " and have started on fixing the error. We apologize for the"
-            + " inconvinience."), [resp.status, resp.statusText])
+            + " inconvinience.")];
         ];
     } else {
         var messages = _showErrorMessages(resp);
         if( messages.length === 0 ) {
-            messages = [interpolate(gettext("Error %s:"), [resp.status])
-                + " " + resp.statusText];
+            messages = [interpolate(gettext("Error %s: %s"),
+            [resp.status, resp.statusText])];
         }
     }
     showMessages(messages, "error");

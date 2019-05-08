@@ -250,10 +250,9 @@ class Contact(models.Model):
     created_at = models.DateTimeField(auto_now_add=True,
         help_text=_("Date/time of creation (in ISO format)"))
     email = models.EmailField(_("E-mail address"),
-        help_text=_("E-mail address for the contact"))
+        help_text=_("E-mail address"))
     full_name = models.CharField(_("Full name"), max_length=60, blank=True,
-        help_text=_("Full name for the contact (effectively first name"\
-        " followed by last name)"))
+        help_text=_("Full name (effectively first name followed by last name)"))
     nick_name = models.CharField(_("Nick name"), max_length=60, blank=True,
         help_text=_("Short casual name used to address the contact"))
     # 2083 number is used because it is a safe option to choose based
@@ -346,8 +345,8 @@ class Contact(models.Model):
                 self.slug = generate_random_slug(
                     length=len(slug_base) + 8, prefix=slug_base + '-')
         raise ValidationError({'detail':
-            _("Unable to create a unique URL slug with a base of '%s'")
-                % slug_base})
+            _("Unable to create a unique URL slug with a base of '%(base)s'")
+                % {'base': slug_base}})
 
     def verification_key_expired(self):
         expiration_date = datetime.timedelta(days=settings.KEY_EXPIRATION)

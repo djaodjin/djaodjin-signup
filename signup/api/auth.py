@@ -294,4 +294,4 @@ class PasswordResetAPIView(CreateAPIView):
             # We don't want to give a clue about registered users, yet
             # it already possible to do a straight register to get the same.
             raise ValidationError({'detail': _("We cannot find an account"\
-                " for this e-mail address.")})
+                " for this e-mail address. Please verify the spelling.")})

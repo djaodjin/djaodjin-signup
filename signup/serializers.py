@@ -147,7 +147,7 @@ class CreateUserSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(
         help_text=_("Primary e-mail to contact user"))
     full_name = serializers.CharField(
-        help_text=_("Full name - typically first name and last name"))
+        help_text=_("Full name (effectively first name followed by last name)"))
 
     class Meta:
         model = get_user_model()
