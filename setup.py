@@ -47,5 +47,6 @@ setup(
         % signup.__version__,
     license='BSD',
     description="DjaoDjin's Implementation of Frictionless Sign Up",
+    long_description_content_type='text/markdown',
     long_description=open('README.md').read(),
 )

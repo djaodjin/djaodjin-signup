@@ -33,6 +33,7 @@ to the settings AUTHENTICATION_BACKENDS.
 
         urlpatterns = ('',
             (r'^accounts/', include('signup.urls')),
+
         )
 
     settings.py:
@@ -40,6 +41,7 @@ to the settings AUTHENTICATION_BACKENDS.
         AUTHENTICATION_BACKENDS = (
             'signup.backends.auth.EmailOrUsernameModelBackend',
             'django.contrib.auth.backends.ModelBackend'
+
         )
 
 To make the application useable accross a variety of websites, ``signup`` never
