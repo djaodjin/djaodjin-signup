@@ -142,7 +142,10 @@ class PasswordResetBaseView(RedirectFormMixin, ProcessFormView):
             if check_user_active(self.request, user, next_url=next_url):
                 # Make sure that a reset password email is sent to a user
                 # that actually has an activated account.
-                uid = urlsafe_base64_encode(force_bytes(user.pk)).decode()
+                uid = urlsafe_base64_encode(force_bytes(user.pk))
+                if not isinstance(uid, six.string_types):
+                    # See Django2.2 release notes
+                    uid = uid.decode()
                 token = self.token_generator.make_token(user)
                 back_url = self.request.build_absolute_uri(
                     reverse('password_reset_confirm', args=(uid, token)))
@@ -196,7 +199,7 @@ class PasswordResetConfirmBaseView(RedirectFormMixin, ProcessFormView):
                                     user, self.kwargs.get('token')):
             if form.is_valid():
                 form.save()
-                LOGGER.info("%s reset her/his password.", self.request.user,
+                LOGGER.info("%s reset her/his password.", user,
                     extra={'event': 'resetpassword', 'request': request})
                 return self.form_valid(form)
         return self.form_invalid(form)
@@ -212,7 +215,10 @@ class PasswordResetConfirmBaseView(RedirectFormMixin, ProcessFormView):
         """
         kwargs = super(PasswordResetConfirmBaseView, self).get_form_kwargs()
         try:
-            uid = urlsafe_base64_decode(self.kwargs.get('uidb64')).decode()
+            uid = urlsafe_base64_decode(self.kwargs.get('uidb64'))
+            if not isinstance(uid, six.string_types):
+                # See Django2.2 release notes
+                uid = uid.decode()
             self.object = self.model.objects.get(pk=uid)
         except (TypeError, ValueError, OverflowError, self.model.DoesNotExist):
             self.object = None
