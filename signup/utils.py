@@ -86,7 +86,7 @@ def get_account_model():
 
 
 def has_invalid_password(user):
-    return user.password.startswith('!')
+    return not user.password or user.password.startswith('!')
 
 
 def printable_name(user):
