@@ -115,6 +115,8 @@ ybmFtZSI6ImRvbm55IiwiZW1haWwiOiJzbWlyb2xvKzRAZGphb2RqaW4uY2\
 zEwfQ.F2y1iwj5NHlImmPfSff6IHLN7sUXpBFmX0qjCbFTe6A"
         }
 
+    responds
+
     .. code-block:: json
 
         {
