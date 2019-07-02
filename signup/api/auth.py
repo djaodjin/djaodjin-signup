@@ -75,6 +75,8 @@ class JWTBase(GenericAPIView):
 
 class JWTLogin(JWTBase):
     """
+    Logs a user in
+
     Returns a JSON Web Token that can be used in requests that require
     authentication.
 
@@ -139,6 +141,8 @@ sbF9uYW1lIjoiRG9ubnkgQ29vcGVyIiwiZXhwIjoxNTI5NjU4NzEwfQ.F2y\
 
 class JWTRegister(JWTBase):
     """
+    Registers a user
+
     Creates a new user and returns a JSON Web Token that can subsequently
     be used to authenticate the new user in HTTP requests.
 
@@ -223,6 +227,8 @@ JwcBUUMECj8AKxsHtRHUSypco"
 
 class JWTLogout(JWTBase):
     """
+    Logs a user out
+
     Removes all cookies associated with the session.
 
     This API endpoint is only useful when the user is using Cookie-based
@@ -265,7 +271,33 @@ class JWTLogout(JWTBase):
 
 
 class PasswordResetAPIView(CreateAPIView):
+    """
+    Emails a password reset link
 
+    The user is uniquely identified by her email address.
+
+    **Tags: auth
+
+    **Examples
+
+    .. code-block:: http
+
+         POST /api/auth/recover/ HTTP/1.1
+
+    .. code-block:: json
+
+        {
+            "email": "xia@localhost.localdomain"
+        }
+
+    responds
+
+    .. code-block:: json
+
+        {
+            "email": "xia@localhost.localdomain"
+        }
+    """
     model = get_user_model()
     serializer_class = PasswordResetSerializer
     token_generator = default_token_generator

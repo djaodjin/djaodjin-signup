@@ -29,7 +29,7 @@ import logging
 from rest_framework import filters
 from rest_framework.generics import ListCreateAPIView
 
-from .users import UserDetailAPIView, UserListAPIView
+from .users import UserDetailAPIView, UserListCreateAPIView
 from ..mixins import ContactMixin
 from ..models import Activity
 from ..serializers import ActivitySerializer
@@ -39,7 +39,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 # XXX smart list? search and order?
-class ActivityListAPIView(ContactMixin, ListCreateAPIView):
+class ActivityListCreateAPIView(ContactMixin, ListCreateAPIView):
     """
     Lists activities for a contact.
 
@@ -102,6 +102,15 @@ class ActivityListAPIView(ContactMixin, ListCreateAPIView):
               "text": "Phone call",
               "account": null
             }
+
+        responds
+
+        .. code-block:: json
+
+            {
+              "text": "Phone call",
+              "account": null
+            }
         """
         return self.create(request, *args, **kwargs)
 
@@ -114,9 +123,9 @@ class ContactDetailAPIView(UserDetailAPIView):
     swagger_schema = None
 
 
-class ContactListAPIView(UserListAPIView):
+class ContactListAPIView(UserListCreateAPIView):
     """
-    This API end-point is a shadow of `UserListAPIView` and is marked
+    This API end-point is a shadow of `UserListCreateAPIView` and is marked
     to be deprecated in the future.
     """
     swagger_schema = None

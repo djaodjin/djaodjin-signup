@@ -79,7 +79,9 @@ def get_order_func(fields):
 
 class UserActivateAPIView(ContactMixin, GenericAPIView):
     """
-    Re-send an activation e-mail if the user is not already activated.
+    Re-sends an activation link
+
+    Re-sends an activation e-mail if the user is not already activated.
 
     The template for the e-mail sent to the user can be found in
     notification/verification.eml.
@@ -120,6 +122,8 @@ class UserActivateAPIView(ContactMixin, GenericAPIView):
 
 class UserDetailAPIView(ContactMixin, RetrieveUpdateDestroyAPIView):
     """
+    Retrieves a user profile
+
     Retrieves details on one single user profile with slug ``{user}``.
 
     **Tags: profile
@@ -156,7 +160,7 @@ class UserDetailAPIView(ContactMixin, RetrieveUpdateDestroyAPIView):
 
     def put(self, request, *args, **kwargs):
         """
-        Updates a user profile.
+        Updates a user profile
 
         **Tags: profile
 
@@ -165,6 +169,16 @@ class UserDetailAPIView(ContactMixin, RetrieveUpdateDestroyAPIView):
         .. code-block:: http
 
             PUT /api/users/xia/ HTTP/1.1
+
+        .. code-block:: json
+
+            {
+              "email": "xia@locahost.localdomain",
+              "full_name": "Xia Lee",
+              "nick_name": "Xia",
+            }
+
+        responds
 
         .. code-block:: json
 
@@ -184,7 +198,7 @@ class UserDetailAPIView(ContactMixin, RetrieveUpdateDestroyAPIView):
 
     def delete(self, request, *args, **kwargs):
         """
-        Deletes a user profile.
+        Deletes a user profile
 
         **Tags: profile
 
@@ -256,8 +270,10 @@ class UserDetailAPIView(ContactMixin, RetrieveUpdateDestroyAPIView):
                 handle_uniq_error(err)
 
 
-class UserListAPIView(ListCreateAPIView):
+class UserListCreateAPIView(ListCreateAPIView):
     """
+    Lists user profiles
+
     Queries a page (``PAGE_SIZE`` records) of organization and user profiles.
 
     The queryset can be filtered for at least one field to match a search
@@ -322,7 +338,7 @@ class UserListAPIView(ListCreateAPIView):
 
     def post(self, request, *args, **kwargs):
         """
-        Creates a new user profile.
+        Creates a user profile
 
         **Tags: profile
 
@@ -331,6 +347,16 @@ class UserListAPIView(ListCreateAPIView):
         .. code-block:: http
 
             POST /api/users/ HTTP/1.1
+
+        .. code-block:: json
+
+            {
+              "email": "xia@locahost.localdomain",
+              "full_name": "Xia Lee",
+              "nick_name": "Xia"
+            }
+
+        responds
 
         .. code-block:: json
 
@@ -441,7 +467,7 @@ class UserListAPIView(ListCreateAPIView):
 
 class PasswordChangeAPIView(UpdateAPIView):
     """
-    Changes the password for a user.
+    Changes a user password
 
     **Tags: auth
 
@@ -451,12 +477,17 @@ class PasswordChangeAPIView(UpdateAPIView):
 
         PUT /api/users/donny/password/ HTTP/1.1
 
+    .. code-block:: json
+
+        {
+          "password": "yeye"
+        }
+
     responds
 
     .. code-block:: json
 
         {
-          "password": "yeye"
         }
     """
 
@@ -482,7 +513,7 @@ class PasswordChangeAPIView(UpdateAPIView):
 
 class UserNotificationsAPIView(UpdateAPIView):
     """
-    Changes notifications preferences for a user.
+    Changes a user notifications preferences
 
     **Tags: profile
 

@@ -43,7 +43,9 @@ LOGGER = logging.getLogger(__name__)
 
 class ResetAPIKeysAPIView(UserMixin, CreateAPIView):
     """
-    Reset the secret API key with which a user can authenticate
+    Resets a user secret API key
+
+    Resets the secret API key with which a user can authenticate
     with the service.
 
     **Tags: auth
@@ -95,7 +97,7 @@ class ResetAPIKeysAPIView(UserMixin, CreateAPIView):
 
 class PublicKeyAPIView(UserMixin, GenericAPIView):
     """
-    Update public key for a User
+    Updates a user public RSA key
 
     **Tags: auth
 

@@ -39,7 +39,7 @@ LOGGER = logging.getLogger(__name__)
 
 class JWTVerify(JWTBase):
     """
-    Verifies a JSON Web Token.
+    Verifies a JSON Web Token
 
     The authenticated user and the user associated to the token should be
     identical.
@@ -92,6 +92,8 @@ zEwfQ.F2y1iwj5NHlImmPfSff6IHLN7sUXpBFmX0qjCbFTe6A"
 
 class JWTRefresh(JWTVerify):
     """
+    Refreshes a JSON Web Token
+
     Refreshes a JSON Web Token by verifying the token and creating
     a new one that expires further in the future.
 
