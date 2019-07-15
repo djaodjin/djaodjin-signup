@@ -263,7 +263,8 @@ class SignupBaseView(RedirectFormMixin, ProcessFormView):
             cleaned_data = {}
             for field_name in six.iterkeys(form.data):
                 cleaned_data.update({
-                    field_name: form.cleaned_data.get(field_name, None)})
+                    field_name: form.cleaned_data.get(
+                        field_name, form.data[field_name])})
             new_user = self.register(**cleaned_data)
         except ValidationError as err:
             fill_form_errors(form, err)
