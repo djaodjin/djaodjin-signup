@@ -187,7 +187,7 @@ class UserDetailAPIView(ContactMixin, RetrieveUpdateDestroyAPIView):
             {
               "email": "xia@locahost.localdomain",
               "full_name": "Xia Lee",
-              "nick_name": "Xia",
+              "nick_name": "Xia"
             }
         """
         storage = get_picture_storage()
