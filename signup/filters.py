@@ -129,8 +129,10 @@ class SortableSearchableFilterBackend(object):
             ' `get_schema_fields()`'
         assert coreschema is not None, 'coreschema must be installed '\
             'to use `get_schema_fields()`'
-        sort_fields_description = "sort by %s" % ', '.join([
-            field[1] for field in self.sort_fields])
+        sort_fields_description = "sort by %s. If a field is preceded by"\
+            "a minus sign ('-'), the order will be reversed. Multiple 'o'"\
+            " parameters can be specified to produce a stable"\
+            " result." % ', '.join([field[1] for field in ordering_fields])
         search_fields_description = "search for matching text in %s"  % (
             ', '.join([field_name for field_name in self.search_fields]))
 
@@ -142,16 +144,6 @@ class SortableSearchableFilterBackend(object):
                 schema=coreschema.String(
                     title='O',
                     description=force_text(sort_fields_description)
-                )
-            ),
-            coreapi.Field(
-                name='ot',
-                required=False,
-                location='query',
-                schema=coreschema.String(
-                    title='OT',
-                    description=force_text(
-                        "sort by natural ascending or descending order")
                 )
             ),
             coreapi.Field(

@@ -103,7 +103,7 @@ class UserActivateAPIView(ContactMixin, GenericAPIView):
             "email": "xia@locahost.localdomain",
             "full_name": "Xia Lee",
             "nick_name": "Xia",
-            "created_at": "2018-01-01T00:00:00Z",
+            "created_at": "2018-01-01T00:00:00Z"
         }
     """
     serializer_class = ContactSerializer
@@ -133,6 +133,8 @@ class UserDetailAPIView(ContactMixin, RetrieveUpdateDestroyAPIView):
     .. code-block:: http
 
         GET /api/users/xia HTTP/1.1
+
+    responds
 
     .. code-block:: json
 
@@ -175,7 +177,7 @@ class UserDetailAPIView(ContactMixin, RetrieveUpdateDestroyAPIView):
             {
               "email": "xia@locahost.localdomain",
               "full_name": "Xia Lee",
-              "nick_name": "Xia",
+              "nick_name": "Xia"
             }
 
         responds
@@ -185,7 +187,7 @@ class UserDetailAPIView(ContactMixin, RetrieveUpdateDestroyAPIView):
             {
               "email": "xia@locahost.localdomain",
               "full_name": "Xia Lee",
-              "nick_name": "Xia",
+              "nick_name": "Xia"
             }
         """
         storage = get_picture_storage()
@@ -292,6 +294,8 @@ class UserListCreateAPIView(ListCreateAPIView):
     .. code-block:: http
 
         GET /api/users/?q=xia HTTP/1.1
+
+    responds
 
     .. code-block:: json
 
