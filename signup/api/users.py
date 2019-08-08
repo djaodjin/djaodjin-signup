@@ -122,7 +122,7 @@ class UserActivateAPIView(ContactMixin, GenericAPIView):
 
 class UserDetailAPIView(ContactMixin, RetrieveUpdateDestroyAPIView):
     """
-    Retrieves a user profile
+    Retrieves a login profile
 
     Retrieves details on one single user profile with slug ``{user}``.
 
@@ -162,7 +162,7 @@ class UserDetailAPIView(ContactMixin, RetrieveUpdateDestroyAPIView):
 
     def put(self, request, *args, **kwargs):
         """
-        Updates a user profile
+        Updates a login profile
 
         **Tags: profile
 
@@ -200,7 +200,7 @@ class UserDetailAPIView(ContactMixin, RetrieveUpdateDestroyAPIView):
 
     def delete(self, request, *args, **kwargs):
         """
-        Deletes a user profile
+        Deletes a login profile
 
         **Tags: profile
 

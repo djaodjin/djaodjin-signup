@@ -41,7 +41,9 @@ LOGGER = logging.getLogger(__name__)
 # XXX smart list? search and order?
 class ActivityListCreateAPIView(ContactMixin, ListCreateAPIView):
     """
-    Lists activities for a contact.
+    Lists activities for a contact
+
+    Returns ``PAGE_SIZE`` activity records for a user.
 
     **Tags: profile
 
@@ -86,7 +88,7 @@ class ActivityListCreateAPIView(ContactMixin, ListCreateAPIView):
 
     def post(self, request, *args, **kwargs):
         """
-        Records new activity with a contact.
+        Records new activity with a contact
 
         **Tags: profile
 
