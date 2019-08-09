@@ -162,6 +162,11 @@ def handle_uniq_error(err, renames=None):
     if field_name:
         if renames and field_name in renames:
             field_name = renames[field_name]
+        if field_name in ('email',):
+            # We treat these fields differently because translation of `this`
+            # is different depending on the `field_name`.
+            raise ValidationError({field_name:
+                _("This email is already taken.")})
         raise ValidationError({field_name:
             _("This %(field)s is already taken.") % {'field': field_name}})
     raise err

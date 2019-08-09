@@ -107,6 +107,8 @@ class PasswordConfirmMixin(object):
 
 class PasswordUpdateForm(PasswordConfirmMixin, forms.ModelForm):
 
+    submit_title = _("Update")
+
     new_password = forms.CharField(strip=False,
         label=_("New password"),
         widget=forms.PasswordInput(
@@ -116,8 +118,6 @@ class PasswordUpdateForm(PasswordConfirmMixin, forms.ModelForm):
         label=_("Confirm password"),
         widget=forms.PasswordInput(
             attrs={'placeholder': _("Type password again")}))
-
-    submit_title = 'Update'
 
     class Meta:
         model = get_user_model()
@@ -162,7 +162,7 @@ class ActivationForm(PasswordConfirmMixin, forms.Form):
     Form to set password, and optionally user's profile information
     in an activation view.
     """
-    submit_title = 'Activate'
+    submit_title = _("Activate")
 
     error_messages = {
         'password_mismatch': _("Password and password confirmation"\
@@ -201,7 +201,8 @@ class ActivationForm(PasswordConfirmMixin, forms.Form):
 
 class PublicKeyForm(forms.Form):
 
-    submit_title = 'Update'
+    submit_title = _("Update")
+
     pubkey = forms.CharField(widget=forms.Textarea)
     password = forms.CharField(
         label=_("Password"),
@@ -218,7 +219,7 @@ class UserForm(forms.ModelForm):
     """
     Form to update a ``User`` profile.
     """
-    submit_title = 'Update'
+    submit_title = _("Update")
 
     username = forms.CharField(widget=forms.TextInput(
         attrs={'placeholder': _("Username")}),
@@ -235,7 +236,7 @@ class UserNotificationsForm(forms.Form):
     """
     Form to update a ``User`` notification preferences.
     """
-    submit_title = 'Update'
+    submit_title = _("Update")
 
     def __init__(self, instance, *args, **kwargs):
         #pylint:disable=unused-argument

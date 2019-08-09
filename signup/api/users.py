@@ -484,7 +484,8 @@ class PasswordChangeAPIView(UpdateAPIView):
     .. code-block:: json
 
         {
-          "password": "yeye"
+          "password": "yeye",
+          "new_password": "yoyo"
         }
 
     responds
