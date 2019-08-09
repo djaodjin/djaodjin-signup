@@ -33,6 +33,7 @@ from django.utils.http import urlsafe_base64_encode
 from django.utils.safestring import mark_safe
 from django.utils.translation import ugettext_lazy as _
 import jwt
+from rest_framework import status
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import GenericAPIView, CreateAPIView
 from rest_framework.response import Response
@@ -241,34 +242,16 @@ class JWTLogout(JWTBase):
     .. code-block:: http
 
         POST /api/auth/logout/  HTTP/1.1
-
-    .. code-block:: json
-
-        {
-          "token": "670yoaq34rotlgqpoxzmw435Alrdf"
-        }
     """
-    serializer_class = TokenSerializer
-
-    @staticmethod
-    def verify_token(token):
-        return verify_token_base(token)
-
     def post(self, request, *args, **kwargs):#pylint:disable=unused-argument
-        serializer = self.get_serializer(data=request.data)
-        if serializer.is_valid():
-            token = serializer.validated_data['token']
-            user = super(JWTLogout, self).verify_token(token)
-            LOGGER.info("%s signed out.", self.request.user,
-                extra={'event': 'logout', 'request': request})
-            auth_logout(request)
-            response = self.create_token(user, expires_at=datetime_or_now())
-            if settings.LOGOUT_CLEAR_COOKIES:
-                for cookie in settings.LOGOUT_CLEAR_COOKIES:
-                    response.delete_cookie(cookie)
-            return response
-        return Response({})
-
+        LOGGER.info("%s signed out.", self.request.user,
+            extra={'event': 'logout', 'request': request})
+        auth_logout(request)
+        response = Response(status=status.HTTP_200_OK)
+        if settings.LOGOUT_CLEAR_COOKIES:
+            for cookie in settings.LOGOUT_CLEAR_COOKIES:
+                response.delete_cookie(cookie)
+        return response
 
 class PasswordResetAPIView(CreateAPIView):
     """
