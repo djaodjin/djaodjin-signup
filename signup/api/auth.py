@@ -25,8 +25,8 @@
 import logging
 
 from django.core.exceptions import PermissionDenied
-from django.contrib.auth import (get_user_model, authenticate,
-    REDIRECT_FIELD_NAME, logout as auth_logout)
+from django.contrib.auth import (REDIRECT_FIELD_NAME, get_user_model,
+    authenticate, login as auth_login, logout as auth_logout)
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
@@ -58,6 +58,11 @@ LOGGER = logging.getLogger(__name__)
 class JWTBase(GenericAPIView):
 
     serializer_class = TokenSerializer
+
+    @staticmethod
+    def optional_session_cookie(request, user):
+        if request.query_params.get('cookie', False):
+            auth_login(request, user)
 
     def create_token(self, user, expires_at=None):
         if not expires_at:
@@ -136,6 +141,7 @@ sbF9uYW1lIjoiRG9ubnkgQ29vcGVyIiwiZXhwIjoxNTI5NjU4NzEwfQ.F2y\
                         raise ValidationError({'detail': _(
                             "MFA code does not match.")})
                     contact.clear_mfa_token()
+                self.optional_session_cookie(request, user)
                 return self.create_token(user)
         raise PermissionDenied()
 
@@ -222,6 +228,7 @@ JwcBUUMECj8AKxsHtRHUSypco"
             # because we do not want to give clues on the reasons for failure.
             user = self.register(serializer)
             if user:
+                self.optional_session_cookie(request, user)
                 return self.create_token(user)
         raise ValidationError({'detail': "invalid request"})
 

@@ -27,6 +27,7 @@ from django.conf.urls import url, include
 urlpatterns = [
     url(r'^', include('signup.urls.api.contacts')),
     url(r'^', include('signup.urls.api.keys')),
+    url(r'^', include('signup.urls.api.activate')),
     url(r'^', include('signup.urls.api.users')),
     url(r'^', include('signup.urls.api.tokens')),
     url(r'^', include('signup.urls.api.auth')), # Prefix to previous urls
