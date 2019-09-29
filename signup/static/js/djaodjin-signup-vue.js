@@ -635,9 +635,7 @@ var app = new Vue({
                 showErrorMessages(resp);
             });
             if(vm.imageSelected){
-                vm.saveProfileWithPicture(data);
-            } else {
-                vm.saveProfile(data);
+                vm.uploadProfilePicture();
             }
         },
         deleteProfile: function() {
@@ -686,7 +684,7 @@ var app = new Vue({
                 showErrorMessages(resp);
             });
         },
-        uploadImage: function() {
+        uploadProfilePicture: function() {
             var vm = this;
             this.picture.generateBlob(function(blob){
                 if(!blob) return;
@@ -696,7 +694,7 @@ var app = new Vue({
                     method: 'PUT',
                     contentType: false,
                     processData: false,
-                    url: djaodjinSettings.urls.user.api_contact,
+                    url: djaodjinSettings.urls.user.api_contact_picture,
                     data: data,
                 }).done(function(res) {
                     vm.getContact(function(){

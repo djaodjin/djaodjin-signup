@@ -25,14 +25,16 @@
 """APIs for profiles and profile activities"""
 
 import logging
+from hashlib import sha256
 
 from rest_framework import filters
-from rest_framework.generics import ListCreateAPIView
+from rest_framework.generics import ListCreateAPIView, RetrieveUpdateAPIView
 
 from .users import UserDetailAPIView, UserListCreateAPIView
 from ..mixins import ContactMixin
-from ..models import Activity
-from ..serializers import ActivitySerializer
+from ..models import Activity, Contact
+from ..serializers import ActivitySerializer, ContactPictureSerializer
+from ..utils import get_picture_storage
 
 
 LOGGER = logging.getLogger(__name__)
@@ -131,3 +133,19 @@ class ContactListAPIView(UserListCreateAPIView):
     to be deprecated in the future.
     """
     swagger_schema = None
+
+
+class ContactPictureAPIView(ContactMixin, RetrieveUpdateAPIView):
+    serializer_class = ContactPictureSerializer
+    queryset = Contact.objects.all().select_related('user')
+
+    def put(self, request, *args, **kwargs):
+        storage = get_picture_storage()
+        picture = request.data.get('picture')
+        if picture:
+            name = '%s.%s' % (sha256(picture.read()).hexdigest(), 'jpg')
+            storage.save(name, picture)
+            request.data['picture'] = storage.url(name)
+        return self.update(request, *args, **kwargs)
+
+    patch = put

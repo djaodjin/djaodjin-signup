@@ -26,11 +26,13 @@ from django.conf.urls import url
 
 from ... import settings
 from ...api.contacts import (ActivityListCreateAPIView, ContactDetailAPIView,
-    ContactListAPIView)
+    ContactListAPIView, ContactPictureAPIView)
 
 urlpatterns = [
     url(r'^contacts/(?P<user>%s)/activities/' % settings.USERNAME_PAT,
         ActivityListCreateAPIView.as_view(), name='api_activities'),
+    url(r'^contacts/(?P<user>%s)/picture/' % settings.USERNAME_PAT,
+        ContactPictureAPIView.as_view(), name='api_contact_picture'),
     url(r'^contacts/(?P<user>%s)/?' % settings.USERNAME_PAT,
         ContactDetailAPIView.as_view(), name='api_contact'),
     url(r'^contacts/?', ContactListAPIView.as_view(), name='api_contacts'),

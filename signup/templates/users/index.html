@@ -11,7 +11,7 @@
     </form>
     <img :src="contact.picture" v-show="contact.picture && !imageSelected" width="100" height="100">
       <croppa v-model="picture" :width="100" :height="100"></croppa>
-      <button @click="uploadImage">Save picture</button>
+      <button @click="uploadProfilePicture">Save picture</button>
     <div>
       <a id="change-password" href="{% url 'password_change' user %}">Change Password</a>
     </div>
