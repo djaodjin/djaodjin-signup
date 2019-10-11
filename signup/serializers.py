@@ -249,3 +249,10 @@ class UserSerializer(serializers.ModelSerializer):
         except Contact.DoesNotExist:
             pass
         return None
+
+
+class ContactPictureSerializer(serializers.ModelSerializer):
+    class Meta:
+        #pylint:disable=old-style-class,no-init
+        model = Contact
+        fields = ('picture',)
