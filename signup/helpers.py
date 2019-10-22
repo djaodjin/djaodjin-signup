@@ -46,10 +46,10 @@ def as_timestamp(dtime_at=None):
         dtime_at - datetime.datetime(1970, 1, 1, tzinfo=utc)).total_seconds())
 
 
-def full_name_natural_split(full_name):
+def full_name_natural_split(full_name, middle_initials=True):
     """
     This function splits a full name into a natural first name, last name
-    and middle initials.
+    and middle names.
     """
     parts = full_name.strip().split(' ')
     first_name = ""
@@ -63,8 +63,11 @@ def full_name_natural_split(full_name):
     if (last_name.lower() == 'i' or last_name.lower() == 'ii'
         or last_name.lower() == 'iii' and parts):
         last_name = parts.pop() + " " + last_name
-    middle_initials = ""
-    for middle_name in parts:
-        if middle_name:
-            middle_initials += middle_name[0]
-    return first_name, middle_initials, last_name
+    if middle_initials:
+        mid_name = ""
+        for middle_name in parts:
+            if middle_name:
+                mid_name += middle_name[0]
+    else:
+        mid_name = " ".join(parts)
+    return first_name, mid_name, last_name

@@ -1,13 +1,14 @@
 {% extends "contacts/base.html" %}
 
 {% block content %}
-<div id="contact-list-container"
+<contact-list id="contact-list-container" inline-template
      ng-app="signupApp">
   <div ng-controller="contactsCtrl">
     <h1>Contacts</h1>
     <form id="create-contact"
        ng-submit="createContact()"
        @submit.prevent="createContact">
+      <input type="hidden" name="csrfmiddlewaretoken" value="{{csrf_token}}">
       <div>
         <label>Full name</label>
         <input type="text" name="full_name"
@@ -41,9 +42,10 @@
          v-show="itemsLoaded && items.results.length > 0" v-cloak>
       <div ng-repeat="entry in items.results"
            v-for="entry in items.results">
-        <p><a href="{{urls.contacts}}[[entry.slug]]/">[[entry.full_name]]</a></p>
+        <p><a v-bind:href="'{{urls.contacts}}' + entry.slug + '/'"
+              ng-href="'{{urls.contacts}}' + entry.slug + '/'">[[entry.printable_name]]</a></p>
       </div>
     </div>
   </div>
-</div>
+</contact-list>
 {% endblock %}

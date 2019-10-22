@@ -33,7 +33,7 @@ try:
     from django.urls import NoReverseMatch, reverse, reverse_lazy
 except ImportError: # <= Django 1.10, Python<3.6
     from django.core.urlresolvers import NoReverseMatch, reverse, reverse_lazy
-except ModuleNotFoundError: #pylint:disable=undefined-variable
+except ModuleNotFoundError: #pylint:disable=undefined-variable,bad-except-order
     # <= Django 1.10, Python>=3.6
     from django.core.urlresolvers import NoReverseMatch, reverse, reverse_lazy
 

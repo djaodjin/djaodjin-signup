@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div id="update-pubkey-container">
+<user-update-pubkey id="update-pubkey-container" inline-template>
     <h1>Change SSH Public Key</h1>
     <form @submit.prevent="updatePubkey">
         <li>
@@ -17,5 +17,5 @@
             <input type="submit" name="submit" value="Submit" id="submit-id-submit">
         </div>
     </form>
-</div>
+</user-update-pubkey>
 {% endblock %}

@@ -23,7 +23,6 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import logging, re
-from hashlib import sha256
 
 from django.contrib.auth import logout as auth_logout
 from django.db import transaction, IntegrityError
@@ -45,7 +44,7 @@ from ..models import Contact
 from ..serializers import (ContactSerializer, ContactDetailSerializer,
     PasswordChangeSerializer, NoModelSerializer, NotificationsSerializer,
     ValidationErrorSerializer)
-from ..utils import get_picture_storage, generate_random_code, handle_uniq_error
+from ..utils import generate_random_code, handle_uniq_error
 
 
 LOGGER = logging.getLogger(__name__)
@@ -190,13 +189,39 @@ class UserDetailAPIView(ContactMixin, RetrieveUpdateDestroyAPIView):
               "nick_name": "Xia"
             }
         """
-        storage = get_picture_storage()
-        picture = request.data.get('picture')
-        if picture:
-            name = '%s.%s' % (sha256(picture.read()).hexdigest(), 'jpg')
-            storage.save(name, picture)
-            request.data['picture'] = storage.url(name)
         return self.update(request, *args, **kwargs)
+
+    def patch(self, request, *args, **kwargs):
+        """
+        Updates a login profile
+
+        **Tags: profile
+
+        **Examples
+
+        .. code-block:: http
+
+            PATCH /api/users/xia/ HTTP/1.1
+
+        .. code-block:: json
+
+            {
+              "email": "xia@locahost.localdomain",
+              "full_name": "Xia Lee",
+              "nick_name": "Xia"
+            }
+
+        responds
+
+        .. code-block:: json
+
+            {
+              "email": "xia@locahost.localdomain",
+              "full_name": "Xia Lee",
+              "nick_name": "Xia"
+            }
+        """
+        return self.partial_update(request, *args, **kwargs)
 
     def delete(self, request, *args, **kwargs):
         """
@@ -260,11 +285,14 @@ class UserDetailAPIView(ContactMixin, RetrieveUpdateDestroyAPIView):
                     if serializer.validated_data.get('slug'):
                         user.username = serializer.validated_data.get('slug')
                     if serializer.validated_data.get('full_name'):
-                        #pylint:disable=unused-variable
                         first_name, mid_name, last_name = \
                             full_name_natural_split(
-                                serializer.validated_data.get('full_name'))
+                                serializer.validated_data.get('full_name'),
+                                middle_initials=False)
                         user.first_name = first_name
+                        if mid_name:
+                            user.first_name = (
+                                first_name + " " + mid_name).strip()
                         user.last_name = last_name
                     user.save()
                 serializer.save()
@@ -340,6 +368,14 @@ class UserListCreateAPIView(ListCreateAPIView):
     queryset = Contact.objects.all().select_related('user')
     user_queryset = get_user_model().objects.filter(is_active=True)
 
+    def get_serializer_class(self):
+        if self.request.method.lower() == 'post':
+            return ContactDetailSerializer
+        return super(UserListCreateAPIView, self).get_serializer_class()
+
+    @swagger_auto_schema(request_body=ContactDetailSerializer, responses={
+        201: OpenAPIResponse("success", ContactDetailSerializer),
+        400: OpenAPIResponse("parameters error", ValidationErrorSerializer)})
     def post(self, request, *args, **kwargs):
         """
         Creates a user profile

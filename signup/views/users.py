@@ -44,7 +44,7 @@ from ..compat import reverse, is_authenticated
 from ..forms import (PasswordChangeForm, PublicKeyForm, UserForm,
     UserNotificationsForm)
 from ..mixins import UserMixin
-from ..models import Notification
+from ..models import Contact, Notification
 from ..utils import has_invalid_password, update_db_row
 
 
@@ -69,9 +69,19 @@ class UserProfileView(UserMixin, UpdateView):
             return self.form_invalid(form)
         return HttpResponseRedirect(self.get_success_url())
 
+    def get_initial(self):
+        initial = super(UserProfileView, self).get_initial()
+        if self.object:
+            initial.update({'full_name': self.object.get_full_name()})
+        return initial
+
     def get_context_data(self, **kwargs):
         context = super(UserProfileView, self).get_context_data(**kwargs)
         setattr(context['user'], 'full_name', context['user'].get_full_name())
+        try:
+            setattr(context['user'], 'picture', context['user'].contact.picture)
+        except Contact.DoesNotExist:
+            pass
         # URLs for user
         if is_authenticated(self.request):
 #XXX            contact, _ = Contact.objects.update_or_create_token(self.object)

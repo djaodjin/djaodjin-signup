@@ -49,7 +49,6 @@ from ..models import Contact
 from ..serializers import (CredentialsSerializer, CreateUserSerializer,
     TokenSerializer, UserSerializer, ValidationErrorSerializer,
     PasswordResetSerializer)
-from ..utils import verify_token as verify_token_base
 
 
 LOGGER = logging.getLogger(__name__)
@@ -195,20 +194,20 @@ JwcBUUMECj8AKxsHtRHUSypco"
                     'This email address has already been registered!'\
 ' Please <a href="%s">login</a> with your credentials. Thank you.'
                     % reverse('login'))))
-            else:
-                ValidationError(mark_safe(_(
-                    "This email address has already been registered!"\
+            raise ValidationError(mark_safe(_(
+                "This email address has already been registered!"\
 " You should now secure and activate your account following "\
 " the instructions we just emailed you. Thank you.")))
-            return None
 
-        first_name, mid_initials, last_name = full_name_natural_split(
-            validated_data['full_name'])
+        first_name, mid_name, last_name = full_name_natural_split(
+            validated_data['full_name'], mid_initials=True)
+        if mid_name:
+            first_name = (first_name + " " + mid_name).strip()
         username = validated_data.get('username', None)
         password = validated_data.get('password', None)
         user = self.model.objects.create_user(username,
             email=email, password=password,
-            first_name=first_name + " " + mid_initials, last_name=last_name)
+            first_name=first_name, last_name=last_name)
 
         # Bypassing authentication here, we are doing frictionless registration
         # the first time around.

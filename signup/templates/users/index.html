@@ -1,17 +1,21 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div id="user-profile-container"
+<user-update id="user-profile-container" inline-template
     ng-app="signupApp">
-  <h1>User Profile</h1>
   <div ng-controller="userProfileCtrl">
-    <form id="update-user-info" @submit.prevent="updateProfile" method="POST">
+    <h1>User Profile</h1>
+    <form id="update-user-info" method="post" @submit.prevent="updateProfile">
+      <input type="hidden" name="csrfmiddlewaretoken" value="{{csrf_token}}">
+      <div>
+        <input type="hidden" name="picture" value="{{user.picture}}">
+        <img :src="formFields.picture" width="100" height="100">
+        <croppa v-model="picture" :width="100" :height="100"></croppa>
+        <button @click.prevent="uploadProfilePicture">Save picture</button>
+      </div>
       {{form.as_p}}
-       <button type="submit">Update</button>
+      <button type="submit">Update</button>
     </form>
-    <img :src="contact.picture" v-show="contact.picture && !imageSelected" width="100" height="100">
-      <croppa v-model="picture" :width="100" :height="100"></croppa>
-      <button @click="uploadProfilePicture">Save picture</button>
     <div>
       <a id="change-password" href="{% url 'password_change' user %}">Change Password</a>
     </div>
@@ -27,9 +31,8 @@
     </div>
     {% endif %}
     {% if urls.user.api_generate_keys %}
-    <button id="generate-key-open"
-        data-target="#generate-key">Reset API Key</button>
     <div id="generate-key">
+      <h5 id="generate-key-open">Reset API Key</h5>
       <form method="POST" ng-submit="generateKey($event)"
             @submit.prevent="generateKey">
         <input name="key" maxlength="128" type="text" disabled
@@ -44,5 +47,5 @@
     </div>
     {% endif %}
   </div><!-- userProfileCtrl -->
-</div><!-- signupApp -->
+</user-update><!-- signupApp -->
 {% endblock %}

@@ -1,7 +1,8 @@
 {% extends "contacts/base.html" %}
 
 {% block content %}
-<div id="contact-edit-container" ng-app="signupApp">
+<contact-update id="contact-edit-container" inline-template
+  ng-app="signupApp">
   <div ng-controller="contactCtrl">
     <h1>Contact Profile</h1>
     <dl>
@@ -48,5 +49,5 @@
       </div>
     </div>
   </div>
-</div>
+</contact-update>
 {% endblock %}

@@ -53,8 +53,7 @@ EMAIL_VERIFICATION_RE = re.compile('^%s$' % settings.EMAIL_VERIFICATION_PAT)
 def _get_extra_field_class():
     extra_class = settings.EXTRA_FIELD
     if extra_class is None:
-        from django.db.models import TextField
-        extra_class = TextField
+        extra_class = models.TextField
     elif isinstance(extra_class, str):
         extra_class = import_string(extra_class)
     return extra_class

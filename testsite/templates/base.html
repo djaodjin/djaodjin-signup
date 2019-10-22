@@ -36,24 +36,31 @@
       {% endif %}
     </div>
   </div>
+  <div id="app">
   {% block content %}{% endblock %}
+  </div>
   {% block footer %}{% endblock %}
 </body>
 {% block scripts %}
 {% if VUEJS %}
-<script type="text/javascript">
-var djaodjinSettings = {
-    urls: {% if urls %}{{urls|to_json}}{% else %}{}{% endif %},
-    itemsPerPage: {% if items_per_page %}{{items_per_page}}{% else %}25{% endif %},
-    csrf: '{{csrf_token}}',
-};
-</script>
 <script type="text/javascript" charset="utf-8" src="/static/vendor/jquery.js"></script>
 <script type="text/javascript" charset="utf-8" src="/static/vendor/vue.js"></script>
 <script type="text/javascript" charset="utf-8" src="/static/vendor/uiv.min.js"></script>
 <script type="text/javascript" charset="utf-8" src="/static/vendor/vue-croppa.min.js"></script>
+<script type="text/javascript">
+var djaodjinSettings = {
+    urls: {% if urls %}{{urls|to_json}}{% else %}{}{% endif %},
+    itemsPerPage: {% if items_per_page %}{{items_per_page}}{% else %}25{% endif %},
+};
+</script>
 <script type="text/javascript" charset="utf-8" src="/static/js/djaodjin-resources.js"></script>
 <script type="text/javascript" charset="utf-8" src="/static/js/djaodjin-signup-vue.js"></script>
+<script type="text/javascript">
+var app = new Vue({
+  el: '#app',
+  delimiters: ["[[","]]"],
+});
+</script>
 {% else %}
 <script type="text/javascript" charset="utf-8" src="/static/vendor/angular.js"></script>
 <script type="text/javascript" charset="utf-8" src="/static/vendor/angular-touch.js"></script>

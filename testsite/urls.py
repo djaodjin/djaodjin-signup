@@ -1,4 +1,4 @@
-# Copyright (c) 2018, Djaodjin Inc.
+# Copyright (c) 2019, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,6 +22,8 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+from django.conf import settings
+from django.conf.urls.static import static
 from django.views.generic.base import RedirectView, TemplateView
 from django.views.i18n import JavaScriptCatalog
 from signup.compat import reverse_lazy
@@ -31,8 +33,8 @@ from urldecorators import include, url
 
 from .forms import SignupWithCaptchaForm
 
-
-urlpatterns = [
+urlpatterns = \
+    static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT) + [
     url(r'^api/',
         include('signup.urls.api.contacts'),
         decorators=['django.contrib.auth.decorators.login_required']),

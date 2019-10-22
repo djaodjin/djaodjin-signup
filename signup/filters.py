@@ -35,9 +35,11 @@ from rest_framework.filters import (OrderingFilter as BaseOrderingFilter,
 
 class SearchFilter(BaseSearchFilter):
 
-    def get_valid_fields(self, queryset, view, context={}):
-        model_fields = set([
-            field.name for field in queryset.model._meta.get_fields()])
+    @staticmethod
+    def get_valid_fields(queryset, view, context=None):
+        #pylint:disable=protected-access,unused-argument
+        model_fields = {
+            field.name for field in queryset.model._meta.get_fields()}
         base_fields = getattr(view, 'search_fields', [])
         valid_fields = tuple([
             field for field in base_fields if field in model_fields])
@@ -76,23 +78,25 @@ class SearchFilter(BaseSearchFilter):
 
 class OrderingFilter(BaseOrderingFilter):
 
-    def get_valid_fields(self, queryset, view, context={}):
-        model_fields = set([
-            field.name for field in queryset.model._meta.get_fields()])
+    def get_valid_fields(self, queryset, view, context=None):
+        #pylint:disable=protected-access
+        model_fields = {
+            field.name for field in queryset.model._meta.get_fields()}
         base_fields = super(OrderingFilter, self).get_valid_fields(
-            queryset, view, context=context)
+            queryset, view, context=context if context else {})
         valid_fields = tuple([
             field for field in base_fields if field[0] in model_fields])
         return valid_fields
 
     def get_ordering(self, request, queryset, view):
+        #pylint:disable=protected-access
         ordering = None
         params = request.query_params.get(self.ordering_param)
         if params:
             fields = [param.strip() for param in params.split(',')]
             if 'created_at' in fields or '-created_at' in fields:
-                model_fields = set([
-                    field.name for field in queryset.model._meta.get_fields()])
+                model_fields = {
+                    field.name for field in queryset.model._meta.get_fields()}
                 if 'date_joined' in model_fields:
                     fields = ['date_joined' if field == 'created_at' else (
                         '-date_joined' if field == '-created_at' else field)
@@ -132,9 +136,9 @@ class SortableSearchableFilterBackend(object):
         sort_fields_description = "sort by %s. If a field is preceded by"\
             "a minus sign ('-'), the order will be reversed. Multiple 'o'"\
             " parameters can be specified to produce a stable"\
-            " result." % ', '.join([field[1] for field in ordering_fields])
+            " result." % ', '.join([field[1] for field in self.sort_fields])
         search_fields_description = "search for matching text in %s"  % (
-            ', '.join([field_name for field_name in self.search_fields]))
+            ', '.join(self.search_fields))
 
         fields = [
             coreapi.Field(
@@ -161,9 +165,9 @@ class SortableSearchableFilterBackend(object):
 
 class SortableDateRangeSearchableFilterBackend(SortableSearchableFilterBackend):
 
-    def __init__(self, sort_fields, search_fields):
-        super(SortableDateRangeSearchableFilterBackend, self).__init__(
-            sort_fields, search_fields)
+#    def __init__(self, sort_fields, search_fields):
+#        super(SortableDateRangeSearchableFilterBackend, self).__init__(
+#            sort_fields, search_fields)
 
     def get_schema_fields(self, view):
         fields = super(SortableDateRangeSearchableFilterBackend,

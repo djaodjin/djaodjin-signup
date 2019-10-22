@@ -33,10 +33,8 @@ from django.utils.translation import ugettext_lazy as _
 from django.utils import six
 
 from . import settings
+from .helpers import full_name_natural_split
 from .models import Contact
-
-
-#pylint: disable=old-style-class,no-init
 
 
 class NameEmailForm(forms.Form):
@@ -226,10 +224,29 @@ class UserForm(forms.ModelForm):
         max_length=254, label=_("Username"),
         error_messages={'invalid': _("Username may only contain letters,"\
 " digits and -/_ characters. Spaces are not allowed.")})
+    full_name = forms.CharField(widget=forms.TextInput(
+        attrs={'placeholder': _("First and last names")}),
+        max_length=254, label=_("Full name"))
 
     class Meta:
         model = get_user_model()
-        fields = ['username', 'email', 'first_name', 'last_name']
+        fields = ['username', 'email', 'full_name']
+
+
+    def clean_full_name(self):
+        if self.cleaned_data.get('full_name'):
+            first_name, mid_name, last_name = \
+                full_name_natural_split(
+                    self.cleaned_data.get('full_name'), middle_initials=False)
+            if mid_name:
+                first_name = (first_name + " " + mid_name).strip()
+            self.cleaned_data.update({
+                'first_name': first_name,
+                'last_name': last_name})
+            if self.instance:
+                self.instance.first_name = first_name
+                self.instance.last_name = last_name
+        return self.cleaned_data.get('full_name')
 
 
 class UserNotificationsForm(forms.Form):

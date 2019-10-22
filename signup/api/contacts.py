@@ -24,16 +24,19 @@
 
 """APIs for profiles and profile activities"""
 
-import logging
-from hashlib import sha256
+import hashlib, logging, os
 
-from rest_framework import filters
+from django.contrib.auth import get_user_model
+from django.db import transaction
+from django.utils.encoding import force_text
+from rest_framework import filters, parsers, status
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateAPIView
+from rest_framework.response import Response
 
 from .users import UserDetailAPIView, UserListCreateAPIView
 from ..mixins import ContactMixin
 from ..models import Activity, Contact
-from ..serializers import ActivitySerializer, ContactPictureSerializer
+from ..serializers import ActivitySerializer
 from ..utils import get_picture_storage
 
 
@@ -136,16 +139,42 @@ class ContactListAPIView(UserListCreateAPIView):
 
 
 class ContactPictureAPIView(ContactMixin, RetrieveUpdateAPIView):
-    serializer_class = ContactPictureSerializer
-    queryset = Contact.objects.all().select_related('user')
+    """
+        Uploads a static asset file
 
-    def put(self, request, *args, **kwargs):
-        storage = get_picture_storage()
-        picture = request.data.get('picture')
-        if picture:
-            name = '%s.%s' % (sha256(picture.read()).hexdigest(), 'jpg')
-            storage.save(name, picture)
-            request.data['picture'] = storage.url(name)
-        return self.update(request, *args, **kwargs)
+        **Examples
 
-    patch = put
+        .. code-block:: http
+
+            POST /api/contacts/xia/picture/ HTTP/1.1
+    """
+    parser_classes = (parsers.FormParser, parsers.MultiPartParser)
+    user_queryset = get_user_model().objects.filter(is_active=True)
+
+    def post(self, request, *args, **kwargs):
+        #pylint:disable=unused-argument
+        uploaded_file = request.data.get('file')
+        if not uploaded_file:
+            return Response({'details': "no location or file specified."},
+                status=status.HTTP_400_BAD_REQUEST)
+
+        # tentatively extract file extension.
+        parts = os.path.splitext(
+            force_text(uploaded_file.name.replace('\\', '/')))
+        ext = parts[-1].lower() if len(parts) > 1 else ""
+        key_name = "%s%s" % (
+            hashlib.sha256(uploaded_file.read()).hexdigest(), ext)
+        default_storage = get_picture_storage()
+        location = self.request.build_absolute_uri(default_storage.url(
+            default_storage.save(key_name, uploaded_file)))
+        user_model = self.user_queryset.model
+        with transaction.atomic():
+            try:
+                user = user_model.objects.get(
+                    username=self.kwargs.get(self.lookup_url_kwarg))
+            except user_model.DoesNotExist:
+                user = None
+            Contact.objects.update_or_create(
+                slug=self.kwargs.get(self.lookup_url_kwarg),
+                defaults={'picture': location, 'user': user})
+        return Response({'location': location}, status=status.HTTP_201_CREATED)

@@ -99,11 +99,18 @@ class AuthTemplateResponseMixin(UrlsMixin, TemplateResponseMixin):
             **kwargs)
         # URLs for user
         disabled_registration = get_disabled_registration(self.request)
-        self.update_context_urls(context, {'user': {
-           'login': reverse('login'),
-           'password_reset': reverse('password_reset'),
-           'register': (reverse('registration_register')
-                if not disabled_registration else None),
+        self.update_context_urls(context, {
+            'api': {
+                'login': reverse('api_login'),
+                'recover': reverse('api_recover'),
+                'register': (reverse('api_register')
+                    if not disabled_registration else None),
+            },
+            'user': {
+                'login': reverse('login'),
+                'password_reset': reverse('password_reset'),
+                'register': (reverse('registration_register')
+                    if not disabled_registration else None),
         }})
         return context
 
@@ -291,16 +298,14 @@ class SignupBaseView(RedirectFormMixin, ProcessFormView):
                          "This email address has already been registered!"\
 " Please <a href=\"%s\">login</a> with your credentials. Thank you.")
                         % reverse('login'))})
-            else:
-                raise ValidationError(
-                    {'email':
-                     _("A user with that e-mail address already exists."),
-                    api_settings.NON_FIELD_ERRORS_KEY:
-                     mark_safe(_(
-                         "This email address has already been registered!"\
+            raise ValidationError(
+                {'email':
+                 _("A user with that e-mail address already exists."),
+                 api_settings.NON_FIELD_ERRORS_KEY:
+                 mark_safe(_(
+                     "This email address has already been registered!"\
 " You should now secure and activate your account following "\
 " the instructions we just emailed you. Thank you."))})
-            return None
 
         first_name, last_name = self.first_and_last_names(**cleaned_data)
         username = cleaned_data.get('username', None)

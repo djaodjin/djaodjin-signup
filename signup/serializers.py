@@ -50,7 +50,6 @@ class ActivitySerializer(serializers.ModelSerializer):
         help_text=_("User that created the activity"))
 
     class Meta:
-        #pylint:disable=old-style-class,no-init
         model = Activity
         fields = ('created_at', 'created_by', 'text', 'account')
         read_only_fields = ('created_at', 'created_by')
@@ -67,7 +66,6 @@ class APIKeysSerializer(NoModelSerializer):
         help_text=_("Password of the user making the HTTP request"))
 
     class Meta:
-        #pylint:disable=old-style-class,no-init
         fields = ('secret', 'password')
 
 
@@ -81,7 +79,6 @@ class ContactSerializer(serializers.ModelSerializer):
         help_text=_("True if the user has valid login credentials"))
 
     class Meta:
-        #pylint:disable=old-style-class,no-init
         model = Contact
         fields = ('slug', 'printable_name', 'picture', 'email', 'created_at',
             'credentials',)
@@ -114,7 +111,6 @@ class NotificationsSerializer(serializers.ModelSerializer):
         slug_field='slug', queryset=Notification.objects.all())
 
     class Meta:
-        #pylint:disable=old-style-class,no-init
         model = get_user_model()
         fields = ('notifications',)
 
@@ -137,7 +133,6 @@ class CredentialsSerializer(NoModelSerializer):
             " is enabled."))
 
 class CreateUserSerializer(serializers.ModelSerializer):
-    #pylint: disable=no-init,old-style-class
 
     username = serializers.CharField(required=False,
         help_text=_("Username to identify the account"))
@@ -164,7 +159,7 @@ class PasswordChangeSerializer(NoModelSerializer):
         help_text=_("New password for the user referenced in the URL"))
 
 
-class PasswordResetSerializer(serializers.Serializer):
+class PasswordResetSerializer(NoModelSerializer):
     """
     Serializer to send an e-mail to a user in order to recover her account.
     """
@@ -206,7 +201,6 @@ class UserSerializer(serializers.ModelSerializer):
 
     XXX currently used in `api.auth.JWTBase` for payloads.
     """
-    #pylint: disable=no-init,old-style-class
 
     # Only way I found out to remove the ``UniqueValidator``. We are not
     # interested to create new instances here.
@@ -249,10 +243,3 @@ class UserSerializer(serializers.ModelSerializer):
         except Contact.DoesNotExist:
             pass
         return None
-
-
-class ContactPictureSerializer(serializers.ModelSerializer):
-    class Meta:
-        #pylint:disable=old-style-class,no-init
-        model = Contact
-        fields = ('picture',)

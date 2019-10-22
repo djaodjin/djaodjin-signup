@@ -74,6 +74,51 @@ INSTALLED_APPS = (
     'testsite'
 )
 
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'filters': {
+        'require_debug_true': {
+            '()': 'django.utils.log.RequireDebugTrue'
+        },
+    },
+    'formatters': {
+        'simple': {
+            'format': 'X X %(levelname)s [%(asctime)s] %(message)s',
+            'datefmt': '%d/%b/%Y:%H:%M:%S %z'
+        },
+    },
+    'handlers': {
+        'log': {
+            'level': 'DEBUG',
+            'formatter': 'simple',
+            'class':'logging.StreamHandler',
+        },
+        'db_log': {
+            'level': 'DEBUG',
+            'formatter': 'simple',
+            'filters': ['require_debug_true'],
+            'class':'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+#        'django.db.backends': {
+#           'handlers': ['db_log'],
+#           'level': 'DEBUG',
+#           'propagate': False
+#        },
+        # This is the root logger.
+        # The level will only be taken into account if the record is not
+        # propagated from a child logger.
+        #https://docs.python.org/2/library/logging.html#logging.Logger.propagate
+        '': {
+            'handlers': ['log'],
+            'level': 'INFO'
+        },
+    },
+}
+
+
 AUTHENTICATION_BACKENDS = (
     'signup.backends.auth.UsernameOrEmailModelBackend',
     'django.contrib.auth.backends.ModelBackend'
@@ -100,7 +145,6 @@ MIDDLEWARE = (
 )
 
 ROOT_URLCONF = 'testsite.urls'
-
 WSGI_APPLICATION = 'testsite.wsgi.application'
 
 TEMPLATES = [{
@@ -136,20 +180,17 @@ MESSAGE_TAGS = {
 # https://docs.djangoproject.com/en/1.6/topics/i18n/
 
 LANGUAGE_CODE = 'en-us'
-
 TIME_ZONE = 'UTC'
-
 USE_I18N = True
-
 USE_L10N = True
-
 USE_TZ = True
 
 
 # Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/1.6/howto/static-files/
-
+MEDIA_ROOT = os.path.join(BASE_DIR, 'testsite', 'media')
+MEDIA_URL = '/media/'
 STATIC_URL = '/static/'
+
 
 ACCOUNT_ACTIVATION_DAYS = 2
 
