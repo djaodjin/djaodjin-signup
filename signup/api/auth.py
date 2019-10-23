@@ -200,7 +200,7 @@ JwcBUUMECj8AKxsHtRHUSypco"
 " the instructions we just emailed you. Thank you.")))
 
         first_name, mid_name, last_name = full_name_natural_split(
-            validated_data['full_name'], mid_initials=True)
+            validated_data['full_name'], middle_initials=False)
         if mid_name:
             first_name = (first_name + " " + mid_name).strip()
         username = validated_data.get('username', None)

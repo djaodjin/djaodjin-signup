@@ -758,56 +758,6 @@ Vue.component('user-update', {
                 showErrorMessages(resp);
             });
         },
-        get: function(){
-            var vm = this;
-            vm.reqGet(djaodjinSettings.urls.user.api_profile,
-            function(resp) {
-                vm.formFields = resp;
-            });
-        },
-        validateForm: function(){ // XXX depends on jQuery
-            var vm = this;
-            var isEmpty = true;
-            var fields = $(vm.$el).find('[name]').not(
-                '[name="csrfmiddlewaretoken"]');
-            for( var fieldIdx = 0; fieldIdx < fields.length; ++fieldIdx ) {
-                var fieldName = $(fields[fieldIdx]).attr('name');
-                var fieldValue = $(fields[fieldIdx]).val();
-                if( vm.formFields[fieldName] !== fieldValue ) {
-                    vm.formFields[fieldName] = fieldValue;
-                }
-                if( vm.formFields[fieldName] ) {
-                    // We have at least one piece of information
-                    // about the plan already available.
-                    isEmpty = false;
-                }
-            }
-            return !isEmpty;
-        },
-        updateProfile: function(){
-            var vm = this;
-            vm.validateForm();
-            vm.reqPatch(djaodjinSettings.urls.user.api_profile, vm.formFields,
-            function(resp) {
-                // XXX should really be success but then it needs to be changed
-                // in Django views as well.
-                showMessages([gettext("Profile updated.")], "info");
-            }, function(resp){
-                showErrorMessages(resp);
-            });
-            if(vm.imageSelected){
-                vm.uploadProfilePicture();
-            }
-        },
-        deleteProfile: function() {
-            var vm = this;
-            vm.reqDelete(djaodjinSettings.urls.user.api_profile,
-            function() {
-                window.location = djaodjinSettings.urls.user.profile_redirect;
-            }, function(resp){
-                showErrorMessages(resp);
-            });
-        },
         resetKey: function(){
             this.apiModalOpen = true;
         },
@@ -826,6 +776,37 @@ Vue.component('user-update', {
                 }
                 showErrorMessages(resp);
             });
+        },
+        deleteProfile: function() {
+            var vm = this;
+            vm.reqDelete(djaodjinSettings.urls.user.api_profile,
+            function() {
+                window.location = djaodjinSettings.urls.user.profile_redirect;
+            }, function(resp){
+                showErrorMessages(resp);
+            });
+        },
+        get: function(){
+            var vm = this;
+            vm.reqGet(djaodjinSettings.urls.user.api_profile,
+            function(resp) {
+                vm.formFields = resp;
+            });
+        },
+        updateProfile: function(){
+            var vm = this;
+            vm.validateForm();
+            vm.reqPatch(djaodjinSettings.urls.user.api_profile, vm.formFields,
+            function(resp) {
+                // XXX should really be success but then it needs to be changed
+                // in Django views as well.
+                showMessages([gettext("Profile updated.")], "info");
+            }, function(resp){
+                showErrorMessages(resp);
+            });
+            if(vm.imageSelected){
+                vm.uploadProfilePicture();
+            }
         },
         uploadProfilePicture: function() {
             var vm = this;
@@ -864,10 +845,29 @@ Vue.component('user-update', {
                 });
             }, 'image/jpeg');
         },
+        validateForm: function(){ // XXX depends on jQuery
+            var vm = this;
+            var isEmpty = true;
+            var fields = $(vm.$el).find('[name]').not(
+                '[name="csrfmiddlewaretoken"]');
+            for( var fieldIdx = 0; fieldIdx < fields.length; ++fieldIdx ) {
+                var fieldName = $(fields[fieldIdx]).attr('name');
+                var fieldValue = $(fields[fieldIdx]).val();
+                if( vm.formFields[fieldName] !== fieldValue ) {
+                    vm.formFields[fieldName] = fieldValue;
+                }
+                if( vm.formFields[fieldName] ) {
+                    // We have at least one piece of information
+                    // about the plan already available.
+                    isEmpty = false;
+                }
+            }
+            return !isEmpty;
+        },
     },
     computed: {
         imageSelected: function(){
-            return this.picture.hasImage();
+            return this.picture && this.picture.hasImage();
         }
     },
     mounted: function(){
