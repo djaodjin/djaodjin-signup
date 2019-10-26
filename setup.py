@@ -37,6 +37,7 @@ setup(
               'signup.views',
               'signup.urls',
               'signup.urls.api',
+              'signup.urls.views',
               ],
     package_data={'signup': ['templates/accounts/*.html',
                              'templates/notification/*.eml',
