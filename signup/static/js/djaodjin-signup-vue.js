@@ -882,7 +882,10 @@ Vue.component('user-update', {
 
 
 Vue.component('user-update-password', {
-    mixins: [httpRequestMixin, userPasswordModalMixin],
+    mixins: [
+        httpRequestMixin,
+        userPasswordModalMixin
+    ],
     data: function () {
         return {
             modalSelector: '.user-password-modal',
@@ -926,7 +929,10 @@ Vue.component('user-update-password', {
 
 
 Vue.component('user-update-pubkey', {
-    mixins: [httpRequestMixin, userPasswordModalMixin],
+    mixins: [
+        httpRequestMixin,
+        userPasswordModalMixin
+    ],
     data: function () {
         return {
             modalSelector: '.user-password-modal',
