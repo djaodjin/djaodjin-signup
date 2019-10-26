@@ -1,4 +1,4 @@
-# Copyright (c) 2018, Djaodjin Inc.
+# Copyright (c) 2019, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,14 +22,24 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from django.conf.urls import url
+"""
+URLconf for frictionless signup.
 
-from .. import settings
-from ..views.contacts import ContactListView, ContactDetailView
+If the default behavior of these views is acceptable to you, simply
+use a line like this in your root URLconf to set up the default URLs
+for registration:
+
+    (r'^accounts/', include('signup.urls.views.accounts')),
+
+Optionally add URLs for User profiles:
+
+    (r'^users/', include('signup.urls.views.users')),
+"""
+
+from django.conf.urls import include, url
 
 urlpatterns = [
-    # These three URLs must be protected.
-    url(r'^(?P<user>%s)/' % settings.USERNAME_PAT,
-        ContactDetailView.as_view(), name='contact'),
-    url(r'^', ContactListView.as_view(), name='contacts'),
+    url(r'^contacts/', include('signup.urls.views.contacts')),
+    url(r'^users/', include('signup.urls.views.users')),
+    url(r'^', include('signup.urls.views.accounts')),
 ]

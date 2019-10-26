@@ -22,13 +22,14 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""
-URLconf for frictionless signup (API and HTML pages).
-"""
+from django.conf.urls import url
 
-from django.conf.urls import include, url
+from ... import settings
+from ...views.contacts import ContactListView, ContactDetailView
 
 urlpatterns = [
-    url(r'^api/', include('signup.urls.api')),
-    url(r'^', include('signup.urls.views')),
+    # These three URLs must be protected.
+    url(r'^(?P<user>%s)/' % settings.USERNAME_PAT,
+        ContactDetailView.as_view(), name='contact'),
+    url(r'^', ContactListView.as_view(), name='contacts'),
 ]

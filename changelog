@@ -1,3 +1,12 @@
+0.4.0
+
+  * upload of contact picture
+  * use full_name in user profile instead of first_name/last_name
+  * use inline-template for Vue.js components
+  * clean separation between API endpoints and HTML pages URLs
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Sat,  26 Oct 2019 13:10:00 -0700
+
 0.3.1
 
   * splits summary and detail profile serializers

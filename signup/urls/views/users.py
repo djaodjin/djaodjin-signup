@@ -24,8 +24,8 @@
 
 from django.conf.urls import url
 
-from ..settings import USERNAME_PAT
-from ..views.users import (PasswordChangeView, UserPublicKeyUpdateView,
+from ...settings import USERNAME_PAT
+from ...views.users import (PasswordChangeView, UserPublicKeyUpdateView,
     UserProfileView, UserNotificationsView, redirect_to_user_profile)
 
 urlpatterns = [

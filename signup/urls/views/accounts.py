@@ -1,4 +1,4 @@
-# Copyright (c) 2018, Djaodjin Inc.
+# Copyright (c) 2019, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -24,9 +24,9 @@
 
 from django.conf.urls import url
 
-from ..views.auth import (ActivationView, PasswordResetView,
+from ... import settings
+from ...views.auth import (ActivationView, PasswordResetView,
     PasswordResetConfirmView, SigninView, SignoutView, SignupView)
-from .. import settings
 
 urlpatterns = [
     # When the key and/or token are wrong we don't want to give any clue

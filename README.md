@@ -32,7 +32,8 @@ to the settings AUTHENTICATION_BACKENDS.
     urls.py:
 
         urlpatterns = ('',
-            (r'^accounts/', include('signup.urls')),
+            (r'^api/', include('signup.urls.api')),
+            (r'^', include('signup.urls.views')),
 
         )
 
@@ -69,9 +70,11 @@ run the testsite webapp.
 Release Notes
 =============
 
-0.3.1
+0.4.0
 
-  * splits summary and detail profile serializers
-  * adds API to recover an account (#30)
+  * upload of contact picture
+  * use full_name in user profile instead of first_name/last_name
+  * use inline-template for Vue.js components
+  * clean separation between API endpoints and HTML pages URLs
 
 [previous release notes](changelog)
