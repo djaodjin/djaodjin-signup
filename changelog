@@ -1,4 +1,10 @@
-0.4.0
+0.4.1
+
+  * adds missing signup.urls.views in setup.py
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Sat,  26 Oct 2019 13:10:00 -0700
+
+0.4.0 (broken)
 
   * upload of contact picture
   * use full_name in user profile instead of first_name/last_name
