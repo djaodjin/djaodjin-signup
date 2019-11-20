@@ -432,7 +432,8 @@ class ActivationBaseView(RedirectFormMixin, UpdateView):
                 " already activated your account previously. In that case,"\
                 " just login. Thank you."))
             next_url = validate_redirect(self.request)
-            return HttpResponseRedirect(next_url)
+            if next_url:
+                return HttpResponseRedirect(next_url)
         return self.render_to_response(self.get_context_data(**kwargs))
 
     def get_object(self, queryset=None):  #pylint:disable=unused-argument
