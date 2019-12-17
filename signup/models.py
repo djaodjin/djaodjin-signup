@@ -65,7 +65,7 @@ class ActivatedUserManager(UserManager):
         #pylint:disable=protected-access
         field = self.model._meta.get_field('username')
         max_length = field.max_length
-        username = email.split('@')[0]
+        username = slugify(email.split('@')[0])
         try:
             field.run_validators(username)
         except ValidationError:
