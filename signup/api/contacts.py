@@ -30,8 +30,7 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.utils.encoding import force_text
 from rest_framework import filters, parsers, status
-from rest_framework.generics import (CreateAPIView, ListCreateAPIView,
-    RetrieveUpdateAPIView)
+from rest_framework.generics import CreateAPIView, ListCreateAPIView
 from rest_framework.response import Response
 
 from .users import UserDetailAPIView, UserListCreateAPIView

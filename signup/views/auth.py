@@ -52,7 +52,7 @@ from ..decorators import check_user_active
 from ..forms import (ActivationForm, MFACodeForm, NameEmailForm,
     PasswordResetForm, PasswordResetConfirmForm)
 from ..helpers import full_name_natural_split
-from ..mixins import UrlsMixin
+from ..mixins import ActivateMixin, UrlsMixin
 from ..models import Contact
 from ..utils import (fill_form_errors, get_disabled_authentication,
     get_disabled_registration)
@@ -325,7 +325,7 @@ class SignupBaseView(RedirectFormMixin, ProcessFormView):
         return user
 
 
-class ActivationBaseView(RedirectFormMixin, UpdateView):
+class ActivationBaseView(RedirectFormMixin, ActivateMixin, UpdateView):
     """
     The user is now on the activation url that was sent in an email.
     It is time to complete the registration and activate the account.
@@ -335,31 +335,7 @@ class ActivationBaseView(RedirectFormMixin, UpdateView):
     once we know the email is valid and a password has been set.
     """
     form_class = ActivationForm
-    key_url_kwarg = 'verification_key'
     http_method_names = ['get', 'post']
-
-    def activate_user(self, form):
-        # If we don't save the ``User`` model here,
-        # we won't be able to authenticate later.
-        first_name, last_name = self.first_and_last_names(**form.cleaned_data)
-        verification_key = self.kwargs.get(self.key_url_kwarg)
-        user = Contact.objects.activate_user(verification_key,
-            username=form.cleaned_data['username'],
-            password=form.cleaned_data['new_password'],
-            first_name=first_name,
-            last_name=last_name)
-        return user
-
-    @staticmethod
-    def first_and_last_names(**cleaned_data):
-        first_name = cleaned_data.get('first_name', None)
-        last_name = cleaned_data.get('last_name', None)
-        if not first_name:
-            # If the form does not contain a first_name/last_name pair,
-            # we assume a full_name was passed instead.
-            full_name = cleaned_data.get('full_name', None)
-            first_name, _, last_name = full_name_natural_split(full_name)
-        return first_name, last_name
 
     @property
     def contact(self):
@@ -395,21 +371,8 @@ class ActivationBaseView(RedirectFormMixin, UpdateView):
         return response
 
     def form_valid(self, form):
-        verification_key = self.kwargs.get(self.key_url_kwarg)
-        user = self.activate_user(form)
-        if not user.last_login:
-            # XXX copy/paste from models.ActivatedUserManager.create_user
-            LOGGER.info("'%s %s <%s>' registered with username '%s'",
-                user.first_name, user.last_name, user.email, user,
-                extra={'event': 'register', 'user': user})
-            signals.user_registered.send(sender=__name__, user=user)
-        else:
-            LOGGER.info("'%s %s <%s>' activated with username '%s'",
-                user.first_name, user.last_name, user.email, user,
-                extra={'event': 'activate', 'user': user})
-            signals.user_activated.send(sender=__name__,
-                user=user, verification_key=verification_key,
-                request=self.request)
+        user = self.activate_user(**form.cleaned_data)
+        if user.last_login:
             messages.info(
                 self.request, _("Thank you. Your account is now active."))
 

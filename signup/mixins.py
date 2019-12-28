@@ -22,13 +22,20 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import logging
+
 from django.http import Http404
 from django.utils import six
 from django.contrib.auth import get_user_model
 from rest_framework.generics import get_object_or_404
 
+from . import signals
 from .compat import reverse, is_authenticated
+from .helpers import full_name_natural_split
 from .models import Contact
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 class UrlsMixin(object):
@@ -49,6 +56,47 @@ class UrlsMixin(object):
         else:
             context.update({'urls': urls})
         return context
+
+
+class ActivateMixin(object):
+
+    key_url_kwarg = 'verification_key'
+
+    def activate_user(self, **cleaned_data):
+        # If we don't save the ``User`` model here,
+        # we won't be able to authenticate later.
+        first_name, last_name = self.first_and_last_names(**cleaned_data)
+        verification_key = self.kwargs.get(self.key_url_kwarg)
+        user = Contact.objects.activate_user(verification_key,
+            username=cleaned_data['username'],
+            password=cleaned_data['new_password'],
+            first_name=first_name,
+            last_name=last_name)
+        if not user.last_login:
+            # XXX copy/paste from models.ActivatedUserManager.create_user
+            LOGGER.info("'%s %s <%s>' registered with username '%s'",
+                user.first_name, user.last_name, user.email, user,
+                extra={'event': 'register', 'user': user})
+            signals.user_registered.send(sender=__name__, user=user)
+        else:
+            LOGGER.info("'%s %s <%s>' activated with username '%s'",
+                user.first_name, user.last_name, user.email, user,
+                extra={'event': 'activate', 'user': user})
+            signals.user_activated.send(sender=__name__,
+                user=user, verification_key=self.kwargs.get(self.key_url_kwarg),
+                request=self.request)
+        return user
+
+    @staticmethod
+    def first_and_last_names(**cleaned_data):
+        first_name = cleaned_data.get('first_name', None)
+        last_name = cleaned_data.get('last_name', None)
+        if not first_name:
+            # If the form does not contain a first_name/last_name pair,
+            # we assume a full_name was passed instead.
+            full_name = cleaned_data.get('full_name', None)
+            first_name, _, last_name = full_name_natural_split(full_name)
+        return first_name, last_name
 
 
 class ContactMixin(UrlsMixin):

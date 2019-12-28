@@ -40,6 +40,21 @@ class NoModelSerializer(serializers.Serializer):
         raise RuntimeError('`update()` should not be called.')
 
 
+class ActivateUserSerializer(serializers.ModelSerializer):
+
+    username = serializers.CharField(required=False,
+        help_text=_("Username to identify the account"))
+    new_password = serializers.CharField(required=False, write_only=True,
+        style={'input_type': 'password'}, help_text=_("Password with which"\
+            " a user can authenticate with the service"))
+    full_name = serializers.CharField(
+        help_text=_("Full name (effectively first name followed by last name)"))
+
+    class Meta:
+        model = get_user_model()
+        fields = ('username', 'new_password', 'full_name')
+
+
 class ActivitySerializer(serializers.ModelSerializer):
 
     account = serializers.SlugRelatedField(
@@ -149,14 +164,18 @@ class CreateUserSerializer(serializers.ModelSerializer):
         fields = ('username', 'password', 'email', 'full_name')
 
 
-class PasswordChangeSerializer(NoModelSerializer):
+class PasswordResetConfirmSerializer(NoModelSerializer):
+
+    new_password = serializers.CharField(write_only=True,
+        style={'input_type': 'password'},
+        help_text=_("New password for the user referenced in the URL"))
+
+
+class PasswordChangeSerializer(PasswordResetConfirmSerializer):
 
     password = serializers.CharField(write_only=True,
         style={'input_type': 'password'},
         help_text=_("Password of the user making the HTTP request"))
-    new_password = serializers.CharField(write_only=True,
-        style={'input_type': 'password'},
-        help_text=_("New password for the user referenced in the URL"))
 
 
 class PasswordResetSerializer(NoModelSerializer):

@@ -28,8 +28,9 @@ from django.core.exceptions import PermissionDenied
 from django.contrib.auth import (REDIRECT_FIELD_NAME, get_user_model,
     authenticate, login as auth_login, logout as auth_logout)
 from django.contrib.auth.tokens import default_token_generator
+from django.utils import six
 from django.utils.encoding import force_bytes
-from django.utils.http import urlsafe_base64_encode
+from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.utils.safestring import mark_safe
 from django.utils.translation import ugettext_lazy as _
 import jwt
@@ -45,10 +46,12 @@ from ..compat import reverse
 from ..decorators import check_user_active
 from ..docs import OpenAPIResponse, swagger_auto_schema
 from ..helpers import as_timestamp, datetime_or_now, full_name_natural_split
+from ..mixins import ActivateMixin
 from ..models import Contact
-from ..serializers import (CredentialsSerializer, CreateUserSerializer,
-    TokenSerializer, UserSerializer, ValidationErrorSerializer,
-    PasswordResetSerializer)
+from ..serializers import (ActivateUserSerializer, CredentialsSerializer,
+    CreateUserSerializer,
+    PasswordResetSerializer, PasswordResetConfirmSerializer,
+    TokenSerializer, UserSerializer, ValidationErrorSerializer)
 
 
 LOGGER = logging.getLogger(__name__)
@@ -76,6 +79,58 @@ class JWTBase(GenericAPIView):
         LOGGER.info("%s signed in.", user,
             extra={'event': 'login', 'request': self.request})
         return Response(TokenSerializer().to_representation({'token': token}))
+
+
+class JWTActivate(ActivateMixin, JWTBase):
+    """
+    Activates a user
+
+    Activates a new user and returns a JSON Web Token that can subsequently
+    be used to authenticate the new user in HTTP requests.
+
+    **Tags: auth
+
+    **Example
+
+    .. code-block:: http
+
+        POST /api/auth/activate/0123456789abcef0123456789abcef/ HTTP/1.1
+
+    .. code-block:: json
+
+        {
+          "username": "joe1",
+          "password": "yoyo",
+          "full_name": "Joe Card1"
+        }
+
+    responds
+
+    .. code-block:: json
+
+        {
+            "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VybmFtZSI6\
+ImpvZTEiLCJlbWFpbCI6ImpvZSsxQGRqYW9kamluLmNvbSIsImZ1bGxfbmFtZ\
+SI6IkpvZSAgQ2FyZDEiLCJleHAiOjE1Mjk2NTUyMjR9.GFxjU5AvcCQbVylF1P\
+JwcBUUMECj8AKxsHtRHUSypco"
+        }
+    """
+    model = get_user_model()
+    serializer_class = ActivateUserSerializer
+
+    @swagger_auto_schema(responses={
+        201: OpenAPIResponse("", TokenSerializer),
+        400: OpenAPIResponse("parameters error", ValidationErrorSerializer)})
+    def post(self, request, *args, **kwargs):#pylint:disable=unused-argument
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            # We are not using `is_valid(raise_exception=True)` here
+            # because we do not want to give clues on the reasons for failure.
+            user = self.activate_user(**serializer.validated_data)
+            if user:
+                self.optional_session_cookie(request, user)
+                return self.create_token(user)
+        raise ValidationError({'detail': "invalid request"})
 
 
 class JWTLogin(JWTBase):
@@ -143,6 +198,73 @@ sbF9uYW1lIjoiRG9ubnkgQ29vcGVyIiwiZXhwIjoxNTI5NjU4NzEwfQ.F2y\
                 self.optional_session_cookie(request, user)
                 return self.create_token(user)
         raise PermissionDenied()
+
+
+class JWTPasswordResetConfirm(JWTBase):
+    """
+    Confirms a password reset
+
+    Sets a new password after a recover password was triggered
+    and returns a JSON Web Token that can subsequently
+    be used to authenticate the new user in HTTP requests.
+
+    **Tags: auth
+
+    **Example
+
+    .. code-block:: http
+
+        POST /api/auth/reset/0123456789abcef0123456789abcef/abc123/ HTTP/1.1
+
+    .. code-block:: json
+
+        {
+          "new_password": "yoyo",
+          "new_password2": "yoyo"
+        }
+
+    responds
+
+    .. code-block:: json
+
+        {
+            "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VybmFtZSI6\
+ImpvZTEiLCJlbWFpbCI6ImpvZSsxQGRqYW9kamluLmNvbSIsImZ1bGxfbmFtZ\
+SI6IkpvZSAgQ2FyZDEiLCJleHAiOjE1Mjk2NTUyMjR9.GFxjU5AvcCQbVylF1P\
+JwcBUUMECj8AKxsHtRHUSypco"
+        }
+    """
+    model = get_user_model()
+    serializer_class = PasswordResetConfirmSerializer
+    token_generator = default_token_generator
+
+    @swagger_auto_schema(responses={
+        201: OpenAPIResponse("", TokenSerializer),
+        400: OpenAPIResponse("parameters error", ValidationErrorSerializer)})
+    def post(self, request, *args, **kwargs):#pylint:disable=unused-argument
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            # We are not using `is_valid(raise_exception=True)` here
+            # because we do not want to give clues on the reasons for failure.
+            try:
+                uid = urlsafe_base64_decode(self.kwargs.get('uidb64'))
+                if not isinstance(uid, six.string_types):
+                    # See Django2.2 release notes
+                    uid = uid.decode()
+                user = self.model.objects.get(pk=uid)
+            except (TypeError, ValueError, OverflowError,
+                    self.model.DoesNotExist):
+                user = None
+            if user is not None and self.token_generator.check_token(
+                                        user, self.kwargs.get('token')):
+                new_password = serializer.validated_data['new_password']
+                user.set_password(new_password)
+                user.save()
+                LOGGER.info("%s reset her/his password.", user,
+                    extra={'event': 'resetpassword', 'request': request})
+                self.optional_session_cookie(request, user)
+                return self.create_token(user)
+        raise ValidationError({'detail': "invalid request"})
 
 
 class JWTRegister(JWTBase):
@@ -299,7 +421,10 @@ class PasswordResetAPIView(CreateAPIView):
             if check_user_active(self.request, user, next_url=next_url):
                 # Make sure that a reset password email is sent to a user
                 # that actually has an activated account.
-                uid = urlsafe_base64_encode(force_bytes(user.pk)).decode()
+                uid = urlsafe_base64_encode(force_bytes(user.pk))
+                if not isinstance(uid, six.string_types):
+                    # See Django2.2 release notes
+                    uid = uid.decode()
                 token = self.token_generator.make_token(user)
                 back_url = self.request.build_absolute_uri(
                     reverse('password_reset_confirm', args=(uid, token)))

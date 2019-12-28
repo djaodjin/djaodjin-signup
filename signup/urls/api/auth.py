@@ -24,10 +24,18 @@
 
 from django.conf.urls import url
 
-from ...api.auth import JWTLogin, JWTRegister, PasswordResetAPIView
+from ... import settings
+from ...api.auth import (JWTActivate, JWTLogin, JWTPasswordResetConfirm,
+    JWTRegister, PasswordResetAPIView)
+
 
 urlpatterns = [
+    url(r'^auth/activate/(?P<verification_key>%s)/$'
+        % settings.EMAIL_VERIFICATION_PAT,
+        JWTActivate.as_view(), name='api_activate'),
     url(r'^auth/register/', JWTRegister.as_view(), name='api_register'),
     url(r'^auth/recover/', PasswordResetAPIView.as_view(), name='api_recover'),
+    url(r'^auth/reset/(?P<uidb64>[0-9A-Za-z_\-]+)/(?P<token>[0-9A-Za-z]{1,13}-[0-9A-Za-z]{1,20})/$', #pylint: disable=line-too-long
+        JWTPasswordResetConfirm.as_view(), name='api_password_reset_confirm'),
     url(r'^auth/', JWTLogin.as_view(), name='api_login'),
 ]
