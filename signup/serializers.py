@@ -212,6 +212,14 @@ class PublicKeySerializer(NoModelSerializer):
         help_text=_("New public key for the user referenced in the URL"))
 
 
+class UploadBlobSerializer(NoModelSerializer):
+    """
+    Upload a picture or other POD content
+    """
+    location = serializers.URLField(
+        help_text=_("URL to uploaded content"))
+
+
 class UserSerializer(serializers.ModelSerializer):
     """
     This serializer is a substitute for `ContactSerializer` whose intent is to

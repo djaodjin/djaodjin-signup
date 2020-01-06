@@ -908,7 +908,7 @@ Vue.component('user-update-password', {
             // We are using the view (and not the API) so that the redirect
             // to the profile page is done correctly and a success message
             // shows up.
-            vm.reqPost(djaodjinSettings.urls.user.password_change, {
+            vm.reqPut(djaodjinSettings.urls.user.api_password_change, {
                 password: vm.password,
                 new_password: vm.newPassword,
                 new_password2: vm.newPassword2

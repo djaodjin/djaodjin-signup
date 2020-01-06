@@ -36,7 +36,8 @@ from rest_framework.response import Response
 from .users import UserDetailAPIView, UserListCreateAPIView
 from ..mixins import ContactMixin
 from ..models import Activity, Contact
-from ..serializers import ActivitySerializer
+from ..serializers import ActivitySerializer, UploadBlobSerializer
+
 from ..utils import get_picture_storage
 
 
@@ -150,6 +151,7 @@ class ContactPictureAPIView(ContactMixin, CreateAPIView):
     """
     parser_classes = (parsers.FormParser, parsers.MultiPartParser)
     user_queryset = get_user_model().objects.filter(is_active=True)
+    serializer_class = UploadBlobSerializer
 
     def post(self, request, *args, **kwargs):
         #pylint:disable=unused-argument
