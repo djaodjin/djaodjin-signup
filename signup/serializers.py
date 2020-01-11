@@ -1,4 +1,4 @@
-# Copyright (c) 2019, DjaoDjin inc.
+# Copyright (c) 2020, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -47,7 +47,7 @@ class ActivateUserSerializer(serializers.ModelSerializer):
     new_password = serializers.CharField(required=False, write_only=True,
         style={'input_type': 'password'}, help_text=_("Password with which"\
             " a user can authenticate with the service"))
-    full_name = serializers.CharField(
+    full_name = serializers.CharField(required=False,
         help_text=_("Full name (effectively first name followed by last name)"))
 
     class Meta:

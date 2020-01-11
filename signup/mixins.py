@@ -1,4 +1,4 @@
-# Copyright (c) 2019, Djaodjin Inc.
+# Copyright (c) 2020, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -63,40 +63,33 @@ class ActivateMixin(object):
     key_url_kwarg = 'verification_key'
 
     def activate_user(self, **cleaned_data):
+        verification_key = self.kwargs.get(self.key_url_kwarg)
+        full_name = cleaned_data.get('full_name', None)
+        if not full_name:
+            first_name = cleaned_data.get('first_name', None)
+            last_name = cleaned_data.get('last_name', None)
+            full_name = (first_name + ' ' + last_name).strip()
         # If we don't save the ``User`` model here,
         # we won't be able to authenticate later.
-        first_name, last_name = self.first_and_last_names(**cleaned_data)
-        verification_key = self.kwargs.get(self.key_url_kwarg)
         user = Contact.objects.activate_user(verification_key,
-            username=cleaned_data['username'],
-            password=cleaned_data['new_password'],
-            first_name=first_name,
-            last_name=last_name)
-        if not user.last_login:
-            # XXX copy/paste from models.ActivatedUserManager.create_user
-            LOGGER.info("'%s %s <%s>' registered with username '%s'",
-                user.first_name, user.last_name, user.email, user,
-                extra={'event': 'register', 'user': user})
-            signals.user_registered.send(sender=__name__, user=user)
-        else:
-            LOGGER.info("'%s %s <%s>' activated with username '%s'",
-                user.first_name, user.last_name, user.email, user,
-                extra={'event': 'activate', 'user': user})
-            signals.user_activated.send(sender=__name__,
-                user=user, verification_key=self.kwargs.get(self.key_url_kwarg),
-                request=self.request)
+            username=cleaned_data.get('username'),
+            password=cleaned_data.get('new_password'),
+            full_name=full_name)
+        if user:
+            if not user.last_login:
+                # XXX copy/paste from models.ActivatedUserManager.create_user
+                LOGGER.info("'%s %s <%s>' registered with username '%s'",
+                    user.first_name, user.last_name, user.email, user,
+                    extra={'event': 'register', 'user': user})
+                signals.user_registered.send(sender=__name__, user=user)
+            else:
+                LOGGER.info("'%s %s <%s>' activated with username '%s'",
+                    user.first_name, user.last_name, user.email, user,
+                    extra={'event': 'activate', 'user': user})
+                signals.user_activated.send(sender=__name__, user=user,
+                    verification_key=self.kwargs.get(self.key_url_kwarg),
+                    request=self.request)
         return user
-
-    @staticmethod
-    def first_and_last_names(**cleaned_data):
-        first_name = cleaned_data.get('first_name', None)
-        last_name = cleaned_data.get('last_name', None)
-        if not first_name:
-            # If the form does not contain a first_name/last_name pair,
-            # we assume a full_name was passed instead.
-            full_name = cleaned_data.get('full_name', None)
-            first_name, _, last_name = full_name_natural_split(full_name)
-        return first_name, last_name
 
 
 class ContactMixin(UrlsMixin):

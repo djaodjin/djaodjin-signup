@@ -184,8 +184,8 @@ class ContactManager(models.Manager):
         token = self.get_token(verification_key=verification_key)
         return token if token else None
 
-    def activate_user(self, verification_key, username=None, password=None,
-                      first_name=None, last_name=None):
+    def activate_user(self, verification_key,
+                      username=None, password=None, full_name=None):
         """
         Activate a user whose email address has been verified.
         """
@@ -198,16 +198,18 @@ class ContactManager(models.Manager):
                     extra={'event': 'activate', 'username': token.user.username,
                         'email_verification_key': token.verification_key})
                 with transaction.atomic():
+                    if full_name:
+                        token.full_name = full_name
+                        first_name, mid_name, last_name = \
+                            full_name_natural_split(full_name)
+                        token.user.first_name = first_name
+                        token.user.last_name = last_name
                     token.verification_key = Contact.VERIFIED
                     token.user.is_active = True
                     if username:
                         token.user.username = username
                     if password:
                         token.user.set_password(password)
-                    if first_name:
-                        token.user.first_name = first_name
-                    if last_name:
-                        token.user.last_name = last_name
                     token.user.save()
                     token.save()
                 return token.user
@@ -324,14 +326,19 @@ class Contact(models.Model):
                 with transaction.atomic():
                     if self.user:
                         # pylint:disable=unused-variable
+                        save_user = False
                         first_name, mid_name, last_name = \
                             full_name_natural_split(self.full_name)
-                        if (self.user.first_name != first_name or
-                            self.user.last_name != last_name or
-                            self.user.email != self.email):
+                        if not self.user.first_name:
                             self.user.first_name = first_name
+                            save_user = True
+                        if not self.user.last_name:
                             self.user.last_name = last_name
+                            save_user = True
+                        if not self.user.email and self.email:
                             self.user.email = self.email
+                            save_user = True
+                        if save_user:
                             self.user.save()
                     return super(Contact, self).save(
                         force_insert=force_insert, force_update=force_update,

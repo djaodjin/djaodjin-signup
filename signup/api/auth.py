@@ -1,4 +1,4 @@
-# Copyright (c) 2019, DjaoDjin inc.
+# Copyright (c) 2020, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -78,15 +78,15 @@ class JWTBase(GenericAPIView):
             settings.JWT_ALGORITHM).decode('utf-8')
         LOGGER.info("%s signed in.", user,
             extra={'event': 'login', 'request': self.request})
-        return Response(TokenSerializer().to_representation({'token': token}))
+        return Response(TokenSerializer().to_representation({'token': token}),
+            status=status.HTTP_201_CREATED)
 
 
 class JWTActivate(ActivateMixin, JWTBase):
     """
-    Activates a user
+    Retrieves user associated to an activation key
 
-    Activates a new user and returns a JSON Web Token that can subsequently
-    be used to authenticate the new user in HTTP requests.
+    Retrieves information about a user based on an activation key.
 
     **Tags: auth
 
@@ -94,34 +94,71 @@ class JWTActivate(ActivateMixin, JWTBase):
 
     .. code-block:: http
 
-        POST /api/auth/activate/0123456789abcef0123456789abcef/ HTTP/1.1
-
-    .. code-block:: json
-
-        {
-          "username": "joe1",
-          "password": "yoyo",
-          "full_name": "Joe Card1"
-        }
+        GET /api/auth/activate/0123456789abcef0123456789abcef/ HTTP/1.1
 
     responds
 
     .. code-block:: json
 
         {
-            "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VybmFtZSI6\
-ImpvZTEiLCJlbWFpbCI6ImpvZSsxQGRqYW9kamluLmNvbSIsImZ1bGxfbmFtZ\
-SI6IkpvZSAgQ2FyZDEiLCJleHAiOjE1Mjk2NTUyMjR9.GFxjU5AvcCQbVylF1P\
-JwcBUUMECj8AKxsHtRHUSypco"
+          "username": "joe1",
+          "email": "joe1@localhost.localdomain",
+          "full_name": "Joe Act"
         }
     """
     model = get_user_model()
     serializer_class = ActivateUserSerializer
 
+    def get_serializer_class(self):
+        if self.request.method.lower() == 'get':
+            return UserSerializer
+        return super(JWTActivate, self).get_serializer_class()
+
+    def get(self, request, *args, **kwargs):#pylint:disable=unused-argument
+        verification_key = self.kwargs.get(self.key_url_kwarg)
+        token = Contact.objects.get_token(verification_key=verification_key)
+        if not token:
+            raise ValidationError({'detail': "invalid request"})
+        serializer = self.get_serializer(token.user)
+        return Response(serializer.data)
+
     @swagger_auto_schema(responses={
         201: OpenAPIResponse("", TokenSerializer),
         400: OpenAPIResponse("parameters error", ValidationErrorSerializer)})
     def post(self, request, *args, **kwargs):#pylint:disable=unused-argument
+        """
+        Activates a user
+
+        Activates a new user and returns a JSON Web Token that can subsequently
+        be used to authenticate the new user in HTTP requests.
+
+        **Tags: auth
+
+        **Example
+
+        .. code-block:: http
+
+            POST /api/auth/activate/0123456789abcef0123456789abcef/ HTTP/1.1
+
+        .. code-block:: json
+
+            {
+              "username": "joe1",
+              "new_password": "yoyo",
+              "full_name": "Joe Card1"
+            }
+
+        responds
+
+        .. code-block:: json
+
+            {
+                "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VybmFtZSI6\
+    ImpvZTEiLCJlbWFpbCI6ImpvZSsxQGRqYW9kamluLmNvbSIsImZ1bGxfbmFtZ\
+    SI6IkpvZSAgQ2FyZDEiLCJleHAiOjE1Mjk2NTUyMjR9.GFxjU5AvcCQbVylF1P\
+    JwcBUUMECj8AKxsHtRHUSypco"
+            }
+        """
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
             # We are not using `is_valid(raise_exception=True)` here
