@@ -1,4 +1,4 @@
-# Copyright (c) 2019, DjaoDjin inc.
+# Copyright (c) 2020, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -36,7 +36,7 @@ from rest_framework.response import Response
 from rest_framework.settings import api_settings
 
 from .. import filters, settings
-from ..decorators import check_user_active
+from ..decorators import check_has_credentials
 from ..docs import OpenAPIResponse, swagger_auto_schema
 from ..helpers import full_name_natural_split
 from ..mixins import ContactMixin
@@ -113,7 +113,7 @@ class UserActivateAPIView(ContactMixin, GenericAPIView):
         400: OpenAPIResponse("parameters error", ValidationErrorSerializer)})
     def post(self, request, *args, **kwargs):#pylint:disable=unused-argument
         instance = self.get_object()
-        if check_user_active(request, instance.user):
+        if check_has_credentials(request, instance.user):
             raise ValidationError({'detail': _("User is already active")})
         serializer = self.get_serializer(instance)
         return Response(serializer.data)

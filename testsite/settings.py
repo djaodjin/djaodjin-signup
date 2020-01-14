@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/1.6/ref/settings/
 """
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
-import os, sys
+import os, re, sys
 from django.contrib.messages import constants as messages
 
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
@@ -26,7 +26,6 @@ def load_config(confpath):
     '''
     # todo: consider using something like ConfigObj for this:
     # http://www.voidspace.org.uk/python/configobj.html
-    import re
     if os.path.isfile(confpath):
         sys.stderr.write('config loaded from %s\n' % confpath)
         with open(confpath) as conffile:
@@ -59,7 +58,13 @@ if not hasattr(sys.modules[__name__], "SECRET_KEY"):
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
+BYPASS_VERIFICATION_KEY_EXPIRED_CHECK = os.getenv(
+    'BYPASS_VERIFICATION_KEY_EXPIRED_CHECK', getattr(sys.modules[__name__],
+    'BYPASS_VERIFICATION_KEY_EXPIRED_CHECK', False))
+
 ALLOWED_HOSTS = []
+
+SILENCED_SYSTEM_CHECKS = ['captcha.recaptcha_test_key_error']
 
 INSTALLED_APPS = (
     'django.contrib.auth',
@@ -239,6 +244,8 @@ DEBUG_TOOLBAR_CONFIG = {
 }
 
 SIGNUP = {
+    'BYPASS_VERIFICATION_KEY_EXPIRED_CHECK':
+        BYPASS_VERIFICATION_KEY_EXPIRED_CHECK,
     'RANDOM_SEQUENCE': getattr(
         sys.modules[__name__], 'SIGNUP_RANDOM_SEQUENCE', [])
 }

@@ -61,4 +61,26 @@
       "email": "alice@localhost.localdomain"
     },
     "model": "signup.Contact", "pk": 4
+},
+{
+    "fields": {
+      "date_joined": "2016-03-18T00:00:00-09:00",
+      "email": "needactive@localhost.localdomain",
+      "first_name": "Stephanie",
+      "is_active": true,
+      "is_staff": false,
+      "is_superuser": false,
+      "last_name": "NeedActive",
+      "password": "!",
+      "username": "needactive"
+    },
+    "model": "auth.User", "pk": 5
+},
+{
+    "fields": {
+      "created_at": "2020-01-10T00:00:00-00:00",
+      "user": 5,
+      "verification_key": "16793aa72a4c7ae94b50b20c2eca52df5b0fe2c6"
+    },
+    "model": "signup.Contact", "pk": 5
 }]

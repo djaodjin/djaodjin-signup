@@ -1,4 +1,4 @@
-# Copyright (c) 2019, Djaodjin Inc.
+# Copyright (c) 2020, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -264,14 +264,36 @@ class UserNotificationsForm(forms.Form):
                 required=False, initial=initial[1])
 
 
-class MFACodeForm(AuthenticationForm):
+class UsernameOrEmailAuthenticationForm(AuthenticationForm):
 
-    username = forms.CharField(max_length=254, widget=forms.HiddenInput())
-    password = forms.CharField(widget=forms.HiddenInput())
+    username = forms.CharField(widget=forms.TextInput(
+        attrs={'placeholder': _("Username or e-mail")}),
+        max_length=254, label=_("Username or e-mail"))
+    password = forms.CharField(widget=forms.PasswordInput(
+        attrs={'placeholder': _("Password")}), label=_("Password"))
+
+    def __init__(self, *args, **kwargs):
+        super(UsernameOrEmailAuthenticationForm, self).__init__(*args, **kwargs)
+        username_label = self.initial.get('username_label', None)
+        if username_label:
+            placeholder_label = _('%(username)s or e-mail' % {
+                'username': username_label})
+            self.fields['username'].label = placeholder_label
+            self.fields['username'].widget.attrs['placeholder'] \
+                = placeholder_label
+
+
+class MFACodeForm(UsernameOrEmailAuthenticationForm):
+
     code = forms.IntegerField(widget=forms.TextInput(
         attrs={'placeholder': _("One-time authentication code"),
             'autofocus': True}),
         label=_("One-time authentication code"))
+
+    def __init__(self, *args, **kwargs):
+        super(MFACodeForm, self).__init__(*args, **kwargs)
+        self.fields['username'].widget = forms.HiddenInput()
+        self.fields['password'].widget = forms.HiddenInput()
 
     def clean(self):
         super(MFACodeForm, self).clean()

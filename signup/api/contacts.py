@@ -1,4 +1,4 @@
-# Copyright (c) 2019, Djaodjin Inc.
+# Copyright (c) 2020, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -26,7 +26,6 @@
 
 import hashlib, logging, os
 
-from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.utils.encoding import force_text
 from rest_framework import filters, parsers, status
@@ -150,7 +149,6 @@ class ContactPictureAPIView(ContactMixin, CreateAPIView):
             POST /api/contacts/xia/picture/ HTTP/1.1
     """
     parser_classes = (parsers.FormParser, parsers.MultiPartParser)
-    user_queryset = get_user_model().objects.filter(is_active=True)
     serializer_class = UploadBlobSerializer
 
     def post(self, request, *args, **kwargs):

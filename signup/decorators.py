@@ -1,4 +1,4 @@
-# Copyright (c) 2019, Djaodjin Inc.
+# Copyright (c) 2020, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -94,12 +94,11 @@ def send_verification_email(email_contact, request,
 
 # The user we are looking to activate might be different from
 # the request.user (which can be Anonymous)
-def check_user_active(request, user,
-                      redirect_field_name=REDIRECT_FIELD_NAME,
-                      next_url=None):
+def check_has_credentials(request, user,
+                          redirect_field_name=REDIRECT_FIELD_NAME,
+                          next_url=None):
     """
-    Checks that a *user* is active. We won't activate the account of
-    a user until we checked the email address is valid.
+    Checks that a *user* has set login credentials (i.e. password).
     """
     if has_invalid_password(user):
         # Let's send e-mail again.
@@ -118,7 +117,36 @@ def fail_active(request):
     """
     Active with valid credentials
     """
-    if not check_user_active(request, request.user):
+    if not check_has_credentials(request, request.user):
+        return reverse(settings.LOGIN_URL)
+    return False
+
+
+def check_email_verified(request, user,
+                         redirect_field_name=REDIRECT_FIELD_NAME,
+                         next_url=None):
+    """
+    Checks that a *user*'s e-mail has been verified.
+    """
+    #pylint:disable=unused-variable
+    contact, created = Contact.objects.update_or_create_token(user)
+    if not (user.email == contact.email and
+        contact.verification_key == Contact.VERIFIED):
+        # Let's send e-mail again.
+        if not next_url:
+            next_url = validate_redirect(request)
+        send_verification_email(
+            contact, request, next_url=next_url,
+            redirect_field_name=redirect_field_name)
+        return False
+    return True
+
+
+def fail_verified_email(request):
+    """
+    Active with a verified e-mail address
+    """
+    if not check_email_verified(request, request.user):
         return reverse(settings.LOGIN_URL)
     return False
 
@@ -137,6 +165,36 @@ def active_required(function=None,
             redirect_url = login_url or settings.LOGIN_URL
             if is_authenticated(request):
                 redirect_url = fail_active(request)
+                if not redirect_url:
+                    return view_func(request, *args, **kwargs)
+                # User is logged in but her email has not been verified yet.
+                http_accepts = get_accept_list(request)
+                if 'text/html' in http_accepts:
+                    messages.info(request, _(
+"You should now secure and activate your account following the instructions"\
+" we just emailed you. Thank you."))
+                auth_logout(request)
+            return redirect_or_denied(request, redirect_url,
+                redirect_field_name=redirect_field_name)
+        return _wrapped_view
+
+    if function:
+        return decorator(function)
+    return decorator
+
+
+def verified_email_required(function=None,
+                            redirect_field_name=REDIRECT_FIELD_NAME,
+                            login_url=None):
+    """
+    Decorator for views that checks that the user has a verified e-mail address.
+    """
+    def decorator(view_func):
+        @wraps(view_func, assigned=available_attrs(view_func))
+        def _wrapped_view(request, *args, **kwargs):
+            redirect_url = login_url or settings.LOGIN_URL
+            if is_authenticated(request):
+                redirect_url = fail_verified_email(request)
                 if not redirect_url:
                     return view_func(request, *args, **kwargs)
                 # User is logged in but her email has not been verified yet.

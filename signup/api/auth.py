@@ -24,7 +24,6 @@
 
 import logging
 
-from django.core.exceptions import PermissionDenied
 from django.contrib.auth import (REDIRECT_FIELD_NAME, get_user_model,
     authenticate, login as auth_login, logout as auth_logout)
 from django.contrib.auth.tokens import default_token_generator
@@ -34,8 +33,7 @@ from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.utils.safestring import mark_safe
 from django.utils.translation import ugettext_lazy as _
 import jwt
-from rest_framework import status
-from rest_framework.exceptions import ValidationError
+from rest_framework import exceptions, permissions, status, serializers
 from rest_framework.generics import GenericAPIView, CreateAPIView
 from rest_framework.response import Response
 
@@ -43,7 +41,7 @@ from rest_framework.response import Response
 from .. import settings, signals
 from ..auth import validate_redirect
 from ..compat import reverse
-from ..decorators import check_user_active
+from ..decorators import check_has_credentials
 from ..docs import OpenAPIResponse, swagger_auto_schema
 from ..helpers import as_timestamp, datetime_or_now, full_name_natural_split
 from ..mixins import ActivateMixin
@@ -52,19 +50,36 @@ from ..serializers import (ActivateUserSerializer, CredentialsSerializer,
     CreateUserSerializer,
     PasswordResetSerializer, PasswordResetConfirmSerializer,
     TokenSerializer, UserSerializer, ValidationErrorSerializer)
+from ..utils import get_disabled_authentication, get_disabled_registration
 
 
 LOGGER = logging.getLogger(__name__)
 
 
+class AllowAuthenticationEnabled(permissions.BasePermission):
+    """
+    Allows access only authentication is not disabled.
+    """
+    message = _("authentication has been temporarly disabled.")
+
+    def has_permission(self, request, view):
+        return not get_disabled_authentication(request)
+
+
+class AllowRegistrationEnabled(permissions.BasePermission):
+    """
+    Allows access only when registration is not disabled.
+    """
+    message = _("registration is disabled.")
+
+    def has_permission(self, request, view):
+        return not get_disabled_registration(request)
+
+
 class JWTBase(GenericAPIView):
 
+    permission_classes = [AllowAuthenticationEnabled]
     serializer_class = TokenSerializer
-
-    @staticmethod
-    def optional_session_cookie(request, user):
-        if request.query_params.get('cookie', False):
-            auth_login(request, user)
 
     def create_token(self, user, expires_at=None):
         if not expires_at:
@@ -80,6 +95,17 @@ class JWTBase(GenericAPIView):
             extra={'event': 'login', 'request': self.request})
         return Response(TokenSerializer().to_representation({'token': token}),
             status=status.HTTP_201_CREATED)
+
+    @staticmethod
+    def optional_session_cookie(request, user):
+        if request.query_params.get('cookie', False):
+            auth_login(request, user)
+
+    def permission_denied(self, request, message=None):
+        # We override this function from `APIView`. The request will never
+        # be authenticated by definition since we are dealing with login
+        # and register APIs.
+        raise exceptions.PermissionDenied(detail=message)
 
 
 class JWTActivate(ActivateMixin, JWTBase):
@@ -118,7 +144,7 @@ class JWTActivate(ActivateMixin, JWTBase):
         verification_key = self.kwargs.get(self.key_url_kwarg)
         token = Contact.objects.get_token(verification_key=verification_key)
         if not token:
-            raise ValidationError({'detail': "invalid request"})
+            raise serializers.ValidationError({'detail': "invalid request"})
         serializer = self.get_serializer(token.user)
         return Response(serializer.data)
 
@@ -165,9 +191,13 @@ class JWTActivate(ActivateMixin, JWTBase):
             # because we do not want to give clues on the reasons for failure.
             user = self.activate_user(**serializer.validated_data)
             if user:
-                self.optional_session_cookie(request, user)
-                return self.create_token(user)
-        raise ValidationError({'detail': "invalid request"})
+                # Okay, security check complete. Log the user in.
+                user_with_backend = authenticate(
+                    request, username=user.username,
+                    password=serializer.validated_data.get('new_password'))
+                self.optional_session_cookie(request, user_with_backend)
+                return self.create_token(user_with_backend)
+        raise serializers.ValidationError({'detail': "invalid request"})
 
 
 class JWTLogin(JWTBase):
@@ -201,6 +231,7 @@ ImRvbm55IiwiZW1haWwiOiJzbWlyb2xvKzRAZGphb2RqaW4uY29tIiwiZnV\
 sbF9uYW1lIjoiRG9ubnkgQ29vcGVyIiwiZXhwIjoxNTI5NjU4NzEwfQ.F2y\
 1iwj5NHlImmPfSff6IHLN7sUXpBFmX0qjCbFTe6A"}
     """
+    model = get_user_model()
     serializer_class = CredentialsSerializer
 
     @swagger_auto_schema(responses={
@@ -211,30 +242,36 @@ sbF9uYW1lIjoiRG9ubnkgQ29vcGVyIiwiZXhwIjoxNTI5NjU4NzEwfQ.F2y\
         if serializer.is_valid():
             username = serializer.validated_data.get('username')
             password = serializer.validated_data.get('password')
-            user = authenticate(username=username, password=password)
+            user = authenticate(request, username=username, password=password)
             if user:
                 contact = Contact.objects.filter(user=user).first()
                 if contact and contact.mfa_backend:
                     if not contact.mfa_priv_key:
                         contact.create_mfa_token()
-                        raise ValidationError({'detail': _(
+                        raise serializers.ValidationError({'detail': _(
                             "missing MFA token")})
                     code = serializer.validated_data.get('code')
                     if code != contact.mfa_priv_key:
                         if (contact.mfa_nb_attempts
                             >= settings.MFA_MAX_ATTEMPTS):
                             contact.clear_mfa_token()
-                            raise PermissionDenied({'detail': _(
+                            raise exceptions.PermissionDenied({'detail': _(
 "You have exceeded the number of attempts to enter the MFA code."\
 " Please start again.")})
                         contact.mfa_nb_attempts += 1
                         contact.save()
-                        raise ValidationError({'detail': _(
+                        raise serializers.ValidationError({'detail': _(
                             "MFA code does not match.")})
                     contact.clear_mfa_token()
                 self.optional_session_cookie(request, user)
                 return self.create_token(user)
-        raise PermissionDenied()
+            user = self.model.objects.find_user(username)
+            if not check_has_credentials(request, user):
+                raise serializers.ValidationError({'detail': _(
+            "This email address has already been registered!"\
+           " You should now secure and activate your account following"\
+            " the instructions we just emailed you. Thank you.")})
+        raise exceptions.PermissionDenied()
 
 
 class JWTPasswordResetConfirm(JWTBase):
@@ -301,7 +338,7 @@ JwcBUUMECj8AKxsHtRHUSypco"
                     extra={'event': 'resetpassword', 'request': request})
                 self.optional_session_cookie(request, user)
                 return self.create_token(user)
-        raise ValidationError({'detail': "invalid request"})
+        raise serializers.ValidationError({'detail': "invalid request"})
 
 
 class JWTRegister(JWTBase):
@@ -340,6 +377,7 @@ JwcBUUMECj8AKxsHtRHUSypco"
         }
     """
     model = get_user_model()
+    permission_classes = [AllowAuthenticationEnabled, AllowRegistrationEnabled]
     serializer_class = CreateUserSerializer
 
     def register_user(self, **validated_data):
@@ -348,12 +386,12 @@ JwcBUUMECj8AKxsHtRHUSypco"
         users = self.model.objects.filter(email=email)
         if users.exists():
             user = users.get()
-            if check_user_active(self.request, user):
-                raise ValidationError(mark_safe(_(
+            if check_has_credentials(self.request, user):
+                raise serializers.ValidationError(mark_safe(_(
                     'This email address has already been registered!'\
 ' Please <a href="%s">login</a> with your credentials. Thank you.'
                     % reverse('login'))))
-            raise ValidationError(mark_safe(_(
+            raise serializers.ValidationError(mark_safe(_(
                 "This email address has already been registered!"\
 " You should now secure and activate your account following "\
 " the instructions we just emailed you. Thank you.")))
@@ -388,7 +426,7 @@ JwcBUUMECj8AKxsHtRHUSypco"
             if user:
                 self.optional_session_cookie(request, user)
                 return self.create_token(user)
-        raise ValidationError({'detail': "invalid request"})
+        raise serializers.ValidationError({'detail': "invalid request"})
 
 
 class JWTLogout(JWTBase):
@@ -417,6 +455,7 @@ class JWTLogout(JWTBase):
             for cookie in settings.LOGOUT_CLEAR_COOKIES:
                 response.delete_cookie(cookie)
         return response
+
 
 class PasswordResetAPIView(CreateAPIView):
     """
@@ -447,6 +486,7 @@ class PasswordResetAPIView(CreateAPIView):
         }
     """
     model = get_user_model()
+    permission_classes = [AllowAuthenticationEnabled]
     serializer_class = PasswordResetSerializer
     token_generator = default_token_generator
 
@@ -455,7 +495,7 @@ class PasswordResetAPIView(CreateAPIView):
             user = self.model.objects.get(
                 email__iexact=serializer.data.get('email'), is_active=True)
             next_url = validate_redirect(self.request)
-            if check_user_active(self.request, user, next_url=next_url):
+            if check_has_credentials(self.request, user, next_url=next_url):
                 # Make sure that a reset password email is sent to a user
                 # that actually has an activated account.
                 uid = urlsafe_base64_encode(force_bytes(user.pk))
@@ -471,10 +511,18 @@ class PasswordResetAPIView(CreateAPIView):
                     sender=__name__, user=user, request=self.request,
                     back_url=back_url, expiration_days=settings.KEY_EXPIRATION)
             else:
-                raise ValidationError({'detail': _("Please activate your"\
+                raise serializers.ValidationError({'detail': _(
+                    "Please activate your"\
                     " account first. You should receive an email shortly.")})
         except self.model.DoesNotExist:
             # We don't want to give a clue about registered users, yet
             # it already possible to do a straight register to get the same.
-            raise ValidationError({'detail': _("We cannot find an account"\
+            raise serializers.ValidationError({'detail': _(
+                "We cannot find an account"\
                 " for this e-mail address. Please verify the spelling.")})
+
+    def permission_denied(self, request, message=None):
+        # We override this function from `APIView`. The request will never
+        # be authenticated by definition since we are dealing with login
+        # and register APIs.
+        raise exceptions.PermissionDenied(detail=message)

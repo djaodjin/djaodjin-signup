@@ -1,4 +1,4 @@
-# Copyright (c) 2019, Djaodjin Inc.
+# Copyright (c) 2020, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -33,6 +33,7 @@ import datetime, hashlib, logging, random, re
 from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import UserManager
+from django.core.validators import validate_email
 from django.db import models, transaction, IntegrityError
 from django.template.defaultfilters import slugify
 from django.utils.encoding import python_2_unicode_compatible
@@ -117,6 +118,14 @@ class ActivatedUserManager(UserManager):
             signals.user_registered.send(sender=__name__, user=user)
         return user
 
+    def find_user(self, username):
+        try:
+            validate_email(username)
+            kwargs = {'email__iexact': username}
+        except ValidationError:
+            kwargs = {'username__iexact': username}
+        return self.get(**kwargs)
+
 
 class ContactManager(models.Manager):
 
@@ -200,6 +209,7 @@ class ContactManager(models.Manager):
                 with transaction.atomic():
                     if full_name:
                         token.full_name = full_name
+                        #pylint:disable=unused-variable
                         first_name, mid_name, last_name = \
                             full_name_natural_split(full_name)
                         token.user.first_name = first_name
@@ -355,10 +365,11 @@ class Contact(models.Model):
                 % {'base': slug_base}})
 
     def verification_key_expired(self):
-        expiration_date = datetime.timedelta(days=settings.KEY_EXPIRATION)
-        start_at = self.created_at
-        return self.verification_key == self.VERIFIED or \
-               (start_at + expiration_date <= datetime_or_now())
+        if settings.BYPASS_VERIFICATION_KEY_EXPIRED_CHECK:
+            return False
+        return (self.verification_key == self.VERIFIED or
+            (self.created_at + datetime.timedelta(days=settings.KEY_EXPIRATION)
+             <= datetime_or_now()))
     verification_key_expired.boolean = True
 
 

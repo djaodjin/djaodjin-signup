@@ -1,4 +1,4 @@
-# Copyright (c) 2018, Djaodjin Inc.
+# Copyright (c) 2020, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -23,6 +23,7 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from captcha.fields import ReCaptchaField
+from captcha.widgets import ReCaptchaV2Checkbox
 from django import forms
 from signup.forms import NameEmailForm
 
@@ -35,4 +36,5 @@ class SignupWithCaptchaForm(NameEmailForm):
     new_password2 = forms.CharField(widget=forms.PasswordInput(
         attrs={'placeholder': 'Type Password Again'}),
         label="Password confirmation")
-    captcha = ReCaptchaField(attrs={'theme' : 'clean'})
+    captcha = ReCaptchaField(widget=ReCaptchaV2Checkbox(
+        attrs={'data-size': 'compact'}))

@@ -31,7 +31,6 @@ from rest_framework.generics import get_object_or_404
 
 from . import signals
 from .compat import reverse, is_authenticated
-from .helpers import full_name_natural_split
 from .models import Contact
 
 

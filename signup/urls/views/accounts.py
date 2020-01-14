@@ -1,4 +1,4 @@
-# Copyright (c) 2019, Djaodjin Inc.
+# Copyright (c) 2020, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -35,6 +35,9 @@ urlpatterns = [
     url(r'^activate/(?P<verification_key>%s)/$'
         % settings.EMAIL_VERIFICATION_PAT,
         ActivationView.as_view(), name='registration_activate'),
+    url(r'^activate/',
+        SigninView.as_view(template_name='accounts/activate/index.html'),
+        name='registration_activate_start'),
     url(r'^register/$',
         SignupView.as_view(), name='registration_register'),
     url(r'^recover/',

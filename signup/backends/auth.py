@@ -1,4 +1,4 @@
-# Copyright (c) 2019, Djaodjin Inc.
+# Copyright (c) 2020, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -46,29 +46,9 @@ urlpatterns = patterns('',
 """
 from __future__ import unicode_literals
 
-from django import forms
 from django.contrib.auth import get_user_model
-from django.contrib.auth.forms import AuthenticationForm
-from django.utils.translation import ugettext_lazy as _
-
-
-class UsernameOrEmailAuthenticationForm(AuthenticationForm):
-
-    username = forms.CharField(widget=forms.TextInput(
-        attrs={'placeholder': _("Username or e-mail")}),
-        max_length=254, label=_("Username or e-mail"))
-    password = forms.CharField(widget=forms.PasswordInput(
-        attrs={'placeholder': _("Password")}), label=_("Password"))
-
-    def __init__(self, *args, **kwargs):
-        super(UsernameOrEmailAuthenticationForm, self).__init__(*args, **kwargs)
-        username_label = self.initial.get('username_label', None)
-        if username_label:
-            placeholder_label = _('%(username)s or e-mail' % {
-                'username': username_label})
-            self.fields['username'].label = placeholder_label
-            self.fields['username'].widget.attrs['placeholder'] \
-                = placeholder_label
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
 
 
 class UsernameOrEmailModelBackend(object):
@@ -79,13 +59,18 @@ class UsernameOrEmailModelBackend(object):
     #pylint: disable=no-self-use
     model = get_user_model()
 
-    def authenticate(self, username=None, password=None):
-        if '@' in username:
-            kwargs = {'email__iexact': username}
-        else:
-            kwargs = {'username__iexact': username}
+    def find_user(self, username):
         try:
-            user = self.model.objects.filter(is_active=True).get(**kwargs)
+            validate_email(username)
+            kwargs = {'email__iexact': username}
+        except ValidationError:
+            kwargs = {'username__iexact': username}
+        return self.model.objects.filter(is_active=True).get(**kwargs)
+
+    def authenticate(self, request, username=None, password=None):
+        #pylint:disable=unused-argument
+        try:
+            user = self.find_user(username)
             if user.check_password(password):
                 return user
         except self.model.DoesNotExist:

@@ -1,4 +1,4 @@
-# Copyright (c) 2019, Djaodjin Inc.
+# Copyright (c) 2020, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -31,26 +31,29 @@ from django.contrib import messages
 from django.contrib.auth import (login as auth_login, logout as auth_logout,
     REDIRECT_FIELD_NAME, authenticate, get_user_model)
 from django.contrib.auth.tokens import default_token_generator
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
 from django.http import HttpResponseRedirect
 from django.template.response import TemplateResponse
 from django.utils import six
 from django.utils.encoding import force_bytes
-from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
+from django.utils.http import (urlencode, urlsafe_base64_decode,
+    urlsafe_base64_encode)
 from django.utils.safestring import mark_safe
 from django.utils.translation import ugettext_lazy as _
 from django.views.decorators.cache import add_never_cache_headers
 from django.views.generic.base import TemplateResponseMixin, View
 from django.views.generic.edit import FormMixin, ProcessFormView, UpdateView
-from rest_framework.exceptions import ValidationError
+from rest_framework import serializers
 from rest_framework.settings import api_settings
 
 from .. import settings, signals
 from ..auth import validate_redirect
-from ..backends.auth import UsernameOrEmailAuthenticationForm
 from ..compat import reverse, is_authenticated
-from ..decorators import check_user_active
+from ..decorators import check_has_credentials
 from ..forms import (ActivationForm, MFACodeForm, NameEmailForm,
-    PasswordResetForm, PasswordResetConfirmForm)
+    PasswordResetForm, PasswordResetConfirmForm,
+    UsernameOrEmailAuthenticationForm)
 from ..helpers import full_name_natural_split
 from ..mixins import ActivateMixin, UrlsMixin
 from ..models import Contact
@@ -146,7 +149,7 @@ class PasswordResetBaseView(RedirectFormMixin, ProcessFormView):
             user = self.model.objects.get(
                 email__iexact=form.cleaned_data['email'], is_active=True)
             next_url = validate_redirect(self.request)
-            if check_user_active(self.request, user, next_url=next_url):
+            if check_has_credentials(self.request, user, next_url=next_url):
                 # Make sure that a reset password email is sent to a user
                 # that actually has an activated account.
                 uid = urlsafe_base64_encode(force_bytes(user.pk))
@@ -273,7 +276,7 @@ class SignupBaseView(RedirectFormMixin, ProcessFormView):
                     field_name: form.cleaned_data.get(
                         field_name, form.data[field_name])})
             new_user = self.register(**cleaned_data)
-        except ValidationError as err:
+        except serializers.ValidationError as err:
             fill_form_errors(form, err)
             return self.form_invalid(form)
         if new_user:
@@ -282,15 +285,21 @@ class SignupBaseView(RedirectFormMixin, ProcessFormView):
             success_url = self.request.META['PATH_INFO']
         return HttpResponseRedirect(success_url)
 
+    def get_initial(self):
+        initial = super(SignupBaseView, self).get_initial()
+        for key, value in six.iteritems(self.request.GET):
+            initial.update({key: value})
+        return initial
+
     def register_user(self, **cleaned_data):
         #pylint: disable=maybe-no-member
         email = cleaned_data['email']
         users = self.model.objects.filter(email__iexact=email)
         if users.exists():
             user = users.get()
-            if check_user_active(self.request, user,
+            if check_has_credentials(self.request, user,
                                  next_url=self.get_success_url()):
-                raise ValidationError(
+                raise serializers.ValidationError(
                     {'email':
                      _("A user with that e-mail address already exists."),
                      api_settings.NON_FIELD_ERRORS_KEY:
@@ -298,7 +307,7 @@ class SignupBaseView(RedirectFormMixin, ProcessFormView):
                          "This email address has already been registered!"\
 " Please <a href=\"%s\">login</a> with your credentials. Thank you.")
                         % reverse('login'))})
-            raise ValidationError(
+            raise serializers.ValidationError(
                 {'email':
                  _("A user with that e-mail address already exists."),
                  api_settings.NON_FIELD_ERRORS_KEY:
@@ -378,7 +387,7 @@ class ActivationBaseView(RedirectFormMixin, ActivateMixin, UpdateView):
 
         # Okay, security check complete. Log the user in.
         user_with_backend = authenticate(
-            username=user.username,
+            self.request, username=user.username,
             password=form.cleaned_data.get('new_password'))
         _login(self.request, user_with_backend)
         if self.request.session.test_cookie_worked():
@@ -408,7 +417,7 @@ class SigninBaseView(RedirectFormMixin, ProcessFormView):
     """
     Check credentials and sign in the authenticated user.
     """
-
+    model = get_user_model()
     form_class = UsernameOrEmailAuthenticationForm
 
     def get_form_class(self):
@@ -418,6 +427,11 @@ class SigninBaseView(RedirectFormMixin, ProcessFormView):
             if contact and contact.mfa_backend and contact.mfa_priv_key:
                 return MFACodeForm
         return self.form_class
+
+    def get_form_kwargs(self):
+        kwargs = super(SigninBaseView, self).get_form_kwargs()
+        kwargs['request'] = self.request
+        return kwargs
 
     def get_mfa_form(self):
         form = MFACodeForm(**self.get_form_kwargs())
@@ -445,17 +459,51 @@ class SigninBaseView(RedirectFormMixin, ProcessFormView):
         return super(SigninBaseView, self).form_valid(form)
 
     def form_invalid(self, form):
-        user = form.get_user()
-        contact = Contact.objects.filter(user=user).first()
-        if contact and contact.mfa_backend:
-            if contact.mfa_nb_attempts >= settings.MFA_MAX_ATTEMPTS:
-                contact.clear_mfa_token()
-                form = self.get_form()
-                form.add_error(None, _("You have exceeded the number"\
-                " of attempts to enter the MFA code. Please start again."))
+        username = form.cleaned_data['username']
+        try:
+            user = self.model.objects.find_user(username)
+            if not check_has_credentials(self.request, user):
+                form.add_error(None, _(
+                    "This email address has already been registered!"\
+                   " You should now secure and activate your account following"\
+                    " the instructions we just emailed you. Thank you."))
             else:
-                contact.mfa_nb_attempts += 1
-                contact.save()
+                contact = Contact.objects.filter(user=user).first()
+                if contact and contact.mfa_backend:
+                    if contact.mfa_nb_attempts >= settings.MFA_MAX_ATTEMPTS:
+                        contact.clear_mfa_token()
+                        form = self.get_form()
+                        form.add_error(None, _("You have exceeded the number"\
+                    " of attempts to enter the MFA code. Please start again."))
+                    else:
+                        contact.mfa_nb_attempts += 1
+                        contact.save()
+        except self.model.DoesNotExist:
+            # Django takes extra steps to make sure an attacker finds
+            # it difficult to distinguish between a non-existant user
+            # and an incorrect password on login.
+            # This is only useful when registration is disabled otherwise
+            # an attacker could simply use the register end-point instead.
+            if not get_disabled_registration(self.request):
+                # If we have attempted to login a user that is not yet
+                # registered, automatically redirect to the registration page
+                # and pre-populate the form fields.
+                try:
+                    validate_email(username)
+                    query_params = {'email': username}
+                    messages.error(self.request, _("This email is not yet"\
+                        " registered. Would you like to do so?"))
+                except ValidationError:
+                    query_params = {'username': username}
+                    messages.error(self.request, _("This username is not yet"\
+                        " registered. Would you like to do so?"))
+                next_url = validate_redirect(self.request)
+                if next_url:
+                    query_params.update({REDIRECT_FIELD_NAME: next_url})
+                redirect_to = reverse('registration_register')
+                if query_params:
+                    redirect_to += '?%s' % urlencode(query_params)
+                return HttpResponseRedirect(redirect_to)
         return super(SigninBaseView, self).form_invalid(form)
 
 
@@ -480,7 +528,7 @@ class SignoutBaseView(RedirectFormMixin, View):
 
 class ActivationView(AuthTemplateResponseMixin, ActivationBaseView):
 
-    template_name = 'accounts/activate.html'
+    template_name = 'accounts/activate/verification_key.html'
 
 
 class PasswordResetView(AuthTemplateResponseMixin, PasswordResetBaseView):

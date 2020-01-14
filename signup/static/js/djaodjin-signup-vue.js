@@ -1,9 +1,6 @@
 /** Components running in the browser.
  */
 
-Vue.use(uiv, {prefix: 'uiv'});
-Vue.use(Croppa);
-
 Vue.filter('formatDate', function(value, format) {
   if (value) {
     if(!format){
