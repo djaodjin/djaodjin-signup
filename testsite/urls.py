@@ -1,4 +1,4 @@
-# Copyright (c) 2019, Djaodjin Inc.
+# Copyright (c) 2020, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -26,10 +26,11 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic.base import RedirectView, TemplateView
 from django.views.i18n import JavaScriptCatalog
+from rules.urldecorators import include, url
 from signup.compat import reverse_lazy
+from signup.decorators import fail_authenticated
 from signup.forms import NameEmailForm
 from signup.views.auth import SignupView
-from urldecorators import include, url
 
 from .forms import SignupWithCaptchaForm
 
@@ -37,24 +38,24 @@ urlpatterns = \
     static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT) + [
     url(r'^api/',
         include('signup.urls.api.contacts'),
-        decorators=['django.contrib.auth.decorators.login_required']),
+        redirects=[fail_authenticated]),
     url(r'^api/',
         include('signup.urls.api.keys'),
-        decorators=['django.contrib.auth.decorators.login_required']),
+        redirects=[fail_authenticated]),
     url(r'^api/',
         include('signup.urls.api.tokens'),
-        decorators=['django.contrib.auth.decorators.login_required']),
+        redirects=[fail_authenticated]),
     url(r'^api/',
         include('signup.urls.api.users'),
-        decorators=['django.contrib.auth.decorators.login_required']),
+        redirects=[fail_authenticated]),
     url(r'^api/',
         include('signup.urls.api.auth')),
     url(r'^contacts/',
         include('signup.urls.views.contacts'),
-        decorators=['django.contrib.auth.decorators.login_required']),
+        redirects=[fail_authenticated]),
     url(r'^users/',
         include('signup.urls.views.users'),
-        decorators=['django.contrib.auth.decorators.login_required']),
+        redirects=[fail_authenticated]),
     url(r'^register/frictionless/',
         SignupView.as_view(form_class=NameEmailForm),
         name='registration_frictionless'),
@@ -65,6 +66,6 @@ urlpatterns = \
 
     url(r'^jsi18n/$', JavaScriptCatalog.as_view(), name='javascript-catalog'),
     url(r'^app/', TemplateView.as_view(template_name='app.html'),
-        decorators=['django.contrib.auth.decorators.login_required']),
+        redirects=[fail_authenticated]),
     url(r'^$', RedirectView.as_view(url=reverse_lazy('registration_register'))),
 ]

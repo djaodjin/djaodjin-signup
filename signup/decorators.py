@@ -113,15 +113,6 @@ def check_has_credentials(request, user,
     return True
 
 
-def fail_active(request):
-    """
-    Active with valid credentials
-    """
-    if not check_has_credentials(request, request.user):
-        return reverse(settings.LOGIN_URL)
-    return False
-
-
 def check_email_verified(request, user,
                          redirect_field_name=REDIRECT_FIELD_NAME,
                          next_url=None):
@@ -142,12 +133,30 @@ def check_email_verified(request, user,
     return True
 
 
+def fail_authenticated(request):
+    """
+    Authenticated
+    """
+    if not is_authenticated(request):
+        return settings.LOGIN_URL
+    return False
+
+
+def fail_active(request):
+    """
+    Active with valid credentials
+    """
+    if not check_has_credentials(request, request.user):
+        return settings.LOGIN_URL
+    return False
+
+
 def fail_verified_email(request):
     """
     Active with a verified e-mail address
     """
     if not check_email_verified(request, request.user):
-        return reverse(settings.LOGIN_URL)
+        return settings.LOGIN_URL
     return False
 
 

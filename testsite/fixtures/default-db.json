@@ -2,15 +2,15 @@
 {
     "fields": {
       "date_joined": "2019-01-01T00:00:00-09:00",
-      "email": "donny@localhost.localdomain",
-      "first_name": "Donny",
+      "email": "alice@localhost.localdomain",
+      "first_name": "Alice",
       "is_active": true,
       "is_staff": true,
       "is_superuser": true,
       "last_login": "2019-01-01T00:00:00-09:00",
       "last_name": "Manager",
       "password": "pbkdf2_sha256$10000$z0MBiWn0Rlem$iZdC6uHomlE07qGK/TqfcfxNzKJtFp03c0JILF1frRc=",
-      "username": "donny"
+      "username": "alice"
     },
     "model": "auth.User", "pk": 1
 },
