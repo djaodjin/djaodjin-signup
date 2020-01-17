@@ -110,6 +110,14 @@ LOGGING = {
         },
     },
     'loggers': {
+        'rules': {
+            'handlers': [],
+            'level': 'INFO',
+        },
+        'signup': {
+            'handlers': [],
+            'level': 'INFO',
+        },
 #        'django.db.backends': {
 #           'handlers': ['db_log'],
 #           'level': 'DEBUG',

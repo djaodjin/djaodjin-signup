@@ -138,7 +138,7 @@ def fail_authenticated(request):
     Authenticated
     """
     if not is_authenticated(request):
-        return settings.LOGIN_URL
+        return str(settings.LOGIN_URL)
     return False
 
 
@@ -147,7 +147,7 @@ def fail_active(request):
     Active with valid credentials
     """
     if not check_has_credentials(request, request.user):
-        return settings.LOGIN_URL
+        return str(settings.LOGIN_URL)
     return False
 
 
@@ -156,7 +156,7 @@ def fail_verified_email(request):
     Active with a verified e-mail address
     """
     if not check_email_verified(request, request.user):
-        return settings.LOGIN_URL
+        return str(settings.LOGIN_URL)
     return False
 
 
@@ -171,7 +171,7 @@ def active_required(function=None,
     def decorator(view_func):
         @wraps(view_func, assigned=available_attrs(view_func))
         def _wrapped_view(request, *args, **kwargs):
-            redirect_url = login_url or settings.LOGIN_URL
+            redirect_url = login_url or str(settings.LOGIN_URL)
             if is_authenticated(request):
                 redirect_url = fail_active(request)
                 if not redirect_url:
@@ -201,7 +201,7 @@ def verified_email_required(function=None,
     def decorator(view_func):
         @wraps(view_func, assigned=available_attrs(view_func))
         def _wrapped_view(request, *args, **kwargs):
-            redirect_url = login_url or settings.LOGIN_URL
+            redirect_url = login_url or str(settings.LOGIN_URL)
             if is_authenticated(request):
                 redirect_url = fail_verified_email(request)
                 if not redirect_url:
