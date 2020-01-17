@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/1.6/ref/settings/
 """
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
-import os, re, sys
+import logging, os, re, sys
 
 from django.contrib.messages import constants as messages
 from signup.compat import reverse_lazy
@@ -133,6 +133,11 @@ LOGGING = {
         },
     },
 }
+if logging.getLogger('gunicorn.error').handlers:
+    LOGGING['handlers']['log'].update({
+        'class':'logging.handlers.WatchedFileHandler',
+        'filename': os.path.join(RUN_DIR, 'testsite-app.log')
+    })
 
 
 AUTHENTICATION_BACKENDS = (

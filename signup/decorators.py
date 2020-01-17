@@ -25,6 +25,7 @@
 """
 Decorators that check a User a verified email address.
 """
+from __future__ import unicode_literals
 
 from functools import wraps
 
