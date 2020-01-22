@@ -336,8 +336,10 @@ JwcBUUMECj8AKxsHtRHUSypco"
                 user.save()
                 LOGGER.info("%s reset her/his password.", user,
                     extra={'event': 'resetpassword', 'request': request})
-                self.optional_session_cookie(request, user)
-                return self.create_token(user)
+                user_with_backend = authenticate(
+                    request, username=user.username, password=new_password)
+                self.optional_session_cookie(request, user_with_backend)
+                return self.create_token(user_with_backend)
         raise serializers.ValidationError({'detail': "invalid request"})
 
 
