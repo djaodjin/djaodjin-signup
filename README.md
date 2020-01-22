@@ -70,11 +70,9 @@ run the testsite webapp.
 Release Notes
 =============
 
-0.4.0
+0.4.3
 
-  * upload of contact picture
-  * use full_name in user profile instead of first_name/last_name
-  * use inline-template for Vue.js components
-  * clean separation between API endpoints and HTML pages URLs
+  * adds activate and password-reset-confirm APIs
+  * replaces django-urldecorators by djaodjin-rules in testsite
 
 [previous release notes](changelog)
