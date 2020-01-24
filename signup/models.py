@@ -44,7 +44,7 @@ from . import settings, signals
 from .backends.mfa import EmailMFABackend
 from .compat import import_string
 from .helpers import datetime_or_now, full_name_natural_split
-from .utils import generate_random_slug
+from .utils import generate_random_slug, has_invalid_password
 
 
 LOGGER = logging.getLogger(__name__)
@@ -206,7 +206,11 @@ class ContactManager(models.Manager):
                     token.user, token.verification_key,
                     extra={'event': 'activate', 'username': token.user.username,
                         'email_verification_key': token.verification_key})
+                previously_inactive = has_invalid_password(token.user)
                 with transaction.atomic():
+                    token.verification_key = Contact.VERIFIED
+                    token.save()
+                    needs_save = False
                     if full_name:
                         token.full_name = full_name
                         #pylint:disable=unused-variable
@@ -214,18 +218,22 @@ class ContactManager(models.Manager):
                             full_name_natural_split(full_name)
                         token.user.first_name = first_name
                         token.user.last_name = last_name
-                    token.verification_key = Contact.VERIFIED
-                    token.user.is_active = True
+                        needs_save = True
                     if username:
                         token.user.username = username
+                        needs_save = True
                     if password:
                         token.user.set_password(password)
-                    token.user.save()
-                    token.save()
-                return token.user
+                        needs_save = True
+                    if not token.user.is_active:
+                        token.user.is_active = True
+                        needs_save = True
+                    if needs_save:
+                        token.user.save()
+                return token.user, previously_inactive
         except Contact.DoesNotExist:
             pass # We return None instead here.
-        return None
+        return None, None
 
     def unverified_for_user(self, user):
         return self.filter(user=user).exclude(verification_key=Contact.VERIFIED)

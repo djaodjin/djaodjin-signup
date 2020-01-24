@@ -43,6 +43,10 @@ class NameEmailForm(forms.Form):
     a full name and an email and you are in. We will ask for username
     and password later.
     """
+    email = forms.EmailField(
+        widget=forms.TextInput(attrs={'placeholder':'Email',
+                                      'maxlength': 75}),
+        label=_("E-mail address"))
     full_name = forms.RegexField(
         regex=settings.FULL_NAME_PAT, max_length=60,
         widget=forms.TextInput(attrs={
@@ -50,10 +54,6 @@ class NameEmailForm(forms.Form):
         label=_("Full name"),
         error_messages={'invalid':
             _("Sorry we do not recognize some characters in your full name.")})
-    email = forms.EmailField(
-        widget=forms.TextInput(attrs={'placeholder':'Email',
-                                      'maxlength': 75}),
-        label=_("E-mail address"))
 
     def __init__(self, *args, **kwargs):
         super(NameEmailForm, self).__init__(*args, **kwargs)
@@ -195,6 +195,21 @@ class ActivationForm(PasswordConfirmMixin, forms.Form):
         super(ActivationForm, self).__init__(*args, **kwargs)
         if settings.REQUIRES_RECAPTCHA:
             self.fields['captcha'] = ReCaptchaField()
+
+
+class UserActivateForm(forms.Form):
+    """
+    Verfication of an e-mail address
+    """
+    password = forms.CharField(
+        label=_("Password"),
+        widget=forms.PasswordInput(attrs={'placeholder': _("Password")}),
+        strip=False,
+        help_text=password_validation.password_validators_help_text_html())
+
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('instance')
+        super(UserActivateForm, self).__init__(*args, **kwargs)
 
 
 class PublicKeyForm(forms.Form):

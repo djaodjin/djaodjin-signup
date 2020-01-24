@@ -65,12 +65,13 @@ class ActivateMixin(object):
         verification_key = self.kwargs.get(self.key_url_kwarg)
         full_name = cleaned_data.get('full_name', None)
         if not full_name:
-            first_name = cleaned_data.get('first_name', None)
-            last_name = cleaned_data.get('last_name', None)
+            first_name = cleaned_data.get('first_name', "")
+            last_name = cleaned_data.get('last_name', "")
             full_name = (first_name + ' ' + last_name).strip()
         # If we don't save the ``User`` model here,
         # we won't be able to authenticate later.
-        user = Contact.objects.activate_user(verification_key,
+        user, previously_inactive = Contact.objects.activate_user(
+            verification_key,
             username=cleaned_data.get('username'),
             password=cleaned_data.get('new_password'),
             full_name=full_name)
@@ -81,7 +82,7 @@ class ActivateMixin(object):
                     user.first_name, user.last_name, user.email, user,
                     extra={'event': 'register', 'user': user})
                 signals.user_registered.send(sender=__name__, user=user)
-            else:
+            elif previously_inactive:
                 LOGGER.info("'%s %s <%s>' activated with username '%s'",
                     user.first_name, user.last_name, user.email, user,
                     extra={'event': 'activate', 'user': user})

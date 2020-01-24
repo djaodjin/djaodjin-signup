@@ -121,9 +121,11 @@ def check_email_verified(request, user,
     Checks that a *user*'s e-mail has been verified.
     """
     #pylint:disable=unused-variable
-    contact, created = Contact.objects.update_or_create_token(user)
-    if not (user.email == contact.email and
-        contact.verification_key == Contact.VERIFIED):
+    try:
+        contact = Contact.objects.get(
+            email=user.email, verification_key=Contact.VERIFIED)
+    except Contact.DoesNotExist:
+        contact, created = Contact.objects.update_or_create_token(user)
         # Let's send e-mail again.
         if not next_url:
             next_url = validate_redirect(request)

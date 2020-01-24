@@ -52,13 +52,13 @@ from ..auth import validate_redirect
 from ..compat import reverse, is_authenticated
 from ..decorators import check_has_credentials
 from ..forms import (ActivationForm, MFACodeForm, NameEmailForm,
-    PasswordResetForm, PasswordResetConfirmForm,
+    PasswordResetForm, PasswordResetConfirmForm, UserActivateForm,
     UsernameOrEmailAuthenticationForm)
 from ..helpers import full_name_natural_split
 from ..mixins import ActivateMixin, UrlsMixin
 from ..models import Contact
 from ..utils import (fill_form_errors, get_disabled_authentication,
-    get_disabled_registration)
+    get_disabled_registration, has_invalid_password)
 
 
 LOGGER = logging.getLogger(__name__)
@@ -360,6 +360,11 @@ class ActivationBaseView(RedirectFormMixin, ActivateMixin, UpdateView):
             context.update({'reason': self.contact.extra})
         return context
 
+    def get_form_class(self):
+        if self.object and not has_invalid_password(self.object):
+            return UserActivateForm
+        return super(ActivationBaseView, self).get_form_class()
+
     def get_initial(self):
         if self.object:
             return {
@@ -369,8 +374,10 @@ class ActivationBaseView(RedirectFormMixin, ActivateMixin, UpdateView):
         return {}
 
     def dispatch(self, request, *args, **kwargs):
+        self.object = self.get_object()
         if is_authenticated(request):
-            auth_logout(request)
+            if request.user != self.object:
+                auth_logout(request)
         # We put the code inline instead of using method_decorator() otherwise
         # kwargs is interpreted as parameters in sensitive_post_parameters.
         request.sensitive_post_parameters = '__ALL__'
@@ -386,9 +393,10 @@ class ActivationBaseView(RedirectFormMixin, ActivateMixin, UpdateView):
                 self.request, _("Thank you. Your account is now active."))
 
         # Okay, security check complete. Log the user in.
+        password = form.cleaned_data.get(
+            'password', form.cleaned_data.get('new_password'))
         user_with_backend = authenticate(
-            self.request, username=user.username,
-            password=form.cleaned_data.get('new_password'))
+            self.request, username=user.username, password=password)
         _login(self.request, user_with_backend)
         if self.request.session.test_cookie_worked():
             self.request.session.delete_test_cookie()
@@ -398,15 +406,23 @@ class ActivationBaseView(RedirectFormMixin, ActivateMixin, UpdateView):
         # We return a custom 404 page such that a user has a chance
         # to see an explanation of why clicking an expired link
         # in an e-mail leads to a 404.
-        self.object = self.get_object()
+        status_code = 200
+        next_url = validate_redirect(self.request)
         if not self.object:
+            status_code = 404
             messages.error(request, _("Activation failed. You may have"\
                 " already activated your account previously. In that case,"\
                 " just login. Thank you."))
-            next_url = validate_redirect(self.request)
             if next_url:
                 return HttpResponseRedirect(next_url)
-        return self.render_to_response(self.get_context_data(**kwargs))
+        elif is_authenticated(request) and self.request.user == self.object:
+            user = self.activate_user()
+            if user.last_login:
+                messages.info(self.request,
+                    _("Thank you for verifying your e-mail address."))
+            return HttpResponseRedirect(self.get_success_url())
+        return self.render_to_response(self.get_context_data(**kwargs),
+            status=status_code)
 
     def get_object(self, queryset=None):  #pylint:disable=unused-argument
         token = self.contact
