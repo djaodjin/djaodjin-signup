@@ -176,9 +176,9 @@ class ActivationForm(PasswordConfirmMixin, forms.Form):
         label=_("Full name"),
         error_messages={'invalid':
             _("Sorry we do not recognize some characters in your full name.")})
-    username = forms.CharField(widget=forms.TextInput(
+    username = forms.SlugField(widget=forms.TextInput(
         attrs={'placeholder': _("Username")}),
-        max_length=254, label=_("Username"),
+        max_length=30, label=_("Username"),
         error_messages={'invalid': _("Username may only contain letters,"\
             " digits and -/_ characters. Spaces are not allowed.")})
     new_password = forms.CharField(strip=False,
@@ -234,11 +234,11 @@ class UserForm(forms.ModelForm):
     """
     submit_title = _("Update")
 
-    username = forms.CharField(widget=forms.TextInput(
+    username = forms.SlugField(widget=forms.TextInput(
         attrs={'placeholder': _("Username")}),
-        max_length=254, label=_("Username"),
+        max_length=30, label=_("Username"),
         error_messages={'invalid': _("Username may only contain letters,"\
-" digits and -/_ characters. Spaces are not allowed.")})
+            " digits and -/_ characters. Spaces are not allowed.")})
     full_name = forms.CharField(widget=forms.TextInput(
         attrs={'placeholder': _("First and last names")}),
         max_length=254, label=_("Full name"))
@@ -279,8 +279,24 @@ class UserNotificationsForm(forms.Form):
                 required=False, initial=initial[1])
 
 
+class StartAuthenticationForm(forms.Form):
+    """
+    Form to present a user who may or may not have an account yet.
+    """
+    username = forms.EmailField(widget=forms.TextInput(
+        attrs={'placeholder':'Email', 'maxlength': 254}),
+        label=_("Please enter your e-mail address"))
+
+    submit_title = _("Submit")
+
+    def __init__(self, request=None, *args, **kwargs):
+        super(StartAuthenticationForm, self).__init__(*args, **kwargs)
+
+
 class UsernameOrEmailAuthenticationForm(AuthenticationForm):
 
+    # The field is called `username`, yet it is technically
+    # a username or e-mail.
     username = forms.CharField(widget=forms.TextInput(
         attrs={'placeholder': _("Username or e-mail")}),
         max_length=254, label=_("Username or e-mail"))

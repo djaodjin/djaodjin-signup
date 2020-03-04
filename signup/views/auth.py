@@ -52,8 +52,8 @@ from ..auth import validate_redirect
 from ..compat import reverse, is_authenticated
 from ..decorators import check_has_credentials
 from ..forms import (ActivationForm, MFACodeForm, NameEmailForm,
-    PasswordResetForm, PasswordResetConfirmForm, UserActivateForm,
-    UsernameOrEmailAuthenticationForm)
+    PasswordResetForm, PasswordResetConfirmForm, StartAuthenticationForm,
+    UserActivateForm, UsernameOrEmailAuthenticationForm)
 from ..helpers import full_name_natural_split
 from ..mixins import ActivateMixin, UrlsMixin
 from ..models import Contact
@@ -437,17 +437,27 @@ class SigninBaseView(RedirectFormMixin, ProcessFormView):
     form_class = UsernameOrEmailAuthenticationForm
 
     def get_form_class(self):
-        username = self.request.POST.get('username', None)
+        username = self.request.POST.get('username')
         if username:
             contact = Contact.objects.filter(user__username=username).first()
             if contact and contact.mfa_backend and contact.mfa_priv_key:
                 return MFACodeForm
+        password = self.request.POST.get('password')
+        if password and not 'password' in self.form_class.base_fields:
+            return UsernameOrEmailAuthenticationForm
         return self.form_class
 
     def get_form_kwargs(self):
         kwargs = super(SigninBaseView, self).get_form_kwargs()
         kwargs['request'] = self.request
         return kwargs
+
+    def get_password_form(self):
+        form_class = self.form_class
+        if not 'password' in self.form_class.base_fields:
+            form_class = UsernameOrEmailAuthenticationForm
+        form = form_class(**self.get_form_kwargs())
+        return form
 
     def get_mfa_form(self):
         form = MFACodeForm(**self.get_form_kwargs())
@@ -459,6 +469,11 @@ class SigninBaseView(RedirectFormMixin, ProcessFormView):
         return form
 
     def form_valid(self, form):
+        password = form.cleaned_data.get('password')
+        if not password:
+            form = self.get_password_form()
+            form.is_valid()
+            return self.form_invalid(form)
         user = form.get_user()
         contact = Contact.objects.filter(user=user).first()
         if contact and contact.mfa_backend:
@@ -475,51 +490,58 @@ class SigninBaseView(RedirectFormMixin, ProcessFormView):
         return super(SigninBaseView, self).form_valid(form)
 
     def form_invalid(self, form):
-        username = form.cleaned_data['username']
-        try:
-            user = self.model.objects.find_user(username)
-            if not check_has_credentials(self.request, user):
-                form.add_error(None, _(
-                    "This email address has already been registered!"\
-                   " You should now secure and activate your account following"\
-                    " the instructions we just emailed you. Thank you."))
-            else:
-                contact = Contact.objects.filter(user=user).first()
-                if contact and contact.mfa_backend:
-                    if contact.mfa_nb_attempts >= settings.MFA_MAX_ATTEMPTS:
-                        contact.clear_mfa_token()
-                        form = self.get_form()
-                        form.add_error(None, _("You have exceeded the number"\
-                    " of attempts to enter the MFA code. Please start again."))
-                    else:
-                        contact.mfa_nb_attempts += 1
-                        contact.save()
-        except self.model.DoesNotExist:
-            # Django takes extra steps to make sure an attacker finds
-            # it difficult to distinguish between a non-existant user
-            # and an incorrect password on login.
-            # This is only useful when registration is disabled otherwise
-            # an attacker could simply use the register end-point instead.
-            if not get_disabled_registration(self.request):
-                # If we have attempted to login a user that is not yet
-                # registered, automatically redirect to the registration page
-                # and pre-populate the form fields.
-                try:
-                    validate_email(username)
-                    query_params = {'email': username}
-                    messages.error(self.request, _("This email is not yet"\
-                        " registered. Would you like to do so?"))
-                except ValidationError:
-                    query_params = {'username': username}
-                    messages.error(self.request, _("This username is not yet"\
-                        " registered. Would you like to do so?"))
-                next_url = validate_redirect(self.request)
-                if next_url:
-                    query_params.update({REDIRECT_FIELD_NAME: next_url})
-                redirect_to = reverse('registration_register')
-                if query_params:
-                    redirect_to += '?%s' % urlencode(query_params)
-                return HttpResponseRedirect(redirect_to)
+        username = form.cleaned_data.get('username')
+        # It is possible username should be interpreted as an e-mail address
+        # and yet be entered incorrectly, in which case the `username` key
+        # won't be present in the `cleaned_data`.
+        if username:
+            try:
+                user = self.model.objects.find_user(username)
+                if not check_has_credentials(self.request, user):
+                    form.add_error(None, _(
+                        "This email address has already been registered!"\
+                        " You should now secure and activate your account"\
+                        " following the instructions we just emailed you."\
+                        " Thank you."))
+                else:
+                    contact = Contact.objects.filter(user=user).first()
+                    if contact and contact.mfa_backend:
+                        if contact.mfa_nb_attempts >= settings.MFA_MAX_ATTEMPTS:
+                            contact.clear_mfa_token()
+                            form = self.get_form()
+                            form.add_error(None, _("You have exceeded the"\
+                                " number of attempts to enter the MFA code."\
+                                " Please start again."))
+                        else:
+                            contact.mfa_nb_attempts += 1
+                            contact.save()
+            except self.model.DoesNotExist:
+                # Django takes extra steps to make sure an attacker finds
+                # it difficult to distinguish between a non-existant user
+                # and an incorrect password on login.
+                # This is only useful when registration is disabled otherwise
+                # an attacker could simply use the register end-point instead.
+                if not get_disabled_registration(self.request):
+                    # If we have attempted to login a user that is not yet
+                    # registered, automatically redirect to the registration
+                    # page and pre-populate the form fields.
+                    try:
+                        validate_email(username)
+                        query_params = {'email': username}
+                        messages.error(self.request, _("This email is not yet"\
+                            " registered. Would you like to do so?"))
+                    except ValidationError:
+                        query_params = {'username': username}
+                        messages.error(self.request, _(
+                            "This username is not yet"\
+                            " registered. Would you like to do so?"))
+                    next_url = validate_redirect(self.request)
+                    if next_url:
+                        query_params.update({REDIRECT_FIELD_NAME: next_url})
+                    redirect_to = reverse('registration_register')
+                    if query_params:
+                        redirect_to += '?%s' % urlencode(query_params)
+                    return HttpResponseRedirect(redirect_to)
         return super(SigninBaseView, self).form_invalid(form)
 
 
