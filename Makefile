@@ -48,3 +48,8 @@ initdb: install-conf
 	cd $(srcDir) && $(PYTHON) ./manage.py migrate $(RUNSYNCDB) --noinput
 	echo "CREATE UNIQUE INDEX uniq_email ON auth_user(email);" | $(SQLITE) $(srcDir)/db.sqlite
 	cd $(srcDir) && $(PYTHON) ./manage.py loaddata testsite/fixtures/default-db.json
+
+
+doc:
+	$(installDirs) build/docs
+	cd $(srcDir) && sphinx-build -b html ./docs $(PWD)/build/docs
