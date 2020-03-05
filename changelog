@@ -1,9 +1,16 @@
+0.4.4
+
+  * improves verify-email workflow
+  * activates account based on e-mail address
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Thu,  5 Mar 2020 09:20:00 -0700
+
 0.4.3
 
   * adds activate and password-reset-confirm APIs
   * replaces django-urldecorators by djaodjin-rules in testsite
 
- -- Sebastien Mirolo <smirolo@djaodjin.com>  Wed,  22 Jan 2030 09:20:00 -0700
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Wed,  22 Jan 2020 09:20:00 -0700
 
 0.4.1
 

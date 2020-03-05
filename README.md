@@ -70,9 +70,9 @@ run the testsite webapp.
 Release Notes
 =============
 
-0.4.3
+0.4.4
 
-  * adds activate and password-reset-confirm APIs
-  * replaces django-urldecorators by djaodjin-rules in testsite
+  * improves verify-email workflow
+  * activates account based on e-mail address
 
 [previous release notes](changelog)
