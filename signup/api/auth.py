@@ -265,12 +265,15 @@ sbF9uYW1lIjoiRG9ubnkgQ29vcGVyIiwiZXhwIjoxNTI5NjU4NzEwfQ.F2y\
                     contact.clear_mfa_token()
                 self.optional_session_cookie(request, user)
                 return self.create_token(user)
-            user = self.model.objects.find_user(username)
-            if not check_has_credentials(request, user):
-                raise serializers.ValidationError({'detail': _(
-            "This email address has already been registered!"\
-           " You should now secure and activate your account following"\
-            " the instructions we just emailed you. Thank you.")})
+            try:
+                user = self.model.objects.find_user(username)
+                if not check_has_credentials(request, user):
+                    raise serializers.ValidationError({'detail': _(
+                "This email address has already been registered!"\
+               " You should now secure and activate your account following"\
+                " the instructions we just emailed you. Thank you.")})
+            except self.model.DoesNotExist:
+                pass
         raise exceptions.PermissionDenied()
 
 
