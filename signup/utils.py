@@ -1,4 +1,4 @@
-# Copyright (c) 2019, DjaoDjin inc.
+# Copyright (c) 2020, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -211,10 +211,11 @@ def get_disabled_registration(request):
     return bool(settings.DISABLED_REGISTRATION)
 
 
-def get_picture_storage():
+def get_picture_storage(request, account=None, **kwargs):
     if settings.PICTURE_STORAGE_CALLABLE:
         try:
-            return import_string(settings.PICTURE_STORAGE_CALLABLE)()
+            return import_string(settings.PICTURE_STORAGE_CALLABLE)(
+                request, account=account, **kwargs)
         except ImportError:
             pass
     return default_storage

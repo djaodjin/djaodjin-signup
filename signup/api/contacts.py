@@ -164,7 +164,7 @@ class ContactPictureAPIView(ContactMixin, CreateAPIView):
         ext = parts[-1].lower() if len(parts) > 1 else ""
         key_name = "%s%s" % (
             hashlib.sha256(uploaded_file.read()).hexdigest(), ext)
-        default_storage = get_picture_storage()
+        default_storage = get_picture_storage(request)
         location = self.request.build_absolute_uri(default_storage.url(
             default_storage.save(key_name, uploaded_file)))
         user_model = self.user_queryset.model
