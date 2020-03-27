@@ -213,36 +213,16 @@ Vue.component('user-update', {
             var vm = this;
             vm.picture.generateBlob(function(blob){
                 if(!blob) return;
-                var data = new FormData();
-                data.append('file', blob, vm.picture.getChosenFile().name);
-                $.ajax({
-                    method: 'POST',
-                    url: djaodjinSettings.urls.user.api_contact_picture,
-                    beforeSend: function(xhr, settings) {
-                        var authToken = vm._getAuthToken();
-                        if( authToken ) {
-                            xhr.setRequestHeader(
-                                "Authorization", "Bearer " + authToken);
-                        } else {
-                            if( !vm._csrfSafeMethod(settings.type) ) {
-                                var csrfToken = vm._getCSRFToken();
-                                if( csrfToken ) {
-                                    xhr.setRequestHeader(
-                                        "X-CSRFToken", csrfToken);
-                                }
-                            }
-                        }
-                    },
-                    contentType: false,
-                    processData: false,
-                    data: data,
-                }).done(function(resp) {
-                    vm.formFields.picture = resp.location;
-                    vm.picture.remove();
-                    vm.$forceUpdate();
-                    showMessages(["Profile was updated."], "success");
-                }).fail(function(resp){
-                    showErrorMessages(resp);
+                var form = new FormData();
+                form.append('file', blob, vm.picture.getChosenFile().name);
+                vm.reqPostBlob(
+                    djaodjinSettings.urls.user.api_user_picture,
+                    form,
+                    function(resp) {
+                        vm.formFields.picture = resp.location;
+                        vm.picture.remove();
+                        vm.$forceUpdate();
+                        showMessages(["Profile was updated."], "success");
                 });
             }, 'image/jpeg');
         },

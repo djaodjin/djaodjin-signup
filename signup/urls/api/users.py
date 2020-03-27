@@ -1,4 +1,4 @@
-# Copyright (c) 2019, Djaodjin Inc.
+# Copyright (c) 2020, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -25,12 +25,15 @@
 from django.conf.urls import url
 
 from ...settings import USERNAME_PAT
+from ...api.contacts import ContactPictureAPIView
 from ...api.users import (PasswordChangeAPIView, UserDetailAPIView,
     UserListCreateAPIView, UserNotificationsAPIView)
 
 urlpatterns = [
     url(r'^users/(?P<user>%s)/notifications/' % USERNAME_PAT,
         UserNotificationsAPIView.as_view(), name='api_user_notifications'),
+    url(r'^users/(?P<user>%s)/picture/' % USERNAME_PAT,
+        ContactPictureAPIView.as_view(), name='api_user_picture'),
     url(r'^users/(?P<user>%s)/password/' % USERNAME_PAT,
         PasswordChangeAPIView.as_view(), name='api_user_password_change'),
     url(r'^users/(?P<user>%s)/' % USERNAME_PAT,
