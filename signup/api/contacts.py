@@ -36,8 +36,10 @@ from .users import UserDetailAPIView, UserListCreateAPIView
 from ..mixins import ContactMixin
 from ..models import Activity, Contact
 from ..serializers import ActivitySerializer, UploadBlobSerializer
-
 from ..utils import get_picture_storage
+
+#pylint:disable=no-name-in-module,import-error
+from django.utils.six.moves.urllib.parse import urlparse, urlunparse
 
 
 LOGGER = logging.getLogger(__name__)
@@ -165,8 +167,15 @@ class ContactPictureAPIView(ContactMixin, CreateAPIView):
         key_name = "%s%s" % (
             hashlib.sha256(uploaded_file.read()).hexdigest(), ext)
         default_storage = get_picture_storage(request)
-        location = self.request.build_absolute_uri(default_storage.url(
-            default_storage.save(key_name, uploaded_file)))
+
+        location = default_storage.url(
+            default_storage.save(key_name, uploaded_file))
+        # We are removing the query parameters, as they contain
+        # signature information, not the relevant URL location.
+        parts = urlparse(location)
+        location = urlunparse((parts.scheme, parts.netloc, parts.path,
+            "", "", ""))
+        location = self.request.build_absolute_uri(location)
         user_model = self.user_queryset.model
         with transaction.atomic():
             try:
