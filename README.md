@@ -58,11 +58,11 @@ After cloning the repository, create a virtualenv environment, install
 the prerequisites, create and load initial data into the database, then
 run the testsite webapp.
 
-    $ virtualenv _installTop_
-    $ source _installTop_/bin/activate
+    $ python -m venv .venv
+    $ source .venv/bin/activate
     $ pip install -r testsite/requirements.txt
     $ python manage.py syncdb
-    $ python manage.py loaddata testsite/fixtures/test_data.json
+    $ python manage.py loaddata testsite/fixtures/default-db.json
     $ python manage.py runserver
 
     # Browse http://localhost:8000/
