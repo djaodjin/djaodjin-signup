@@ -70,9 +70,9 @@ run the testsite webapp.
 Release Notes
 =============
 
-0.4.4
+0.4.5
 
-  * improves verify-email workflow
-  * activates account based on e-mail address
+  * fixes regression on api login - 500 error when user does not exist
+  * uploads contact profile picture
 
 [previous release notes](changelog)
