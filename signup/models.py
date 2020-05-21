@@ -36,13 +36,12 @@ from django.contrib.auth.models import UserManager
 from django.core.validators import validate_email
 from django.db import models, transaction, IntegrityError
 from django.template.defaultfilters import slugify
-from django.utils.encoding import python_2_unicode_compatible
 from django.utils.translation import ugettext_lazy as _
 from django.contrib.auth.hashers import check_password, make_password
 
 from . import settings, signals
 from .backends.mfa import EmailMFABackend
-from .compat import import_string
+from .compat import import_string, python_2_unicode_compatible
 from .helpers import datetime_or_now, full_name_natural_split
 from .utils import generate_random_slug, has_invalid_password
 

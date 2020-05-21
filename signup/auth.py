@@ -1,4 +1,4 @@
-# Copyright (c) 2017, Djaodjin Inc.
+# Copyright (c) 2020, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,8 @@
 from django.conf import settings
 from django.contrib.auth import REDIRECT_FIELD_NAME
 from django.http.request import split_domain_port, validate_host
-from django.utils import six
+
+from .compat import urlparse, urlunparse
 
 
 def validate_redirect(request):
@@ -41,11 +42,11 @@ def validate_redirect_url(next_url):
     """
     if not next_url:
         return None
-    parts = six.moves.urllib.parse.urlparse(next_url)
+    parts = urlparse(next_url)
     if parts.netloc:
         domain, _ = split_domain_port(parts.netloc)
         allowed_hosts = ['*'] if settings.DEBUG else settings.ALLOWED_HOSTS
         if not (domain and validate_host(domain, allowed_hosts)):
             return None
-    return six.moves.urllib.parse.urlunparse(("", "", parts.path,
+    return urlunparse(("", "", parts.path,
         parts.params, parts.query, parts.fragment))

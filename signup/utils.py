@@ -29,7 +29,6 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ImproperlyConfigured, NON_FIELD_ERRORS
 from django.core.files.storage import default_storage
 from django.db import IntegrityError
-from django.utils import six
 from django.utils.crypto import get_random_string
 from django.utils.translation import ugettext_lazy as _
 import jwt
@@ -38,7 +37,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.settings import api_settings
 
 from . import settings
-from .compat import import_string
+from .compat import import_string, six
 
 LOGGER = logging.getLogger(__name__)
 

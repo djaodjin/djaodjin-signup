@@ -1,4 +1,4 @@
-# Copyright (c) 2019, Djaodjin Inc.
+# Copyright (c) 2020, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -27,11 +27,8 @@ import datetime, base64, hashlib, hmac, json, logging
 import boto3
 
 from .. import settings
-from ..compat import is_authenticated
+from ..compat import is_authenticated, urlparse
 from ..helpers import datetime_or_now
-
-#pylint:disable=no-name-in-module,import-error
-from django.utils.six.moves.urllib.parse import urlparse
 
 
 LOGGER = logging.getLogger(__name__)

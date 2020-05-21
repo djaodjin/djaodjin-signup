@@ -25,12 +25,11 @@
 import logging
 
 from django.http import Http404
-from django.utils import six
 from django.contrib.auth import get_user_model
 from rest_framework.generics import get_object_or_404
 
 from . import signals
-from .compat import reverse, is_authenticated
+from .compat import is_authenticated, reverse, six
 from .models import Contact
 
 

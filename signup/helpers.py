@@ -1,4 +1,4 @@
-# Copyright (c) 2019, DjaoDjin inc.
+# Copyright (c) 2020, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -25,8 +25,9 @@
 import datetime
 
 from dateutil.parser import parse
-from django.utils import six
 from django.utils.timezone import utc
+
+from .compat import six
 
 
 def datetime_or_now(dtime_at=None):

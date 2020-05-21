@@ -1,3 +1,5 @@
+# Many prerequisite projects have dropped support for Python2.
+# This legacy requirements file is used for Python2 environments.
 boto3==1.4.4
 botocore==1.5.95
 coverage==4.0.3
@@ -9,11 +11,9 @@ djangorestframework==3.9.4
 djaodjin-rules==0.2.3
 docutils==0.15.2
 gunicorn==19.7.1
-jmespath==0.9.3
 PyJWT==1.7.1
 python-dateutil==2.8.1
 python-ldap==3.2.0
 pytz==2019.3
-s3transfer==0.1.13
 six==1.12.0
 whitenoise==4.1.2

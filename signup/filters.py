@@ -1,4 +1,4 @@
-# Copyright (c) 2019, DjaoDjin inc.
+# Copyright (c) 2020, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -27,11 +27,13 @@ import operator
 from functools import reduce
 
 from django.db import models
-from django.utils import six
 from django.utils.encoding import force_text
 from rest_framework.compat import coreapi, coreschema, distinct
 from rest_framework.filters import (OrderingFilter as BaseOrderingFilter,
     SearchFilter as BaseSearchFilter)
+
+from .compat import six
+
 
 class SearchFilter(BaseSearchFilter):
 

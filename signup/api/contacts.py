@@ -33,13 +33,11 @@ from rest_framework.generics import CreateAPIView, ListCreateAPIView
 from rest_framework.response import Response
 
 from .users import UserDetailAPIView, UserListCreateAPIView
+from ..compat import urlparse, urlunparse
 from ..mixins import ContactMixin
 from ..models import Activity, Contact
 from ..serializers import ActivitySerializer, UploadBlobSerializer
 from ..utils import get_picture_storage
-
-#pylint:disable=no-name-in-module,import-error
-from django.utils.six.moves.urllib.parse import urlparse, urlunparse
 
 
 LOGGER = logging.getLogger(__name__)

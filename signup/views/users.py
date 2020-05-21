@@ -1,4 +1,4 @@
-# Copyright (c) 2019, Djaodjin Inc.
+# Copyright (c) 2020, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -33,14 +33,13 @@ from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.http import HttpResponseRedirect
 from django.shortcuts import redirect
-from django.utils import six
 from django.utils.decorators import method_decorator
 from django.utils.translation import ugettext_lazy as _
 from django.views.decorators.csrf import csrf_protect
 from django.views.generic.edit import UpdateView
 
 from .. import settings
-from ..compat import reverse, is_authenticated
+from ..compat import is_authenticated, reverse, six
 from ..forms import (PasswordChangeForm, PublicKeyForm, UserForm,
     UserNotificationsForm)
 from ..mixins import UserMixin

@@ -35,7 +35,6 @@ from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.http import HttpResponseRedirect
 from django.template.response import TemplateResponse
-from django.utils import six
 from django.utils.encoding import force_bytes
 from django.utils.http import (urlencode, urlsafe_base64_decode,
     urlsafe_base64_encode)
@@ -49,10 +48,10 @@ from rest_framework.settings import api_settings
 
 from .. import settings, signals
 from ..auth import validate_redirect
-from ..compat import reverse, is_authenticated
+from ..compat import reverse, is_authenticated, six
 from ..decorators import check_has_credentials
 from ..forms import (ActivationForm, MFACodeForm, NameEmailForm,
-    PasswordResetForm, PasswordResetConfirmForm, StartAuthenticationForm,
+    PasswordResetForm, PasswordResetConfirmForm,
     UserActivateForm, UsernameOrEmailAuthenticationForm)
 from ..helpers import full_name_natural_split
 from ..mixins import ActivateMixin, UrlsMixin

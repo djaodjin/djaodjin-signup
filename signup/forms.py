@@ -30,9 +30,9 @@ from django.contrib.auth import password_validation, get_user_model
 from django.contrib.auth.forms import (AuthenticationForm,
     PasswordResetForm as PasswordResetBaseForm)
 from django.utils.translation import ugettext_lazy as _
-from django.utils import six
 
 from . import settings
+from .compat import six
 from .helpers import full_name_natural_split
 from .models import Contact
 

@@ -1,4 +1,4 @@
-# Copyright (c) 2019, Djaodjin Inc.
+# Copyright (c) 2020, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,7 +22,25 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#pylint:disable=no-name-in-module,invalid-name,unused-import
+#pylint: disable=no-name-in-module,unused-import
+from functools import WRAPPER_ASSIGNMENTS
+import six
+
+#pylint:disable=no-name-in-module,import-error
+from six.moves.urllib.parse import urlparse, urlunparse
+
+
+try:
+    from django.utils.decorators import available_attrs
+except ImportError: # django < 3.0
+    def available_attrs(func):      #pylint:disable=unused-argument
+        return WRAPPER_ASSIGNMENTS
+
+try:
+    from django.utils.encoding import python_2_unicode_compatible
+except ImportError: # django < 3.0
+    python_2_unicode_compatible = six.python_2_unicode_compatible
+
 
 try:
     from django.utils.module_loading import import_string

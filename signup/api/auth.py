@@ -27,7 +27,6 @@ import logging
 from django.contrib.auth import (REDIRECT_FIELD_NAME, get_user_model,
     authenticate, login as auth_login, logout as auth_logout)
 from django.contrib.auth.tokens import default_token_generator
-from django.utils import six
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.utils.safestring import mark_safe
@@ -40,7 +39,7 @@ from rest_framework.response import Response
 
 from .. import settings, signals
 from ..auth import validate_redirect
-from ..compat import reverse
+from ..compat import reverse, six
 from ..decorators import check_has_credentials
 from ..docs import OpenAPIResponse, swagger_auto_schema
 from ..helpers import as_timestamp, datetime_or_now, full_name_natural_split
