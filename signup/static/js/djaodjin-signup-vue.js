@@ -62,10 +62,14 @@ var userPasswordModalMixin = {
 
 
 Vue.component('contact-list', {
-    mixins: [itemListMixin, paginationMixin],
+    mixins: [
+        itemListMixin,
+        paginationMixin
+    ],
     data: function () {
         return {
-            url: djaodjinSettings.urls.api_contacts,
+            url: this.$urls.api_contacts,
+            redirect_url: this.$urls.contacts,
             contact: {
                 full_name: "",
                 nick_name: "",
@@ -76,13 +80,17 @@ Vue.component('contact-list', {
     methods: {
         createContact: function() {
             var vm = this;
-            vm.reqPost(djaodjinSettings.urls.api_contacts, this.contact,
+            vm.reqPost(vm.url, this.contact,
             function(resp) {
-                window.location = djaodjinSettings.urls.contacts + resp.slug + '/';
+                window.location = vm.redirectUrl(resp.slug);
             }, function(resp) {
                 showErrorMessages(resp);
             });
         },
+        redirectUrl: function(contact) {
+            var vm = this;
+            return vm.redirect_url + contact + '/';
+        }
     },
     mounted: function(){
         this.get();
@@ -94,7 +102,8 @@ Vue.component('contact-update', {
     mixins: [itemListMixin, paginationMixin],
     data: function () {
         return {
-            url: djaodjinSettings.urls.api_activities,
+            url: this.$urls.api_activities,
+            typeaheadUrl: this.$urls.api_candidates,
             activityText: '',
             itemSelected: {
                 slug: ''
@@ -109,7 +118,7 @@ Vue.component('contact-update', {
                 text: vm.activityText,
                 account: vm.itemSelected.slug
             }
-            vm.reqPost(djaodjinSettings.urls.api_activities, {
+            vm.reqPost(vm.url, {
                 text: vm.activityText,
                 account: vm.itemSelected.slug
             }, function(resp) {
@@ -121,8 +130,7 @@ Vue.component('contact-update', {
         getCandidates: function(query, done) {
             var vm = this;
             vm.searching = true;
-            vm.reqGet(djaodjinSettings.urls.api_candidates,
-                {q: query},
+            vm.reqGet(vm.typeaheadUrl, {q: query},
             function(resp){
                 vm.searching = false;
                 done(resp.results)
@@ -139,6 +147,11 @@ Vue.component('user-update', {
     mixins: [httpRequestMixin],
     data: function () {
         return {
+            url: this.$urls.user.api_profile,
+            picture_url: this.$urls.user.api_user_picture,
+            redirect_url: this.$urls.user.profile_redirect,
+            api_activate_url: this.$urls.user.api_activate,
+            api_generate_keys_url: this.$urls.user.api_generate_keys,
             formFields: {},
             userModalOpen: false,
             apiModalOpen: false,
@@ -150,7 +163,7 @@ Vue.component('user-update', {
     methods: {
         activate: function() {
             var vm = this;
-            vm.reqPost(djaodjinSettings.urls.user.api_activate,
+            vm.reqPost(vm.api_activate_url,
             function(resp) {
                 showMessages([interpolate(gettext(
                     "Activation e-mail successfuly sent to %s"),
@@ -164,7 +177,7 @@ Vue.component('user-update', {
         },
         generateKey: function() {
             var vm = this;
-            vm.reqPost(djaodjinSettings.urls.user.api_generate_keys,
+            vm.reqPost(vm.api_generate_keys_url,
                 { password: vm.password },
             function(resp) {
                 vm.apiKey = resp.secret;
@@ -180,16 +193,16 @@ Vue.component('user-update', {
         },
         deleteProfile: function() {
             var vm = this;
-            vm.reqDelete(djaodjinSettings.urls.user.api_profile,
+            vm.reqDelete(vm.url,
             function() {
-                window.location = djaodjinSettings.urls.user.profile_redirect;
+                window.location = vm.redirect_url;
             }, function(resp){
                 showErrorMessages(resp);
             });
         },
         get: function(){
             var vm = this;
-            vm.reqGet(djaodjinSettings.urls.user.api_profile,
+            vm.reqGet(vm.url,
             function(resp) {
                 vm.formFields = resp;
             });
@@ -197,7 +210,7 @@ Vue.component('user-update', {
         updateProfile: function(){
             var vm = this;
             vm.validateForm();
-            vm.reqPatch(djaodjinSettings.urls.user.api_profile, vm.formFields,
+            vm.reqPatch(vm.url, vm.formFields,
             function(resp) {
                 // XXX should really be success but then it needs to be changed
                 // in Django views as well.
@@ -215,14 +228,12 @@ Vue.component('user-update', {
                 if(!blob) return;
                 var form = new FormData();
                 form.append('file', blob, vm.picture.getChosenFile().name);
-                vm.reqPostBlob(
-                    djaodjinSettings.urls.user.api_user_picture,
-                    form,
-                    function(resp) {
-                        vm.formFields.picture = resp.location;
-                        vm.picture.remove();
-                        vm.$forceUpdate();
-                        showMessages(["Profile was updated."], "success");
+                vm.reqPostBlob(vm.picture_url, form,
+                function(resp) {
+                    vm.formFields.picture = resp.location;
+                    vm.picture.remove();
+                    vm.$forceUpdate();
+                    showMessages(["Profile was updated."], "success");
                 });
             }, 'image/jpeg');
         },
@@ -269,6 +280,7 @@ Vue.component('user-update-password', {
     ],
     data: function () {
         return {
+            url: this.$urls.user.api_password_change,
             modalSelector: '.user-password-modal',
             newPassword: '',
             newPassword2: '',
@@ -289,7 +301,7 @@ Vue.component('user-update-password', {
             // We are using the view (and not the API) so that the redirect
             // to the profile page is done correctly and a success message
             // shows up.
-            vm.reqPut(djaodjinSettings.urls.user.api_password_change, {
+            vm.reqPut(vm.url, {
                 password: vm.password,
                 new_password: vm.newPassword,
                 new_password2: vm.newPassword2
@@ -298,7 +310,6 @@ Vue.component('user-update-password', {
                 vm.newPassword = '';
                 vm.newPassword2 = '';
                 showMessages([gettext("Password was updated.")], "success");
-                // XXX window.location = djaodjinSettings.urls.user.profile;
             }, vm.failCb);
         },
         submitPassword: function(){
@@ -316,6 +327,7 @@ Vue.component('user-update-pubkey', {
     ],
     data: function () {
         return {
+            url: this.$urls.user.api_pubkey,
             modalSelector: '.user-password-modal',
             pubkey: '',
         };
@@ -323,7 +335,7 @@ Vue.component('user-update-pubkey', {
     methods: {
         updatePubkey: function(){
             var vm = this;
-            vm.reqPut(djaodjinSettings.urls.user.api_pubkey, {
+            vm.reqPut(vm.url, {
                 pubkey: vm.pubkey,
                 password: vm.password,
             }, function(resp){
