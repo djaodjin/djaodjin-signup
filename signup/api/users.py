@@ -22,29 +22,33 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import logging, re
+import hashlib, logging, os, re
 
 from django.contrib.auth import logout as auth_logout
 from django.db import transaction, IntegrityError
 from django.core.exceptions import PermissionDenied
 from django.contrib.auth import update_session_auth_hash, get_user_model
+from django.utils.encoding import force_text
 from django.utils.translation import ugettext_lazy as _
+from rest_framework import parsers, status
 from rest_framework.exceptions import ValidationError
-from rest_framework.generics import (ListCreateAPIView,
+from rest_framework.generics import (CreateAPIView, ListCreateAPIView,
     RetrieveUpdateDestroyAPIView, GenericAPIView, UpdateAPIView)
 from rest_framework.response import Response
 from rest_framework.settings import api_settings
 
+
 from .. import filters, settings
+from ..compat import urlparse, urlunparse
 from ..decorators import check_has_credentials
-from ..docs import OpenAPIResponse, swagger_auto_schema
+from ..docs import OpenAPIResponse, no_body, swagger_auto_schema
 from ..helpers import full_name_natural_split
 from ..mixins import ContactMixin
 from ..models import Contact
 from ..serializers import (ContactSerializer, ContactDetailSerializer,
     PasswordChangeSerializer, NoModelSerializer, NotificationsSerializer,
-    ValidationErrorSerializer)
-from ..utils import generate_random_code, handle_uniq_error
+    UploadBlobSerializer, ValidationErrorSerializer)
+from ..utils import generate_random_code, get_picture_storage, handle_uniq_error
 
 
 LOGGER = logging.getLogger(__name__)
@@ -108,7 +112,7 @@ class UserActivateAPIView(ContactMixin, GenericAPIView):
     serializer_class = ContactSerializer
     queryset = Contact.objects.all().select_related('user')
 
-    @swagger_auto_schema(request_body=NoModelSerializer, responses={
+    @swagger_auto_schema(request_body=no_body, responses={
         201: OpenAPIResponse("success", ContactSerializer),
         400: OpenAPIResponse("parameters error", ValidationErrorSerializer)})
     def post(self, request, *args, **kwargs):#pylint:disable=unused-argument
@@ -505,39 +509,48 @@ class UserListCreateAPIView(ListCreateAPIView):
             serializer.save(user=user)
 
 
-class PasswordChangeAPIView(UpdateAPIView):
+class PasswordChangeAPIView(GenericAPIView):
     """
     Changes a user password
-
-    **Tags: auth
-
-    **Example
-
-    .. code-block:: http
-
-        PUT /api/users/donny/password/ HTTP/1.1
-
-    .. code-block:: json
-
-        {
-          "password": "yeye",
-          "new_password": "yoyo"
-        }
-
-    responds
-
-    .. code-block:: json
-
-        {
-        }
     """
-
     lookup_field = 'username'
     lookup_url_kwarg = 'user'
     serializer_class = PasswordChangeSerializer
     queryset = get_user_model().objects.filter(is_active=True)
 
-    def perform_update(self, serializer):
+    @swagger_auto_schema(responses={
+        200: OpenAPIResponse("success", ValidationErrorSerializer)})
+    def put(self, request, *args, **kwargs):
+        """
+        Changes a user password
+
+        **Tags: auth
+
+        **Example
+
+        .. code-block:: http
+
+            PUT /api/users/donny/password/ HTTP/1.1
+
+        .. code-block:: json
+
+            {
+              "password": "yeye",
+              "new_password": "yoyo"
+            }
+
+        responds
+
+        .. code-block:: json
+
+            {
+              "detail": "Password updated successfully."
+            }
+        """
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data)
+        serializer.is_valid(raise_exception=True)
+
         password = serializer.validated_data['password']
         new_password = serializer.validated_data.get('new_password')
         if not self.request.user.check_password(password):
@@ -550,6 +563,8 @@ class PasswordChangeAPIView(UpdateAPIView):
             # django.contrib.auth.middleware.SessionAuthenticationMiddleware
             # is enabled.
             update_session_auth_hash(self.request, serializer.instance)
+
+        return Response({'detail': _("Password updated successfully.")})
 
 
 class UserNotificationsAPIView(UpdateAPIView):
@@ -582,3 +597,61 @@ class UserNotificationsAPIView(UpdateAPIView):
     lookup_url_kwarg = 'user'
     serializer_class = NotificationsSerializer
     queryset = get_user_model().objects.filter(is_active=True)
+
+
+class UserPictureAPIView(ContactMixin, CreateAPIView):
+    """
+        Uploads a picture for the user profile
+
+        **Examples
+
+        .. code-block:: http
+
+            POST /api/users/xia/picture/ HTTP/1.1
+
+        responds
+
+        .. code-block:: json
+
+            {
+              "location": "https://cowork.net/picture.jpg"
+            }
+    """
+    parser_classes = (parsers.FormParser, parsers.MultiPartParser)
+    serializer_class = UploadBlobSerializer
+
+    def post(self, request, *args, **kwargs):
+        #pylint:disable=unused-argument
+        uploaded_file = request.data.get('file')
+        if not uploaded_file:
+            return Response({'detail': "no location or file specified."},
+                status=status.HTTP_400_BAD_REQUEST)
+
+        # tentatively extract file extension.
+        parts = os.path.splitext(
+            force_text(uploaded_file.name.replace('\\', '/')))
+        ext = parts[-1].lower() if len(parts) > 1 else ""
+        key_name = "%s%s" % (
+            hashlib.sha256(uploaded_file.read()).hexdigest(), ext)
+        default_storage = get_picture_storage(request)
+
+        location = default_storage.url(
+            default_storage.save(key_name, uploaded_file))
+        # We are removing the query parameters, as they contain
+        # signature information, not the relevant URL location.
+        parts = urlparse(location)
+        location = urlunparse((parts.scheme, parts.netloc, parts.path,
+            "", "", ""))
+        location = self.request.build_absolute_uri(location)
+        user_model = self.user_queryset.model
+        with transaction.atomic():
+            try:
+                user = user_model.objects.get(
+                    username=self.kwargs.get(self.lookup_url_kwarg))
+            except user_model.DoesNotExist:
+                user = None
+            Contact.objects.update_or_create(
+                slug=self.kwargs.get(self.lookup_url_kwarg),
+                defaults={'picture': location, 'user': user})
+        return Response(self.get_serializer().to_representation(
+            {'location': location}), status=status.HTTP_201_CREATED)

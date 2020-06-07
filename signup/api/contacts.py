@@ -24,20 +24,15 @@
 
 """APIs for profiles and profile activities"""
 
-import hashlib, logging, os
+import logging
 
-from django.db import transaction
-from django.utils.encoding import force_text
-from rest_framework import filters, parsers, status
-from rest_framework.generics import CreateAPIView, ListCreateAPIView
-from rest_framework.response import Response
+from rest_framework import filters
+from rest_framework.generics import ListCreateAPIView
 
-from .users import UserDetailAPIView, UserListCreateAPIView
-from ..compat import urlparse, urlunparse
+from .users import UserDetailAPIView, UserListCreateAPIView, UserPictureAPIView
 from ..mixins import ContactMixin
-from ..models import Activity, Contact
-from ..serializers import ActivitySerializer, UploadBlobSerializer
-from ..utils import get_picture_storage
+from ..models import Activity
+from ..serializers import ActivitySerializer
 
 
 LOGGER = logging.getLogger(__name__)
@@ -138,50 +133,21 @@ class ContactListAPIView(UserListCreateAPIView):
     swagger_schema = None
 
 
-class ContactPictureAPIView(ContactMixin, CreateAPIView):
+class ContactPictureAPIView(UserPictureAPIView):
     """
-        Uploads a static asset file
+        Uploads a picture for the user profile
 
         **Examples
 
         .. code-block:: http
 
             POST /api/contacts/xia/picture/ HTTP/1.1
+
+        responds
+
+        .. code-block:: json
+
+            {
+              "location": "https://cowork.net/picture.jpg"
+            }
     """
-    parser_classes = (parsers.FormParser, parsers.MultiPartParser)
-    serializer_class = UploadBlobSerializer
-
-    def post(self, request, *args, **kwargs):
-        #pylint:disable=unused-argument
-        uploaded_file = request.data.get('file')
-        if not uploaded_file:
-            return Response({'details': "no location or file specified."},
-                status=status.HTTP_400_BAD_REQUEST)
-
-        # tentatively extract file extension.
-        parts = os.path.splitext(
-            force_text(uploaded_file.name.replace('\\', '/')))
-        ext = parts[-1].lower() if len(parts) > 1 else ""
-        key_name = "%s%s" % (
-            hashlib.sha256(uploaded_file.read()).hexdigest(), ext)
-        default_storage = get_picture_storage(request)
-
-        location = default_storage.url(
-            default_storage.save(key_name, uploaded_file))
-        # We are removing the query parameters, as they contain
-        # signature information, not the relevant URL location.
-        parts = urlparse(location)
-        location = urlunparse((parts.scheme, parts.netloc, parts.path,
-            "", "", ""))
-        location = self.request.build_absolute_uri(location)
-        user_model = self.user_queryset.model
-        with transaction.atomic():
-            try:
-                user = user_model.objects.get(
-                    username=self.kwargs.get(self.lookup_url_kwarg))
-            except user_model.DoesNotExist:
-                user = None
-            Contact.objects.update_or_create(
-                slug=self.kwargs.get(self.lookup_url_kwarg),
-                defaults={'picture': location, 'user': user})
-        return Response({'location': location}, status=status.HTTP_201_CREATED)

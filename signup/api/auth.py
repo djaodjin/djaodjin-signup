@@ -41,7 +41,7 @@ from .. import settings, signals
 from ..auth import validate_redirect
 from ..compat import reverse, six
 from ..decorators import check_has_credentials
-from ..docs import OpenAPIResponse, swagger_auto_schema
+from ..docs import OpenAPIResponse, no_body, swagger_auto_schema
 from ..helpers import as_timestamp, datetime_or_now, full_name_natural_split
 from ..mixins import ActivateMixin
 from ..models import Contact
@@ -126,9 +126,12 @@ class JWTActivate(ActivateMixin, JWTBase):
     .. code-block:: json
 
         {
+          "slug": "joe1",
           "username": "joe1",
           "email": "joe1@localhost.localdomain",
-          "full_name": "Joe Act"
+          "full_name": "Joe Act",
+          "printable_name": "Joe Act",
+          "created_at": "2020-05-30T00:00:00Z"
         }
     """
     model = get_user_model()
@@ -450,6 +453,8 @@ class JWTLogout(JWTBase):
 
         POST /api/auth/logout/  HTTP/1.1
     """
+    @swagger_auto_schema(request_body=no_body, responses={
+        200: OpenAPIResponse("success", no_body)})
     def post(self, request, *args, **kwargs):#pylint:disable=unused-argument
         LOGGER.info("%s signed out.", self.request.user,
             extra={'event': 'logout', 'request': request})

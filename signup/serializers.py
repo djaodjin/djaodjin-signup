@@ -57,7 +57,7 @@ class ActivateUserSerializer(serializers.ModelSerializer):
 
 class ActivitySerializer(serializers.ModelSerializer):
 
-    account = serializers.SlugRelatedField(
+    account = serializers.SlugRelatedField(allow_null=True,
         slug_field='slug', queryset=get_account_model().objects.all(),
         help_text=_("Account the activity is associated to"))
     created_by = serializers.SlugRelatedField(
@@ -70,6 +70,16 @@ class ActivitySerializer(serializers.ModelSerializer):
         read_only_fields = ('created_at', 'created_by')
 
 
+class AuthenticatedUserPasswordSerializer(NoModelSerializer):
+
+    password = serializers.CharField(write_only=True,
+        style={'input_type': 'password'},
+        help_text=_("Password of the user making the HTTP request"))
+
+    class Meta:
+        fields = ('password',)
+
+
 class APIKeysSerializer(NoModelSerializer):
     """
     username and password for authentication through API.
@@ -77,11 +87,18 @@ class APIKeysSerializer(NoModelSerializer):
     secret = serializers.CharField(max_length=128, read_only=True,
         help_text=_("Secret API Key used to authenticate user on every HTTP"\
         " request"))
-    password = serializers.CharField(max_length=128, write_only=True,
-        help_text=_("Password of the user making the HTTP request"))
 
     class Meta:
-        fields = ('secret', 'password')
+        fields = ('secret',)
+
+
+class PublicKeySerializer(AuthenticatedUserPasswordSerializer):
+    """
+    Updates a user public key
+    """
+    pubkey = serializers.CharField(max_length=500,
+        style={'input_type': 'password'},
+        help_text=_("New public key for the user referenced in the URL"))
 
 
 class ContactSerializer(serializers.ModelSerializer):
@@ -202,16 +219,6 @@ class ValidationErrorSerializer(NoModelSerializer):
         " the error in plain text"))
 
 
-class PublicKeySerializer(NoModelSerializer):
-
-    password = serializers.CharField(write_only=True,
-        style={'input_type': 'password'},
-        help_text=_("Password of the user making the HTTP request"))
-    pubkey = serializers.CharField(write_only=True, max_length=500,
-        style={'input_type': 'password'},
-        help_text=_("New public key for the user referenced in the URL"))
-
-
 class UploadBlobSerializer(NoModelSerializer):
     """
     Upload a picture or other POD content
@@ -233,14 +240,16 @@ class UserSerializer(serializers.ModelSerializer):
     # interested to create new instances here.
     slug = serializers.CharField(source='username', validators=[
         validators.RegexValidator(r'^[\w.@+-]+$', _("Enter a valid username."),
-            'invalid')])
+            'invalid')],
+        help_text=_("Username"))
     printable_name = serializers.CharField(source='get_full_name',
         help_text=_("Full name"))
     picture = serializers.SerializerMethodField(read_only=True,
         help_text=_("Picture"))
     email = serializers.EmailField(
         help_text=_("Primary e-mail to contact user"))
-    created_at = serializers.DateTimeField(source='date_joined')
+    created_at = serializers.DateTimeField(source='date_joined',
+        help_text=_("date at which the account was created"))
     credentials = serializers.SerializerMethodField(read_only=True,
         help_text=_("True if the user has valid login credentials"))
     # XXX username and full_name are duplicates of slug and printable_name
@@ -248,7 +257,8 @@ class UserSerializer(serializers.ModelSerializer):
     # compatibility.
     username = serializers.CharField(validators=[
         validators.RegexValidator(r'^[\w.@+-]+$', _("Enter a valid username."),
-            'invalid')])
+            'invalid')],
+        help_text=_("Username"))
     full_name = serializers.CharField(source='get_full_name',
         help_text=_("Full name"))
 

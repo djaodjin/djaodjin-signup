@@ -1,4 +1,4 @@
-# Copyright (c) 2019, Djaodjin Inc.
+# Copyright (c) 2020, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -28,49 +28,60 @@ from django.contrib.auth.hashers import make_password
 from django.core.exceptions import PermissionDenied
 from django.utils.translation import ugettext_lazy as _
 from rest_framework import status
-from rest_framework.generics import CreateAPIView, GenericAPIView
+from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
 
+from ..docs import OpenAPIResponse, swagger_auto_schema
 from ..mixins import UserMixin
 from ..models import Credentials
-from ..serializers import APIKeysSerializer, PublicKeySerializer
+from ..serializers import (AuthenticatedUserPasswordSerializer,
+    APIKeysSerializer, PublicKeySerializer, ValidationErrorSerializer)
 from ..utils import generate_random_slug
 
 
 LOGGER = logging.getLogger(__name__)
 
 
-class ResetAPIKeysAPIView(UserMixin, CreateAPIView):
+class ResetAPIKeysAPIView(UserMixin, GenericAPIView):
     """
     Resets a user secret API key
-
-    Resets the secret API key with which a user can authenticate
-    with the service.
-
-    **Tags: auth
-
-    **Example
-
-    .. code-block:: http
-
-        POST /api/users/donny/api-keys/  HTTP/1.1
-
-    responds
-
-    .. code-block:: json
-
-        {
-            "secret": "tgLwDw5ErQ2pQr5TTdAzSYjvZenHC9pSy7fB3sXWERzynbG5zG6h\
-67pTN4dh7fpy"
-        }
-
     """
-
     serializer_class = APIKeysSerializer
 
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
+    @swagger_auto_schema(request_body=AuthenticatedUserPasswordSerializer)
+    def post(self, request, *args, **kwargs):#pylint:disable=unused-argument
+        """
+        Resets a user secret API key
+
+        Resets the secret API key with which a user can authenticate
+        with the service.
+
+        **Tags: auth
+
+        **Example
+
+        .. code-block:: http
+
+            POST /api/users/donny/api-keys/  HTTP/1.1
+
+        .. code-block:: json
+
+            {
+              "password": "secret"
+            }
+
+        responds
+
+        .. code-block:: json
+
+            {
+                "secret": "tgLwDw5ErQ2pQr5TTdAzSYjvZenHC9pSy7fB3sXWERzynbG5zG6h\
+    67pTN4dh7fpy"
+            }
+
+        """
+        serializer = AuthenticatedUserPasswordSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         password = serializer.validated_data.get('password')
         if not request.user.check_password(password):
@@ -98,33 +109,38 @@ class ResetAPIKeysAPIView(UserMixin, CreateAPIView):
 class PublicKeyAPIView(UserMixin, GenericAPIView):
     """
     Updates a user public RSA key
-
-    **Tags: auth
-
-    **Example
-
-    .. code-block:: http
-
-        PUT /api/users/donny/ssh-keys/  HTTP/1.1
-
-    .. code-block:: json
-
-        {
-          "pubkey": "ssh-rsa AAAAB3N...",
-          "password": "secret"
-        }
-
-    responds
-
-    .. code-block:: json
-
-        {
-          "detail": "ok"
-        }
     """
     serializer_class = PublicKeySerializer
 
+    @swagger_auto_schema(responses={
+        200: OpenAPIResponse("success", ValidationErrorSerializer)})
     def put(self, request, *args, **kwargs):
+        """
+        Updates a user public RSA key
+
+        **Tags: auth
+
+        **Example
+
+        .. code-block:: http
+
+            PUT /api/users/donny/ssh-keys/  HTTP/1.1
+
+        .. code-block:: json
+
+            {
+              "pubkey": "ssh-rsa AAAAB3N...",
+              "password": "secret"
+            }
+
+        responds
+
+        .. code-block:: json
+
+            {
+              "detail": "Public key updated successfully."
+            }
+        """
         #pylint:disable=unused-argument
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
