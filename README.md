@@ -70,9 +70,9 @@ run the testsite webapp.
 Release Notes
 =============
 
-0.4.5
+0.4.6
 
-  * fixes regression on api login - 500 error when user does not exist
-  * uploads contact profile picture
+  * introduces compatibility with Django3
+  * extends Vue with configuration constants
 
 [previous release notes](changelog)
