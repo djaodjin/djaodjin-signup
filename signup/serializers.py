@@ -164,6 +164,7 @@ class CredentialsSerializer(NoModelSerializer):
             " an expected code when multi-factor authentication (MFA)"\
             " is enabled."))
 
+
 class CreateUserSerializer(serializers.ModelSerializer):
 
     username = serializers.CharField(required=False,
@@ -275,8 +276,8 @@ class UserSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def get_picture(obj):
-        try:
-            return obj.contact.picture
-        except Contact.DoesNotExist:
-            pass
+        contact = obj.contacts.filter(picture__isnull=False).order_by(
+            'created_at').first()
+        if contact:
+            return contact.picture
         return None

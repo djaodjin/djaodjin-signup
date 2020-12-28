@@ -1,4 +1,4 @@
-# Copyright (c) 2019, DjaoDjin inc.
+# Copyright (c) 2020, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -50,7 +50,7 @@ class JWTVerify(JWTBase):
 
     .. code-block:: http
 
-        POST /api/tokens/verify/ HTTP/1.1
+        POST /api/auth/tokens/verify/ HTTP/1.1
 
     .. code-block:: json
 
@@ -106,7 +106,7 @@ class JWTRefresh(JWTVerify):
 
     .. code-block:: http
 
-        POST /api/tokens/ HTTP/1.1
+        POST /api/auth/tokens/ HTTP/1.1
 
     .. code-block:: json
 

@@ -165,7 +165,7 @@ def handle_uniq_error(err, renames=None):
             # We treat these fields differently because translation of `this`
             # is different depending on the `field_name`.
             raise ValidationError({field_name:
-                _("This email is already taken.")})
+                _("This e-mail address is already taken.")})
         raise ValidationError({field_name:
             _("This %(field)s is already taken.") % {'field': field_name}})
     raise err

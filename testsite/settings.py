@@ -76,6 +76,7 @@ INSTALLED_APPS = (
     'django.contrib.staticfiles',
     'django_extensions',
     'rest_framework',
+    'phonenumber_field',
     'captcha',
     'rules',
     'signup',
@@ -141,7 +142,7 @@ if logging.getLogger('gunicorn.error').handlers:
 
 
 AUTHENTICATION_BACKENDS = (
-    'signup.backends.auth.UsernameOrEmailModelBackend',
+    'signup.backends.auth.UsernameOrEmailPhoneModelBackend',
     'django.contrib.auth.backends.ModelBackend'
 )
 

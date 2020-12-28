@@ -52,7 +52,7 @@ from ..compat import reverse, is_authenticated, six
 from ..decorators import check_has_credentials
 from ..forms import (ActivationForm, MFACodeForm, NameEmailForm,
     PasswordResetForm, PasswordResetConfirmForm,
-    UserActivateForm, UsernameOrEmailAuthenticationForm)
+    UserActivateForm, UsernameOrEmailPhoneAuthenticationForm)
 from ..helpers import full_name_natural_split
 from ..mixins import ActivateMixin, UrlsMixin
 from ..models import Contact
@@ -186,6 +186,16 @@ class PasswordResetConfirmBaseView(RedirectFormMixin, ProcessFormView):
     model = get_user_model()
     form_class = PasswordResetConfirmForm
     token_generator = default_token_generator
+    post_reset_login = True
+
+    def form_valid(self, form):
+        if self.post_reset_login:
+            user = self.object
+            user_with_backend = authenticate(self.request,
+                username=user.username,
+                password=form.cleaned_data['new_password'])
+            _login(self.request, user_with_backend)
+        return super(PasswordResetConfirmBaseView, self).form_valid(form)
 
     def get_context_data(self, **kwargs):
         context = super(PasswordResetConfirmBaseView,
@@ -433,7 +443,8 @@ class SigninBaseView(RedirectFormMixin, ProcessFormView):
     Check credentials and sign in the authenticated user.
     """
     model = get_user_model()
-    form_class = UsernameOrEmailAuthenticationForm
+    form_class = UsernameOrEmailPhoneAuthenticationForm
+    password_form_class = UsernameOrEmailPhoneAuthenticationForm
 
     def get_form_class(self):
         username = self.request.POST.get('username')
@@ -443,7 +454,7 @@ class SigninBaseView(RedirectFormMixin, ProcessFormView):
                 return MFACodeForm
         password = self.request.POST.get('password')
         if password and not 'password' in self.form_class.base_fields:
-            return UsernameOrEmailAuthenticationForm
+            return self.password_form_class
         return self.form_class
 
     def get_form_kwargs(self):
@@ -454,7 +465,7 @@ class SigninBaseView(RedirectFormMixin, ProcessFormView):
     def get_password_form(self):
         form_class = self.form_class
         if not 'password' in self.form_class.base_fields:
-            form_class = UsernameOrEmailAuthenticationForm
+            form_class = self.password_form_class
         form = form_class(**self.get_form_kwargs())
         return form
 

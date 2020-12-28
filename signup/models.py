@@ -38,6 +38,7 @@ from django.db import models, transaction, IntegrityError
 from django.template.defaultfilters import slugify
 from django.utils.translation import ugettext_lazy as _
 from django.contrib.auth.hashers import check_password, make_password
+from phonenumber_field.modelfields import PhoneNumberField
 
 from . import settings, signals
 from .backends.mfa import EmailMFABackend
@@ -108,7 +109,7 @@ class ActivatedUserManager(UserManager):
                     username, email=email, password=password, **kwargs)
             # Force is_active to True and create an email verification key
             # (see above definition of active user).
-            Contact.objects.update_or_create_token(user)
+            Contact.objects.prepare_email_verification(user, email)
             user.is_active = True
             user.save()
             LOGGER.info("'%s %s <%s>' registered with username '%s'",
@@ -129,36 +130,40 @@ class ActivatedUserManager(UserManager):
 class ContactManager(models.Manager):
 
     def get_token(self, verification_key):
+        """
+        Returns a ``Contact`` where a non-expired ``email_verification_key`` or
+        ``phone_verification_key`` matches ``verification_key``.
+        """
         if EMAIL_VERIFICATION_RE.search(verification_key):
             try:
-                token = self.filter(
-                    verification_key=verification_key).select_related(
+                at_time = datetime_or_now()
+                email_filter = models.Q(email_verification_key=verification_key)
+                if not settings.BYPASS_VERIFICATION_KEY_EXPIRED_CHECK:
+                    email_filter &= models.Q(email_verification_at__gt=at_time
+                        - datetime.timedelta(days=settings.KEY_EXPIRATION))
+                phone_filter = models.Q(phone_verification_key=verification_key)
+                if not settings.BYPASS_VERIFICATION_KEY_EXPIRED_CHECK:
+                    phone_filter &= models.Q(phone_verification_at__gt=at_time
+                        - datetime.timedelta(days=settings.KEY_EXPIRATION))
+                return self.filter(email_filter | phone_filter).select_related(
                     'user').get()
-                if not token.verification_key_expired():
-                    return token
             except Contact.DoesNotExist:
                 pass # We return None instead here.
         return None
 
-    def update_or_create_token(self, user, verification_key=None, reason=None):
+    def prepare_email_verification(self, user, email, at_time=None,
+                                   verification_key=None, reason=None):
+        #pylint:disable=too-many-arguments
+        at_time = datetime_or_now(at_time)
         if verification_key is None:
             random_key = str(random.random()).encode('utf-8')
             salt = hashlib.sha1(random_key).hexdigest()[:5]
             verification_key = hashlib.sha1(
                 (salt+user.username).encode('utf-8')).hexdigest()
-        kwargs = {}
-        if hasattr(user, 'email'):
-            kwargs.update({'email': user.email})
-        defaults = {
-#XXX            'slug': user.username,
-            'full_name': user.get_full_name(),
-            'verification_key': verification_key
+        kwargs = {
+            'user': user,
+            'email': email
         }
-        if reason:
-            # XXX It is possible a 'reason' field would be a better
-            # implementation.
-            defaults.update({'extra': reason})
-
         # XXX The get() needs to be targeted at the write database in order
         # to avoid potential transaction consistency problems.
         try:
@@ -166,31 +171,27 @@ class ContactManager(models.Manager):
                 # We have to wrap in a transaction.atomic here, otherwise
                 # we end-up with a TransactionManager error when Contact.slug
                 # already exists in db and we generate new one.
-                token = self.get(user=user, **kwargs)
-                if token.verification_key_expired():
-                    # In case we sent multiple activate links in a short
-                    # period, we want to use the same `verification_key`
-                    # so users can click on any e-mail link.
-                    token.verification_key = verification_key
-                # We are about to send a link that expires so better update
-                # date of creation in case the `Contact` for that `User`
-                # was not created recently.
-                token.created_at = datetime_or_now()
+                contact = self.get(**kwargs)
+                contact.email_verification_key = verification_key
+                contact.email_verification_at = at_time
                 # XXX It is possible a 'reason' field would be a better
                 # implementation.
-                token.extra = reason
-                token.save()
-                return token, False
+                if reason:
+                    contact.extra = reason
+                contact.save()
+                return contact, False
         except self.model.DoesNotExist:
-            kwargs.update(defaults)
-        return self.create(user=user, **kwargs), True
-
-    def find_user(self, verification_key):
-        """
-        Find a user based on a verification key but do not activate the user.
-        """
-        token = self.get_token(verification_key=verification_key)
-        return token if token else None
+            kwargs.update({
+                'full_name': user.get_full_name(),
+                'nick_name': user.first_name,
+                'email_verification_key': verification_key,
+                'email_verification_at': at_time
+            })
+            if reason:
+                # XXX It is possible a 'reason' field would be a better
+                # implementation.
+                kwargs.update({'extra': reason})
+        return self.create(**kwargs), True
 
     def activate_user(self, verification_key,
                       username=None, password=None, full_name=None):
@@ -198,16 +199,24 @@ class ContactManager(models.Manager):
         Activate a user whose email address has been verified.
         """
         #pylint:disable=too-many-arguments
+        at_time = datetime_or_now()
         try:
             token = self.get_token(verification_key=verification_key)
             if token:
                 LOGGER.info('user %s activated through code: %s',
-                    token.user, token.verification_key,
+                    token.user, verification_key,
                     extra={'event': 'activate', 'username': token.user.username,
-                        'email_verification_key': token.verification_key})
+                        'verification_key': verification_key,
+                        'email_verification_key': token.email_verification_key,
+                        'phone_verification_key': token.phone_verification_key})
                 previously_inactive = has_invalid_password(token.user)
                 with transaction.atomic():
-                    token.verification_key = Contact.VERIFIED
+                    if token.email_verification_key == verification_key:
+                        token.email_verification_key = Contact.VERIFIED
+                        token.email_verified_at = at_time
+                    elif token.phone_verification_key == verification_key:
+                        token.phone_verification_key = Contact.VERIFIED
+                        token.phone_verified_at = at_time
                     token.save()
                     needs_save = False
                     if full_name:
@@ -234,15 +243,19 @@ class ContactManager(models.Manager):
             pass # We return None instead here.
         return None, None
 
-    def unverified_for_user(self, user):
-        return self.filter(user=user).exclude(verification_key=Contact.VERIFIED)
-
-    def is_reachable(self, user):
+    def is_reachable_by_email(self, user):
         """
         Returns True if the user is reachable by email.
         """
         return self.filter(user=user,
-            verification_key=Contact.VERIFIED).exists()
+            email_verification_key=Contact.VERIFIED).exists()
+
+    def is_reachable_by_phone(self, user):
+        """
+        Returns True if the user is reachable by phone.
+        """
+        return self.filter(user=user,
+            phone_verification_key=Contact.VERIFIED).exists()
 
 
 @python_2_unicode_compatible
@@ -267,8 +280,10 @@ class Contact(models.Model):
             " the username for profiles with login credentials."))
     created_at = models.DateTimeField(auto_now_add=True,
         help_text=_("Date/time of creation (in ISO format)"))
-    email = models.EmailField(_("E-mail address"),
+    email = models.EmailField(_("E-mail address"), unique=True, null=True,
         help_text=_("E-mail address"))
+    phone = PhoneNumberField(_("Phone number"), unique=True, null=True,
+        help_text=_("Phone number"))
     full_name = models.CharField(_("Full name"), max_length=60, blank=True,
         help_text=_("Full name (effectively first name followed by last name)"))
     nick_name = models.CharField(_("Nick name"), max_length=60, blank=True,
@@ -279,9 +294,21 @@ class Contact(models.Model):
     picture = models.URLField(_("URL to a profile picture"), max_length=2083,
         null=True, blank=True,
         help_text=_("Profile picture"))
-    user = models.OneToOneField(settings.AUTH_USER_MODEL,
-        null=True, on_delete=models.CASCADE, related_name='contact')
-    verification_key = models.CharField(_("Verification key"), max_length=40)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL,
+        null=True, on_delete=models.CASCADE, related_name='contacts')
+    # key must be unique when used in URLs. IF we use a code,
+    # then it shouldn't be.
+    email_verification_key = models.CharField(_(
+        "Email verification key"),
+         null=True, max_length=40)
+    email_verification_at = models.DateTimeField(null=True,
+        help_text=_("Date/time when the e-mail verification key was sent"))
+    phone_verification_key = models.CharField(
+        _("Phone verification key"),
+        null=True, max_length=40)
+    phone_verification_at = models.DateTimeField(null=True,
+        help_text=_("Date/time when the phone verification key was sent"))
+
     mfa_backend = models.PositiveSmallIntegerField(
         choices=MFA_BACKEND_TYPE, default=NO_MFA,
         help_text=_("Backend to use for multi-factor authentication"))
@@ -371,14 +398,6 @@ class Contact(models.Model):
             _("Unable to create a unique URL slug with a base of '%(base)s'")
                 % {'base': slug_base}})
 
-    def verification_key_expired(self):
-        if settings.BYPASS_VERIFICATION_KEY_EXPIRED_CHECK:
-            return False
-        return (self.verification_key == self.VERIFIED or
-            (self.created_at + datetime.timedelta(days=settings.KEY_EXPIRATION)
-             <= datetime_or_now()))
-    verification_key_expired.boolean = True
-
 
 @python_2_unicode_compatible
 class Activity(models.Model):
@@ -434,6 +453,7 @@ class Credentials(models.Model):
     api_priv_key = models.CharField(max_length=128)
     user = models.OneToOneField(settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE, related_name='credentials')
+    extra = _get_extra_field_class()(null=True)
 
     def __str__(self):
         return self.api_pub_key

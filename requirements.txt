@@ -1,7 +1,9 @@
-Django>=1.11
 boto3>=1.4.4
+Django>=1.11
+django-phonenumber-field>=5.0.0
 django-recaptcha>=2.0
-djangorestframework>=3.2
+djangorestframework>=3.9
+phonenumbers>=8.12.6
 PyJWT>=1.6.1
 python-dateutil>=2.2
 python-ldap>=3.2.0

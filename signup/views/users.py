@@ -43,7 +43,7 @@ from ..compat import is_authenticated, reverse, six
 from ..forms import (PasswordChangeForm, PublicKeyForm, UserForm,
     UserNotificationsForm)
 from ..mixins import UserMixin
-from ..models import Contact, Notification
+from ..models import Notification
 from ..utils import has_invalid_password, update_db_row
 
 
@@ -77,13 +77,12 @@ class UserProfileView(UserMixin, UpdateView):
     def get_context_data(self, **kwargs):
         context = super(UserProfileView, self).get_context_data(**kwargs)
         setattr(context['user'], 'full_name', context['user'].get_full_name())
-        try:
-            setattr(context['user'], 'picture', context['user'].contact.picture)
-        except Contact.DoesNotExist:
-            pass
+        contact = context['user'].contacts.filter(
+            picture__isnull=False).order_by('created_at').first()
+        if contact:
+            setattr(context['user'], 'picture', contact.picture)
         # URLs for user
         if is_authenticated(self.request):
-#XXX            contact, _ = Contact.objects.update_or_create_token(self.object)
             self.update_context_urls(context, {'user': {
                 'api_generate_keys': reverse(
                     'api_generate_keys', args=(self.object,)),

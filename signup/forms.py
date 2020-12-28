@@ -289,9 +289,6 @@ class StartAuthenticationForm(forms.Form):
 
     submit_title = _("Submit")
 
-    def __init__(self, request=None, *args, **kwargs):
-        super(StartAuthenticationForm, self).__init__(*args, **kwargs)
-
 
 class UsernameOrEmailAuthenticationForm(AuthenticationForm):
 
@@ -308,6 +305,28 @@ class UsernameOrEmailAuthenticationForm(AuthenticationForm):
         username_label = self.initial.get('username_label', None)
         if username_label:
             placeholder_label = _('%(username)s or e-mail' % {
+                'username': username_label})
+            self.fields['username'].label = placeholder_label
+            self.fields['username'].widget.attrs['placeholder'] \
+                = placeholder_label
+
+
+class UsernameOrEmailPhoneAuthenticationForm(AuthenticationForm):
+
+    # The field is called `username`, yet it is technically
+    # a username or e-mail.
+    username = forms.CharField(widget=forms.TextInput(
+        attrs={'placeholder': _("Username, e-mail or phone number")}),
+        max_length=254, label=_("Username, e-mail or phone number"))
+    password = forms.CharField(widget=forms.PasswordInput(
+        attrs={'placeholder': _("Password")}), label=_("Password"))
+
+    def __init__(self, *args, **kwargs):
+        super(UsernameOrEmailPhoneAuthenticationForm, self).__init__(
+            *args, **kwargs)
+        username_label = self.initial.get('username_label', None)
+        if username_label:
+            placeholder_label = _('%(username)s, e-mail or phone number' % {
                 'username': username_label})
             self.fields['username'].label = placeholder_label
             self.fields['username'].widget.attrs['placeholder'] \

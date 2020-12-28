@@ -1,4 +1,4 @@
-# Copyright (c) 2020, Djaodjin Inc.
+# Copyright (c) 2020, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,35 +22,18 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#pylint:disable=unused-argument,unused-import
+from django.core.exceptions import ValidationError
+from django.utils.translation import gettext_lazy as _
 
-try:
-    from drf_yasg.openapi import Response as OpenAPIResponse
-    from drf_yasg.utils import no_body, swagger_auto_schema
-except ImportError:
-    from functools import wraps
-    from .compat import available_attrs
+from phonenumber_field.phonenumber import to_python
 
-    class no_body(object): #pylint:disable=invalid-name
-        pass
 
-    def swagger_auto_schema(function=None, **kwargs):
-        """
-        Dummy decorator when drf_yasg is not present.
-        """
-        def decorator(view_func):
-            @wraps(view_func, assigned=available_attrs(view_func))
-            def _wrapped_view(request, *args, **kwargs):
-                return view_func(request, *args, **kwargs)
-            return _wrapped_view
-
-        if function:
-            return decorator(function)
-        return decorator
-
-    class OpenAPIResponse(object):
-        """
-        Dummy response object to document API.
-        """
-        def __init__(self, *args, **kwargs):
-            pass
+def validate_phone(value, region=None):
+    phone = to_python(value, region)
+    if phone and not phone.is_valid():
+        phone = to_python(value, region='US')
+    if phone and not phone.is_valid():
+        raise ValidationError(
+            _("The phone number entered is not valid."),
+            code="invalid_phone_number")
+    return phone

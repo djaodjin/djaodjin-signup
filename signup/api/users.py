@@ -46,8 +46,8 @@ from ..helpers import full_name_natural_split
 from ..mixins import ContactMixin
 from ..models import Contact
 from ..serializers import (ContactSerializer, ContactDetailSerializer,
-    PasswordChangeSerializer, NoModelSerializer, NotificationsSerializer,
-    UploadBlobSerializer, ValidationErrorSerializer)
+    PasswordChangeSerializer, NotificationsSerializer, UploadBlobSerializer,
+    ValidationErrorSerializer)
 from ..utils import generate_random_code, get_picture_storage, handle_uniq_error
 
 
@@ -419,7 +419,7 @@ class UserListCreateAPIView(ListCreateAPIView):
             created_at=user.date_joined, user=user)
 
     def get_users_queryset(self):
-        return self.user_queryset.filter(contact__isnull=True)
+        return self.user_queryset.filter(contacts__isnull=True)
 
     def list(self, request, *args, **kwargs):
         #pylint:disable=too-many-locals,too-many-statements
@@ -547,6 +547,7 @@ class PasswordChangeAPIView(GenericAPIView):
               "detail": "Password updated successfully."
             }
         """
+        #pylint:disable=unused-argument
         instance = self.get_object()
         serializer = self.get_serializer(instance, data=request.data)
         serializer.is_valid(raise_exception=True)

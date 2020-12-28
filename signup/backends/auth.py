@@ -23,9 +23,10 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 """
-Backend to authenticate a User through her username or email address.
+Backend to authenticate a User through her username, email address or
+phone number
 
-Add to the UsernameOrEmailModelBackend to your project
+Add the UsernameOrEmailModelBackend to your project
 settings.AUTHENTICATION_BACKENDS and use UsernameOrEmailAuthenticationForm
 for the authentication_form parameter to your login urlpattern.
 
@@ -50,6 +51,9 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 
+from ..models import Contact
+from ..validators import validate_phone
+
 
 class UsernameOrEmailModelBackend(object):
     """
@@ -66,6 +70,64 @@ class UsernameOrEmailModelBackend(object):
         except ValidationError:
             kwargs = {'username__iexact': username}
         return self.model.objects.filter(is_active=True).get(**kwargs)
+
+    def authenticate(self, request, username=None, password=None):
+        #pylint:disable=unused-argument
+        try:
+            user = self.find_user(username)
+            if user.check_password(password):
+                return user
+        except self.model.DoesNotExist:
+            # Run the default password hasher once to reduce the timing
+            # difference between an existing and a non-existing user (#20760).
+            self.model().set_password(password)
+        return None
+
+    def get_user(self, user_id):
+        try:
+            return self.model.objects.get(pk=user_id)
+        except self.model.DoesNotExist:
+            return None
+
+
+class UsernameOrEmailPhoneModelBackend(object):
+    """
+    Backend to authenticate a user through either her username,
+    email address or phone number.
+    """
+    #pylint: disable=no-self-use
+    model = get_user_model()
+
+    def find_user(self, username):
+        user_kwargs = {}
+        contact_kwargs = {}
+        try:
+            validate_email(username)
+            contact_kwargs = {'email__iexact': username}
+            user_kwargs = {'email__iexact': username}
+        except ValidationError:
+            pass
+        if not contact_kwargs:
+            try:
+                validate_phone(username)
+                contact_kwargs = {'phone__iexact': username}
+            except ValidationError:
+                contact_kwargs = {'user__username__iexact': username}
+                user_kwargs = {'username__iexact': username}
+
+        if user_kwargs:
+            try:
+                return self.model.objects.filter(
+                    is_active=True).get(**user_kwargs)
+            except self.model.DoesNotExist:
+                pass
+        try:
+            contact = Contact.objects.get(
+                user__is_active=True, **contact_kwargs).select_related('user')
+            return contact.user
+        except Contact.DoesNotExist:
+            pass
+        raise self.model.DoesNotExist()
 
     def authenticate(self, request, username=None, password=None):
         #pylint:disable=unused-argument

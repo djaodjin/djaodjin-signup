@@ -83,7 +83,7 @@ def send_verification_email(email_contact, request,
     workflow once verification is completed.
     """
     back_url = request.build_absolute_uri(reverse('registration_activate',
-        args=(email_contact.verification_key,)))
+        args=(email_contact.email_verification_key,)))
     if next_url:
         back_url += '?%s=%s' % (redirect_field_name, next_url)
     signals.user_verification.send(
@@ -102,7 +102,8 @@ def check_has_credentials(request, user,
     if has_invalid_password(user):
         # Let's send e-mail again.
         #pylint:disable=unused-variable
-        contact, created = Contact.objects.update_or_create_token(user)
+        contact, created = Contact.objects.prepare_email_verification(
+            user, user.email)
         if not next_url:
             next_url = validate_redirect(request)
         send_verification_email(
@@ -123,7 +124,8 @@ def check_email_verified(request, user,
         contact = Contact.objects.get(
             email=user.email, verification_key=Contact.VERIFIED)
     except Contact.DoesNotExist:
-        contact, created = Contact.objects.update_or_create_token(user)
+        contact, created = Contact.objects.prepare_email_verification(
+            user, user.email)
         # Let's send e-mail again.
         if not next_url:
             next_url = validate_redirect(request)
@@ -140,6 +142,15 @@ def fail_authenticated(request):
     """
     if not is_authenticated(request):
         return str(settings.LOGIN_URL)
+    return False
+
+
+def fail_registered(request):
+    """
+    Registered
+    """
+    if not is_authenticated(request):
+        return str(reverse('registration_register'))
     return False
 
 

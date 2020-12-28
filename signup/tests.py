@@ -1,4 +1,4 @@
-# Copyright (c) 2018, Djaodjin Inc.
+# Copyright (c) 2020, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -34,7 +34,7 @@ from signup import settings as signup_settings
 from signup.compat import reverse
 from signup.auth import validate_redirect, validate_redirect_url
 from signup.models import ActivatedUserManager
-from .models import Notification
+from .models import Contact, Notification
 
 
 REGISTRATION_EMAIL = 'user@example.com'
@@ -95,9 +95,14 @@ class SignUpTests(TestCase):
         user = get_user_model().objects.create_user(REGISTRATION_EMAIL,
             email=REGISTRATION_EMAIL, is_active=False)
         client = Client()
+        contact = user.contacts.exclude(
+            email_verification_key=Contact.VERIFIED).filter(
+                email_verification_key__isnull=False).first()
+        verification_key = None
+        if contact:
+            verification_key = contact.email_verification_key
         response = client.get(reverse('registration_activate',
-                                      args=(user.contact.verification_key,)),
-                              follow=True)
+            args=(verification_key,)), follow=True)
         # pylint: disable=maybe-no-member
         self.assertTrue(response.status_code == 200)
         self.assertTrue(re.match(
