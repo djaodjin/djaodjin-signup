@@ -72,7 +72,7 @@ def redirect_or_denied(request, inserted_url,
     raise PermissionDenied(descr)
 
 
-def send_verification_email(email_contact, request,
+def send_verification_email(contact, request,
                            next_url=None,
                            redirect_field_name=REDIRECT_FIELD_NAME):
     """
@@ -83,11 +83,31 @@ def send_verification_email(email_contact, request,
     workflow once verification is completed.
     """
     back_url = request.build_absolute_uri(reverse('registration_activate',
-        args=(email_contact.email_verification_key,)))
+        args=(contact.email_verification_key,)))
     if next_url:
         back_url += '?%s=%s' % (redirect_field_name, next_url)
     signals.user_verification.send(
-        sender=__name__, user=email_contact.user, request=request,
+        sender=__name__, user=contact.user, request=request,
+        back_url=back_url, expiration_days=settings.KEY_EXPIRATION)
+
+
+def send_verification_phone(contact, request,
+                           next_url=None,
+                           redirect_field_name=REDIRECT_FIELD_NAME):
+    """
+    Send a text message to the user to verify her phone number.
+
+    The email embed a link to a verification url and a redirect to the page
+    the verification email was sent from so that the user stays on her
+    workflow once verification is completed.
+    """
+    # XXX needs to send phone text message instead of e-mail!!!
+    back_url = request.build_absolute_uri(reverse('registration_activate',
+        args=(contact.email_verification_key,)))
+    if next_url:
+        back_url += '?%s=%s' % (redirect_field_name, next_url)
+    signals.user_verification.send(
+        sender=__name__, user=contact.user, request=request,
         back_url=back_url, expiration_days=settings.KEY_EXPIRATION)
 
 
@@ -120,20 +140,39 @@ def check_email_verified(request, user,
     Checks that a *user*'s e-mail has been verified.
     """
     #pylint:disable=unused-variable
-    try:
-        contact = Contact.objects.get(
-            email=user.email, verification_key=Contact.VERIFIED)
-    except Contact.DoesNotExist:
-        contact, created = Contact.objects.prepare_email_verification(
-            user, user.email)
-        # Let's send e-mail again.
-        if not next_url:
-            next_url = validate_redirect(request)
-        send_verification_email(
-            contact, request, next_url=next_url,
-            redirect_field_name=redirect_field_name)
-        return False
-    return True
+    if Contact.objects.is_reachable_by_email(user):
+        return True
+
+    contact, created = Contact.objects.prepare_email_verification(
+        user, user.email)
+    # Let's send e-mail again.
+    if not next_url:
+        next_url = validate_redirect(request)
+    send_verification_email(
+        contact, request, next_url=next_url,
+        redirect_field_name=redirect_field_name)
+    return False
+
+
+def check_phone_verified(request, user,
+                         redirect_field_name=REDIRECT_FIELD_NAME,
+                         next_url=None):
+    """
+    Checks that a *user*'s e-mail has been verified.
+    """
+    #pylint:disable=unused-variable
+    if Contact.objects.is_reachable_by_phone(user):
+        return True
+
+    contact, created = Contact.objects.prepare_phone_verification(
+        user, user.phone) # XXX
+    # Let's send e-mail again.
+    if not next_url:
+        next_url = validate_redirect(request)
+    send_verification_phone(
+        contact, request, next_url=next_url,
+        redirect_field_name=redirect_field_name)
+    return False
 
 
 def fail_authenticated(request):
@@ -168,6 +207,15 @@ def fail_verified_email(request):
     Active with a verified e-mail address
     """
     if not check_email_verified(request, request.user):
+        return str(settings.LOGIN_URL)
+    return False
+
+
+def fail_verified_phone(request):
+    """
+    Active with a verified phone number
+    """
+    if not check_phone_verified(request, request.user):
         return str(settings.LOGIN_URL)
     return False
 

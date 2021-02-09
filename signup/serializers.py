@@ -1,4 +1,4 @@
-# Copyright (c) 2020, DjaoDjin inc.
+# Copyright (c) 2021, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,13 +22,71 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import logging
+
 from django.core import validators
 from django.contrib.auth import get_user_model
 from django.utils.translation import ugettext_lazy as _
+import phonenumbers
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 
 from .models import Activity, Contact, Notification
 from .utils import get_account_model, has_invalid_password
+from .validators import (validate_email_or_phone,
+    validate_username_or_email_or_phone)
+
+LOGGER = logging.getLogger(__name__)
+
+
+class PhoneField(serializers.CharField):
+
+    def to_internal_value(self, data):
+        """
+        Returns a formatted phone number as a string.
+        """
+        if self.required:
+            try:
+                phone_number = phonenumbers.parse(data, None)
+            except phonenumbers.NumberParseException as err:
+                LOGGER.info("tel %s:%s", data, err)
+                phone_number = None
+            if not phone_number:
+                try:
+                    phone_number = phonenumbers.parse(data, "US")
+                except phonenumbers.NumberParseException:
+                    raise ValidationError(self.error_messages['invalid'])
+            if phone_number and not phonenumbers.is_valid_number(phone_number):
+                raise ValidationError(self.error_messages['invalid'])
+            return phonenumbers.format_number(
+                phone_number, phonenumbers.PhoneNumberFormat.E164)
+        return None
+
+
+class CommField(serializers.CharField):
+    """
+    Either an e-mail address or a phone number
+    """
+    default_error_messages = {
+        'invalid': _('Enter a valid email address or phone number.')
+    }
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.validators.append(validate_email_or_phone)
+
+
+class UsernameOrCommField(serializers.CharField):
+    """
+    Either a username, e-mail address or a phone number
+    """
+    default_error_messages = {
+        'invalid': _('Enter a valid username, email address or phone number.')
+    }
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.validators.append(validate_username_or_email_or_phone)
 
 
 class NoModelSerializer(serializers.Serializer):
@@ -107,6 +165,8 @@ class ContactSerializer(serializers.ModelSerializer):
     profile is referenced.
     For a detailed profile, see `ContactDetailSerializer`.
     """
+    printable_name = serializers.CharField(
+        help_text=_("Full name"))
     credentials = serializers.SerializerMethodField(read_only=True,
         help_text=_("True if the user has valid login credentials"))
 
@@ -131,8 +191,8 @@ class ContactDetailSerializer(ContactSerializer):
     activities = ActivitySerializer(many=True, read_only=True)
 
     class Meta(ContactSerializer.Meta):
-        fields = ContactSerializer.Meta.fields + ('full_name', 'nick_name',
-            'extra', 'activities',)
+        fields = ContactSerializer.Meta.fields + ('phone',
+            'full_name', 'nick_name', 'extra', 'activities',)
         read_only_fields = ContactSerializer.Meta.read_only_fields + (
             'activities',)
 
@@ -151,10 +211,9 @@ class CredentialsSerializer(NoModelSerializer):
     """
     username and password for authentication through API.
     """
-    username = serializers.CharField(validators=[
-        validators.RegexValidator(r'^[\w.@+-]+$', _("Enter a valid username."),
-            'invalid')],
-        help_text=_("Username to identify the account"))
+    username = UsernameOrCommField(
+        help_text=_("Username, e-mail address or phone number to identify"\
+        " the account"))
     password = serializers.CharField(write_only=True,
         style={'input_type': 'password'},
         help_text=_("Secret password for the account"))
@@ -173,13 +232,15 @@ class CreateUserSerializer(serializers.ModelSerializer):
         style={'input_type': 'password'}, help_text=_("Password with which"\
             " a user can authenticate with the service"))
     email = serializers.EmailField(
-        help_text=_("Primary e-mail to contact user"))
+        help_text=_("Primary e-mail to contact user"), required=False)
+    phone = PhoneField(
+        help_text=_("Primary phone number to contact user"), required=False)
     full_name = serializers.CharField(
         help_text=_("Full name (effectively first name followed by last name)"))
 
     class Meta:
         model = get_user_model()
-        fields = ('username', 'password', 'email', 'full_name')
+        fields = ('username', 'password', 'email', 'phone', 'full_name')
 
 
 class PasswordResetConfirmSerializer(NoModelSerializer):
@@ -200,8 +261,8 @@ class PasswordResetSerializer(NoModelSerializer):
     """
     Serializer to send an e-mail to a user in order to recover her account.
     """
-    email = serializers.EmailField(
-        help_text=_("Primary e-mail to contact user"))
+    email = CommField(
+        help_text=_("Email or phone number to recover the account"))
 
 
 class TokenSerializer(NoModelSerializer):
@@ -248,7 +309,9 @@ class UserSerializer(serializers.ModelSerializer):
     picture = serializers.SerializerMethodField(read_only=True,
         help_text=_("Picture"))
     email = serializers.EmailField(
-        help_text=_("Primary e-mail to contact user"))
+        help_text=_("Primary e-mail to contact user"), required=False)
+    phone = PhoneField(
+        help_text=_("Primary phone number to contact user"), required=False)
     created_at = serializers.DateTimeField(source='date_joined',
         help_text=_("date at which the account was created"))
     credentials = serializers.SerializerMethodField(read_only=True,
@@ -265,8 +328,8 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = get_user_model()
-        fields = ('slug', 'printable_name', 'picture', 'email', 'created_at',
-            'credentials', 'username', 'full_name')
+        fields = ('slug', 'printable_name', 'picture', 'email', 'phone',
+            'created_at', 'credentials', 'username', 'full_name')
         read_only_fields = ('slug', 'printable_name', 'created_at',
             'credentials',)
 

@@ -1,4 +1,4 @@
-# Copyright (c) 2020, Djaodjin Inc.
+# Copyright (c) 2021, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -33,7 +33,6 @@ import datetime, hashlib, logging, random, re
 from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import UserManager
-from django.core.validators import validate_email
 from django.db import models, transaction, IntegrityError
 from django.template.defaultfilters import slugify
 from django.utils.translation import ugettext_lazy as _
@@ -45,6 +44,7 @@ from .backends.mfa import EmailMFABackend
 from .compat import import_string, python_2_unicode_compatible
 from .helpers import datetime_or_now, full_name_natural_split
 from .utils import generate_random_slug, has_invalid_password
+from .validators import validate_email, validate_phone
 
 
 LOGGER = logging.getLogger(__name__)
@@ -88,6 +88,32 @@ class ActivatedUserManager(UserManager):
                 trials = trials + 1
         raise err
 
+    def create_user_from_phone(self, phone, password=None, **kwargs):
+        #pylint:disable=protected-access
+        field = self.model._meta.get_field('username')
+        max_length = field.max_length
+        username = slugify(phone)
+        try:
+            field.run_validators(username)
+        except ValidationError:
+            username = 'user'
+        err = IntegrityError()
+        trials = 0
+        username_base = username
+        while trials < 10:
+            try:
+                return super(ActivatedUserManager, self).create_user(
+                    username, password=password, **kwargs)
+            except IntegrityError as exp:
+                err = exp
+                if len(username_base) + 4 > max_length:
+                    username_base = username_base[:(max_length - 4)]
+                username = generate_random_slug(
+                    length=len(username_base) + 4, prefix=username_base + '-',
+                    allowed_chars='0123456789')
+                trials = trials + 1
+        raise err
+
     def create_user(self, username, email=None, password=None, **kwargs):
         """
         Create an inactive user with a default username.
@@ -100,34 +126,85 @@ class ActivatedUserManager(UserManager):
         login. Our definition of inactive is thus a user that has an invalid
         password.
         """
+        phone = kwargs.pop('phone', None)
         with transaction.atomic():
-            if not username:
-                user = self.create_user_from_email(
-                    email, password=password, **kwargs)
-            else:
+            if username:
                 user = super(ActivatedUserManager, self).create_user(
                     username, email=email, password=password, **kwargs)
-            # Force is_active to True and create an email verification key
-            # (see above definition of active user).
-            Contact.objects.prepare_email_verification(user, email)
+            elif email:
+                user = self.create_user_from_email(
+                    email, password=password, **kwargs)
+                # Force is_active to True and create an email verification key
+                # (see above definition of active user).
+                Contact.objects.prepare_email_verification(user, email,
+                    phone=phone)
+            elif phone:
+                user = self.create_user_from_phone(
+                    phone, password=password, **kwargs)
+                # Force is_active to True and create an email verification key
+                # (see above definition of active user).
+                Contact.objects.prepare_phone_verification(user, phone,
+                    email=email)
+            else:
+                raise ValueError("email or phone must be set.")
             user.is_active = True
             user.save()
-            LOGGER.info("'%s %s <%s>' registered with username '%s'",
-                user.first_name, user.last_name, user.email, user,
+            LOGGER.info("'%s <%s>' registered with username '%s'%s",
+                user.get_full_name(), user.email, user,
+                (" and phone %s" % str(phone)) if phone else "",
                 extra={'event': 'register', 'user': user})
             signals.user_registered.send(sender=__name__, user=user)
         return user
 
     def find_user(self, username):
+        user_kwargs = {}
+        contact_kwargs = {}
+        username = str(username) # We could have a ``PhoneNumber`` here.
         try:
             validate_email(username)
-            kwargs = {'email__iexact': username}
+            contact_kwargs = {'email__iexact': username}
+            user_kwargs = {'email__iexact': username}
         except ValidationError:
-            kwargs = {'username__iexact': username}
-        return self.get(**kwargs)
+            pass
+        if not contact_kwargs:
+            try:
+                contact_kwargs = {'phone__iexact': validate_phone(username)}
+            except ValidationError:
+                contact_kwargs = {'user__username__iexact': username}
+                user_kwargs = {'username__iexact': username}
+
+        if user_kwargs:
+            try:
+                return self.filter(is_active=True).get(**user_kwargs)
+            except self.model.DoesNotExist:
+                pass
+        try:
+            contact = Contact.objects.filter(user__is_active=True,
+                **contact_kwargs).select_related('user').get()
+            return contact.user
+        except Contact.DoesNotExist:
+            pass
+        raise self.model.DoesNotExist()
 
 
 class ContactManager(models.Manager):
+
+    def find_by_username_or_comm(self, username):
+        contact_kwargs = {}
+        username = str(username) # We could have a ``PhoneNumber`` here.
+        try:
+            validate_email(username)
+            contact_kwargs = {'email__iexact': username}
+        except ValidationError:
+            pass
+        if not contact_kwargs:
+            try:
+                contact_kwargs = {'phone__iexact': validate_phone(username)}
+            except ValidationError:
+                contact_kwargs = {'user__username__iexact': username}
+
+        return self.filter(user__is_active=True,
+            **contact_kwargs).select_related('user')
 
     def get_token(self, verification_key):
         """
@@ -152,7 +229,8 @@ class ContactManager(models.Manager):
         return None
 
     def prepare_email_verification(self, user, email, at_time=None,
-                                   verification_key=None, reason=None):
+                                   verification_key=None, reason=None,
+                                   phone=None):
         #pylint:disable=too-many-arguments
         at_time = datetime_or_now(at_time)
         if verification_key is None:
@@ -184,8 +262,53 @@ class ContactManager(models.Manager):
             kwargs.update({
                 'full_name': user.get_full_name(),
                 'nick_name': user.first_name,
+                'phone': phone,
                 'email_verification_key': verification_key,
                 'email_verification_at': at_time
+            })
+            if reason:
+                # XXX It is possible a 'reason' field would be a better
+                # implementation.
+                kwargs.update({'extra': reason})
+        return self.create(**kwargs), True
+
+    def prepare_phone_verification(self, user, phone, at_time=None,
+                                   verification_key=None, reason=None,
+                                   email=None):
+        #pylint:disable=too-many-arguments
+        at_time = datetime_or_now(at_time)
+        if verification_key is None:
+            random_key = str(random.random()).encode('utf-8')
+            salt = hashlib.sha1(random_key).hexdigest()[:5]
+            verification_key = hashlib.sha1(
+                (salt+user.username).encode('utf-8')).hexdigest()
+        kwargs = {
+            'user': user,
+            'phone': phone
+        }
+        # XXX The get() needs to be targeted at the write database in order
+        # to avoid potential transaction consistency problems.
+        try:
+            with transaction.atomic():
+                # We have to wrap in a transaction.atomic here, otherwise
+                # we end-up with a TransactionManager error when Contact.slug
+                # already exists in db and we generate new one.
+                contact = self.get(**kwargs)
+                contact.phone_verification_key = verification_key
+                contact.phone_verification_at = at_time
+                # XXX It is possible a 'reason' field would be a better
+                # implementation.
+                if reason:
+                    contact.extra = reason
+                contact.save()
+                return contact, False
+        except self.model.DoesNotExist:
+            kwargs.update({
+                'full_name': user.get_full_name(),
+                'nick_name': user.first_name,
+                'email': email,
+                'phone_verification_key': verification_key,
+                'phone_verification_at': at_time
             })
             if reason:
                 # XXX It is possible a 'reason' field would be a better
@@ -212,10 +335,10 @@ class ContactManager(models.Manager):
                 previously_inactive = has_invalid_password(token.user)
                 with transaction.atomic():
                     if token.email_verification_key == verification_key:
-                        token.email_verification_key = Contact.VERIFIED
+                        token.email_verification_key = None
                         token.email_verified_at = at_time
                     elif token.phone_verification_key == verification_key:
-                        token.phone_verification_key = Contact.VERIFIED
+                        token.phone_verification_key = None
                         token.phone_verified_at = at_time
                     token.save()
                     needs_save = False
@@ -247,15 +370,15 @@ class ContactManager(models.Manager):
         """
         Returns True if the user is reachable by email.
         """
-        return self.filter(user=user,
-            email_verification_key=Contact.VERIFIED).exists()
+        return self.filter(user=user).exclude(
+            email_verified_at__isnull=True).exists()
 
     def is_reachable_by_phone(self, user):
         """
         Returns True if the user is reachable by phone.
         """
-        return self.filter(user=user,
-            phone_verification_key=Contact.VERIFIED).exists()
+        return self.filter(user=user).exclude(
+            phone_verified_at__isnull=True).exists()
 
 
 @python_2_unicode_compatible
@@ -270,8 +393,6 @@ class Contact(models.Model):
         (NO_MFA, "password only"),
         (EMAIL_BACKEND, "send one-time authentication code through email"),
     )
-
-    VERIFIED = "VERIFIED"
 
     objects = ContactManager()
 
@@ -303,11 +424,15 @@ class Contact(models.Model):
          null=True, max_length=40)
     email_verification_at = models.DateTimeField(null=True,
         help_text=_("Date/time when the e-mail verification key was sent"))
+    email_verified_at = models.DateTimeField(null=True,
+        help_text=_("Date/time when the e-mail was last verified"))
     phone_verification_key = models.CharField(
         _("Phone verification key"),
         null=True, max_length=40)
     phone_verification_at = models.DateTimeField(null=True,
         help_text=_("Date/time when the phone verification key was sent"))
+    phone_verified_at = models.DateTimeField(null=True,
+        help_text=_("Date/time when the phone number was last verified"))
 
     mfa_backend = models.PositiveSmallIntegerField(
         choices=MFA_BACKEND_TYPE, default=NO_MFA,

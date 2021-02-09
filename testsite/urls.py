@@ -1,4 +1,4 @@
-# Copyright (c) 2020, Djaodjin Inc.
+# Copyright (c) 2021, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -29,7 +29,6 @@ from django.views.i18n import JavaScriptCatalog
 from rules.urldecorators import include, url
 from signup.compat import reverse_lazy
 from signup.decorators import fail_authenticated
-from signup.forms import NameEmailForm
 from signup.views.auth import SignupView
 
 from .forms import SignupWithCaptchaForm
@@ -49,6 +48,8 @@ urlpatterns = \
         include('signup.urls.api.users'),
         redirects=[fail_authenticated]),
     url(r'^api/',
+        include('signup.urls.api.activate')),
+    url(r'^api/',
         include('signup.urls.api.auth')),
     url(r'^contacts/',
         include('signup.urls.views.contacts'),
@@ -57,7 +58,7 @@ urlpatterns = \
         include('signup.urls.views.users'),
         redirects=[fail_authenticated]),
     url(r'^register/frictionless/',
-        SignupView.as_view(form_class=NameEmailForm),
+        SignupView.as_view(),
         name='registration_frictionless'),
     url(r'^register/$',
         SignupView.as_view(form_class=SignupWithCaptchaForm),

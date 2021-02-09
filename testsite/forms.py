@@ -1,4 +1,4 @@
-# Copyright (c) 2020, Djaodjin Inc.
+# Copyright (c) 2021, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -25,10 +25,10 @@
 from captcha.fields import ReCaptchaField
 from captcha.widgets import ReCaptchaV2Checkbox
 from django import forms
-from signup.forms import NameEmailForm
+from signup.forms import FrictionlessSignupForm
 
 
-class SignupWithCaptchaForm(NameEmailForm):
+class SignupWithCaptchaForm(FrictionlessSignupForm):
 
     username = forms.SlugField(max_length=30, label="Username")
     new_password = forms.CharField(widget=forms.PasswordInput(

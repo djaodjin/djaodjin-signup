@@ -1,4 +1,4 @@
-# Copyright (c) 2020, Djaodjin Inc.
+# Copyright (c) 2021, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,31 +22,70 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Forms for the signup app"""
+"""
+Forms for the signup Django app
+"""
 
 from captcha.fields import ReCaptchaField
 from django import forms
+from django.core import validators
 from django.contrib.auth import password_validation, get_user_model
-from django.contrib.auth.forms import (AuthenticationForm,
+from django.contrib.auth.forms import (
+    AuthenticationForm as AuthenticationBaseForm,
     PasswordResetForm as PasswordResetBaseForm)
 from django.utils.translation import ugettext_lazy as _
+from phonenumber_field.formfields import PhoneNumberField
 
-from . import settings
+from . import settings, validators
 from .compat import six
 from .helpers import full_name_natural_split
 from .models import Contact
 
 
-class NameEmailForm(forms.Form):
+class PhoneField(PhoneNumberField):
+
+    def __init__(self, *args, region=None, **kwargs):
+        if not region:
+            region = 'US'
+        super(PhoneField, self).__init__(*args, region=region, **kwargs)
+
+
+class CommField(forms.CharField):
+
+    default_validators = [validators.validate_email_or_phone]
+    default_label = _("E-mail address or phone number")
+    widget = forms.TextInput(
+        attrs={'placeholder': _("E-mail address or phone number"),
+               'maxlength': 75})
+
+    def __init__(self, **kwargs):
+        super(CommField, self).__init__(strip=True, **kwargs)
+        if not self.label:
+            self.label = self.default_label
+
+
+class UsernameOrCommField(CommField):
+
+    default_validators = [validators.validate_username_or_email_or_phone]
+    default_label = _("Username, e-mail address or phone number")
+    widget = forms.TextInput(
+        attrs={'placeholder': _("Username, e-mail address or phone number"),
+               'maxlength': 75})
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        if not self.label:
+            self.label = self.default_label
+
+
+class FrictionlessSignupForm(forms.Form):
     """
-    Form for frictionless registration of a new account. Just supply
-    a full name and an email and you are in. We will ask for username
-    and password later.
+    Form for frictionless registration of a new user. Just supply
+    a full name and a way to notify user (email or phone) and you are in.
+    We will ask for username and password later.
     """
-    email = forms.EmailField(
-        widget=forms.TextInput(attrs={'placeholder':'Email',
-                                      'maxlength': 75}),
-        label=_("E-mail address"))
+    email = forms.EmailField(required=False)
+    phone = PhoneField(required=False)
     full_name = forms.RegexField(
         regex=settings.FULL_NAME_PAT, max_length=60,
         widget=forms.TextInput(attrs={
@@ -56,9 +95,17 @@ class NameEmailForm(forms.Form):
             _("Sorry we do not recognize some characters in your full name.")})
 
     def __init__(self, *args, **kwargs):
-        super(NameEmailForm, self).__init__(*args, **kwargs)
+        super(FrictionlessSignupForm, self).__init__(*args, **kwargs)
         if settings.REQUIRES_RECAPTCHA:
             self.fields['captcha'] = ReCaptchaField()
+
+    def clean(self):
+        super(FrictionlessSignupForm, self).clean()
+        if not (self.cleaned_data.get('email', None) or
+                self.cleaned_data.get('phone', None)):
+            raise forms.ValidationError(
+                _("Either email or phone must be valid."))
+        return self.cleaned_data
 
 
 class PasswordConfirmMixin(object):
@@ -134,8 +181,9 @@ class PasswordUpdateForm(PasswordConfirmMixin, forms.ModelForm):
 
 
 class PasswordResetConfirmForm(PasswordUpdateForm):
-
-    pass
+    """
+    Form displayed when a user clicked on the link sent in the reset e-mail.
+    """
 
 
 class PasswordChangeForm(PasswordUpdateForm):
@@ -151,8 +199,10 @@ class PasswordChangeForm(PasswordUpdateForm):
 
 
 class PasswordResetForm(PasswordResetBaseForm):
-
-    pass
+    """
+    Form displayed to recover password.
+    """
+    email = CommField()
 
 
 class ActivationForm(PasswordConfirmMixin, forms.Form):
@@ -167,9 +217,10 @@ class ActivationForm(PasswordConfirmMixin, forms.Form):
         " do not match."),
     }
 
-    email = forms.EmailField(
-        widget=forms.TextInput(attrs={'placeholder':'Email', 'maxlength': 75}),
-        label=_("E-mail address"), disabled=True)
+    email = forms.EmailField(label=_("E-mail address"),
+        disabled=True, required=False)
+    phone = PhoneField(label=_("Phone number"),
+        disabled=True, required=False)
     full_name = forms.RegexField(
         regex=r'^[\w\s]+$', max_length=60,
         widget=forms.TextInput(attrs={'placeholder':'Full name'}),
@@ -247,6 +298,14 @@ class UserForm(forms.ModelForm):
         model = get_user_model()
         fields = ['username', 'email', 'full_name']
 
+    def __init__(self, instance=None, **kwargs):
+        super(UserForm, self).__init__(instance=instance, **kwargs)
+        if instance:
+            # define other fields dynamically
+            self.fields['phone'] = PhoneField(required=False)
+            contact = instance.contacts.order_by('pk').first()
+            if contact:
+                self.fields['phone'].initial = contact.phone
 
     def clean_full_name(self):
         if self.cleaned_data.get('full_name'):
@@ -283,57 +342,31 @@ class StartAuthenticationForm(forms.Form):
     """
     Form to present a user who may or may not have an account yet.
     """
-    username = forms.EmailField(widget=forms.TextInput(
-        attrs={'placeholder':'Email', 'maxlength': 254}),
-        label=_("Please enter your e-mail address"))
+    username = CommField()
 
     submit_title = _("Submit")
 
 
-class UsernameOrEmailAuthenticationForm(AuthenticationForm):
+class AuthenticationForm(AuthenticationBaseForm):
 
     # The field is called `username`, yet it is technically
-    # a username or e-mail.
-    username = forms.CharField(widget=forms.TextInput(
-        attrs={'placeholder': _("Username or e-mail")}),
-        max_length=254, label=_("Username or e-mail"))
+    # a username, e-mail or phone.
+    username = UsernameOrCommField()
     password = forms.CharField(widget=forms.PasswordInput(
         attrs={'placeholder': _("Password")}), label=_("Password"))
 
     def __init__(self, *args, **kwargs):
-        super(UsernameOrEmailAuthenticationForm, self).__init__(*args, **kwargs)
+        super(AuthenticationForm, self).__init__(*args, **kwargs)
         username_label = self.initial.get('username_label', None)
         if username_label:
-            placeholder_label = _('%(username)s or e-mail' % {
+            placeholder_label = _('%(username)s, e-mail or phone' % {
                 'username': username_label})
             self.fields['username'].label = placeholder_label
             self.fields['username'].widget.attrs['placeholder'] \
                 = placeholder_label
 
 
-class UsernameOrEmailPhoneAuthenticationForm(AuthenticationForm):
-
-    # The field is called `username`, yet it is technically
-    # a username or e-mail.
-    username = forms.CharField(widget=forms.TextInput(
-        attrs={'placeholder': _("Username, e-mail or phone number")}),
-        max_length=254, label=_("Username, e-mail or phone number"))
-    password = forms.CharField(widget=forms.PasswordInput(
-        attrs={'placeholder': _("Password")}), label=_("Password"))
-
-    def __init__(self, *args, **kwargs):
-        super(UsernameOrEmailPhoneAuthenticationForm, self).__init__(
-            *args, **kwargs)
-        username_label = self.initial.get('username_label', None)
-        if username_label:
-            placeholder_label = _('%(username)s, e-mail or phone number' % {
-                'username': username_label})
-            self.fields['username'].label = placeholder_label
-            self.fields['username'].widget.attrs['placeholder'] \
-                = placeholder_label
-
-
-class MFACodeForm(UsernameOrEmailAuthenticationForm):
+class MFACodeForm(AuthenticationForm):
 
     code = forms.IntegerField(widget=forms.TextInput(
         attrs={'placeholder': _("One-time authentication code"),

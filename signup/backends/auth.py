@@ -101,6 +101,7 @@ class UsernameOrEmailPhoneModelBackend(object):
     def find_user(self, username):
         user_kwargs = {}
         contact_kwargs = {}
+        username = str(username) # We could have a ``PhoneNumber`` here.
         try:
             validate_email(username)
             contact_kwargs = {'email__iexact': username}
@@ -109,12 +110,10 @@ class UsernameOrEmailPhoneModelBackend(object):
             pass
         if not contact_kwargs:
             try:
-                validate_phone(username)
-                contact_kwargs = {'phone__iexact': username}
+                contact_kwargs = {'phone__iexact': validate_phone(username)}
             except ValidationError:
                 contact_kwargs = {'user__username__iexact': username}
                 user_kwargs = {'username__iexact': username}
-
         if user_kwargs:
             try:
                 return self.model.objects.filter(
@@ -122,8 +121,8 @@ class UsernameOrEmailPhoneModelBackend(object):
             except self.model.DoesNotExist:
                 pass
         try:
-            contact = Contact.objects.get(
-                user__is_active=True, **contact_kwargs).select_related('user')
+            contact = Contact.objects.filter(user__is_active=True,
+                **contact_kwargs).select_related('user').get()
             return contact.user
         except Contact.DoesNotExist:
             pass

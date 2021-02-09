@@ -1,4 +1,4 @@
-# Copyright (c) 2020, DjaoDjin inc.
+# Copyright (c) 2021, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -246,7 +246,8 @@ sbF9uYW1lIjoiRG9ubnkgQ29vcGVyIiwiZXhwIjoxNTI5NjU4NzEwfQ.F2y\
             password = serializer.validated_data.get('password')
             user = authenticate(request, username=username, password=password)
             if user:
-                contact = Contact.objects.filter(user=user).first()
+                contact = Contact.objects.find_by_username_or_comm(
+                    username).first()
                 if contact and contact.mfa_backend:
                     if not contact.mfa_priv_key:
                         contact.create_mfa_token()

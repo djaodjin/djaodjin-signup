@@ -78,9 +78,35 @@
 },
 {
     "fields": {
+      "slug": "needactive",
       "created_at": "2020-01-10T00:00:00-00:00",
       "user": 5,
       "email_verification_key": "16793aa72a4c7ae94b50b20c2eca52df5b0fe2c6"
     },
     "model": "signup.Contact", "pk": 5
+},
+{
+    "fields": {
+      "date_joined": "2020-01-01T00:00:00-09:00",
+      "email": "xia+login@localhost.localdomain",
+      "first_name": "Xia",
+      "is_active": true,
+      "is_staff": false,
+      "is_superuser": false,
+      "last_login": "2020-01-01T00:00:00-09:00",
+      "last_name": "Login with e-mail",
+      "password": "pbkdf2_sha256$10000$z0MBiWn0Rlem$iZdC6uHomlE07qGK/TqfcfxNzKJtFp03c0JILF1frRc=",
+      "username": "xia6"
+    },
+    "model": "auth.User", "pk": 6
+},
+{
+    "fields": {
+      "slug": "xia6",
+      "created_at": "2020-01-10T00:00:00-00:00",
+      "user": 6,
+      "phone": "+14155555556",
+      "email": "xia+login@localhost.localdomain"
+    },
+    "model": "signup.Contact", "pk": 6
 }]

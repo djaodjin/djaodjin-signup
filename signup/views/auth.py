@@ -1,4 +1,4 @@
-# Copyright (c) 2020, Djaodjin Inc.
+# Copyright (c) 2021, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -50,14 +50,15 @@ from .. import settings, signals
 from ..auth import validate_redirect
 from ..compat import reverse, is_authenticated, six
 from ..decorators import check_has_credentials
-from ..forms import (ActivationForm, MFACodeForm, NameEmailForm,
+from ..forms import (ActivationForm, MFACodeForm, FrictionlessSignupForm,
     PasswordResetForm, PasswordResetConfirmForm,
-    UserActivateForm, UsernameOrEmailPhoneAuthenticationForm)
+    UserActivateForm, AuthenticationForm)
 from ..helpers import full_name_natural_split
 from ..mixins import ActivateMixin, UrlsMixin
 from ..models import Contact
 from ..utils import (fill_form_errors, get_disabled_authentication,
     get_disabled_registration, has_invalid_password)
+from ..validators import as_email_or_phone
 
 
 LOGGER = logging.getLogger(__name__)
@@ -137,16 +138,17 @@ class RedirectFormView(RedirectFormMixin, ProcessFormView):
 
 class PasswordResetBaseView(RedirectFormMixin, ProcessFormView):
     """
-    Enter email address to reset password.
+    Enter email address or phone number to reset password.
     """
     model = get_user_model()
     form_class = PasswordResetForm
     token_generator = default_token_generator
 
     def form_valid(self, form):
+        username = form.cleaned_data.get('email', None)
+        email, phone = as_email_or_phone(username)
         try:
-            user = self.model.objects.get(
-                email__iexact=form.cleaned_data['email'], is_active=True)
+            user = self.model.objects.find_user(username)
             next_url = validate_redirect(self.request)
             if check_has_credentials(self.request, user, next_url=next_url):
                 # Make sure that a reset password email is sent to a user
@@ -163,19 +165,37 @@ class PasswordResetBaseView(RedirectFormMixin, ProcessFormView):
                 signals.user_reset_password.send(
                     sender=__name__, user=user, request=self.request,
                     back_url=back_url, expiration_days=settings.KEY_EXPIRATION)
-                messages.info(self.request, _("Please follow the instructions"\
+                if phone:
+                    messages.info(self.request,
+                    _("Please follow the instructions in the phone message"\
+                    " that has just been sent to you to reset"\
+                    " your password."))
+                elif email:
+                    messages.info(self.request,
+                    _("Please follow the instructions"\
                     " in the email that has just been sent to you to reset"\
                     " your password."))
             else:
-                messages.info(self.request, _(
-"You should now secure and activate your account following the instructions"\
-" we just emailed you. Thank you."))
+                if phone:
+                    messages.info(self.request,
+                        _("You should now secure and activate"\
+                          " your account following the instructions"\
+                          " we just phoned you. Thank you."))
+                elif email:
+                    messages.info(self.request,
+                        _("You should now secure and activate"\
+                          " your account following the instructions"\
+                          " we just emailed you. Thank you."))
             return super(PasswordResetBaseView, self).form_valid(form)
         except self.model.DoesNotExist:
             # We don't want to give a clue about registered users, yet
             # it already possible to do a straight register to get the same.
-            messages.error(self.request, _("We cannot find an account"\
-                " for this e-mail address. Please verify the spelling."))
+            if phone:
+                messages.error(self.request, _("We cannot find an account"\
+                    " for this phone number. Please verify the spelling."))
+            else:
+                messages.error(self.request, _("We cannot find an account"\
+                    " for this e-mail address. Please verify the spelling."))
         return super(PasswordResetBaseView, self).form_invalid(form)
 
 
@@ -251,8 +271,9 @@ class SignupBaseView(RedirectFormMixin, ProcessFormView):
     address, the user is immediately signed up and logged in.
     """
     model = get_user_model()
-    form_class = NameEmailForm
+    form_class = FrictionlessSignupForm
     fail_url = ('registration_register', (), {})
+    backend_path = 'signup.backends.auth.UsernameOrEmailPhoneModelBackend'
 
     @staticmethod
     def first_and_last_names(**cleaned_data):
@@ -301,40 +322,70 @@ class SignupBaseView(RedirectFormMixin, ProcessFormView):
         return initial
 
     def register_user(self, **cleaned_data):
-        #pylint: disable=maybe-no-member
-        email = cleaned_data['email']
-        users = self.model.objects.filter(email__iexact=email)
-        if users.exists():
-            user = users.get()
-            if check_has_credentials(self.request, user,
-                                 next_url=self.get_success_url()):
+        email = cleaned_data.get('email', None)
+        if email:
+            try:
+                user = self.model.objects.find_user(email)
+                if check_has_credentials(self.request, user,
+                                     next_url=self.get_success_url()):
+                    raise serializers.ValidationError(
+                        {'email':
+                         _("A user with that e-mail address already exists."),
+                         api_settings.NON_FIELD_ERRORS_KEY:
+                         mark_safe(_(
+                             "This email address has already been registered!"\
+    " Please <a href=\"%s\">login</a> with your credentials. Thank you.")
+                            % reverse('login'))})
                 raise serializers.ValidationError(
                     {'email':
                      _("A user with that e-mail address already exists."),
                      api_settings.NON_FIELD_ERRORS_KEY:
                      mark_safe(_(
                          "This email address has already been registered!"\
-" Please <a href=\"%s\">login</a> with your credentials. Thank you.")
-                        % reverse('login'))})
-            raise serializers.ValidationError(
-                {'email':
-                 _("A user with that e-mail address already exists."),
-                 api_settings.NON_FIELD_ERRORS_KEY:
-                 mark_safe(_(
-                     "This email address has already been registered!"\
-" You should now secure and activate your account following "\
-" the instructions we just emailed you. Thank you."))})
+    " You should now secure and activate your account following "\
+    " the instructions we just emailed you. Thank you."))})
+            except self.model.DoesNotExist:
+                # OK to continue. We will have raised an exception in all other
+                # cases.
+                pass
+
+        phone = cleaned_data.get('phone', None)
+        if phone:
+            try:
+                user = self.model.objects.find_user(phone)
+                if check_has_credentials(self.request, user,
+                                     next_url=self.get_success_url()):
+                    raise serializers.ValidationError(
+                        {'phone':
+                         _("A user with that phone number already exists."),
+                         api_settings.NON_FIELD_ERRORS_KEY:
+                         mark_safe(_(
+                             "This phone number has already been registered!"\
+    " Please <a href=\"%s\">login</a> with your credentials. Thank you.")
+                            % reverse('login'))})
+                raise serializers.ValidationError(
+                    {'phone':
+                     _("A user with that phone number already exists."),
+                     api_settings.NON_FIELD_ERRORS_KEY:
+                     mark_safe(_(
+                         "This phone number has already been registered!"\
+    " You should now secure and activate your account following "\
+    " the instructions we just messaged you. Thank you."))})
+            except self.model.DoesNotExist:
+                # OK to continue. We will have raised an exception in all other
+                # cases.
+                pass
 
         first_name, last_name = self.first_and_last_names(**cleaned_data)
         username = cleaned_data.get('username', None)
         password = cleaned_data.get('new_password',
             cleaned_data.get('password', None))
         user = self.model.objects.create_user(username,
-            email=email, password=password,
+            email=email, password=password, phone=phone,
             first_name=first_name, last_name=last_name)
         # Bypassing authentication here, we are doing frictionless registration
         # the first time around.
-        user.backend = 'django.contrib.auth.backends.ModelBackend'
+        user.backend = self.backend_path
         return user
 
     def register(self, **cleaned_data):
@@ -443,8 +494,8 @@ class SigninBaseView(RedirectFormMixin, ProcessFormView):
     Check credentials and sign in the authenticated user.
     """
     model = get_user_model()
-    form_class = UsernameOrEmailPhoneAuthenticationForm
-    password_form_class = UsernameOrEmailPhoneAuthenticationForm
+    form_class = AuthenticationForm
+    password_form_class = AuthenticationForm
 
     def get_form_class(self):
         username = self.request.POST.get('username')
