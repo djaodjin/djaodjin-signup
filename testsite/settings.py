@@ -20,6 +20,9 @@ RUN_DIR = os.getcwd()
 #JS_FRAMEWORK = 'angularjs'
 JS_FRAMEWORK = 'vuejs'
 
+# SECURITY WARNING: don't run with debug turned on in production!
+DEBUG = True
+BYPASS_VERIFICATION_KEY_EXPIRED_CHECK = False
 
 def load_config(confpath):
     '''
@@ -57,12 +60,9 @@ if not hasattr(sys.modules[__name__], "SECRET_KEY"):
     SECRET_KEY = "".join([choice(
         "abcdefghijklmnopqrstuvwxyz0123456789!@#$%^*-_=+") for i in range(50)])
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
-BYPASS_VERIFICATION_KEY_EXPIRED_CHECK = os.getenv(
-    'BYPASS_VERIFICATION_KEY_EXPIRED_CHECK', getattr(sys.modules[__name__],
-    'BYPASS_VERIFICATION_KEY_EXPIRED_CHECK', False))
+if os.getenv('BYPASS_VERIFICATION_KEY_EXPIRED_CHECK'):
+    BYPASS_VERIFICATION_KEY_EXPIRED_CHECK = (int(os.getenv(
+        'BYPASS_VERIFICATION_KEY_EXPIRED_CHECK')) > 0)
 
 ALLOWED_HOSTS = []
 

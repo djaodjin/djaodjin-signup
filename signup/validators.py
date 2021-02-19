@@ -28,7 +28,21 @@ from django.core.validators import validate_email, validate_slug
 from django.utils.translation import gettext_lazy as _
 from phonenumber_field import phonenumber
 #pylint:disable=unused-import
-from django.core.validators import EmailValidator, RegexValidator
+from django.core.validators import (EmailValidator as EmailValidatorBase,
+    RegexValidator)
+
+from .utils import get_email_dynamic_validator
+
+
+@deconstructible
+class EmailValidator(EmailValidatorBase):
+
+    dynamic_validator = get_email_dynamic_validator()
+
+    def __call__(self, value):
+        super(EmailValidator, self).__call__(value)
+        if self.dynamic_validator:
+            self.dynamic_validator(value)
 
 
 @deconstructible

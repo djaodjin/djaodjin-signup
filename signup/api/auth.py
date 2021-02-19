@@ -49,7 +49,8 @@ from ..serializers import (ActivateUserSerializer, CredentialsSerializer,
     CreateUserSerializer,
     PasswordResetSerializer, PasswordResetConfirmSerializer,
     TokenSerializer, UserSerializer, ValidationErrorSerializer)
-from ..utils import get_disabled_authentication, get_disabled_registration
+from ..utils import (get_disabled_authentication, get_disabled_registration,
+    get_login_throttle, get_password_reset_throttle)
 
 
 LOGGER = logging.getLogger(__name__)
@@ -236,40 +237,52 @@ sbF9uYW1lIjoiRG9ubnkgQ29vcGVyIiwiZXhwIjoxNTI5NjU4NzEwfQ.F2y\
     model = get_user_model()
     serializer_class = CredentialsSerializer
 
+    def check_user_throttles(self, request, user):
+        throttle = get_login_throttle()
+        if throttle:
+            throttle(request, self, user)
+
     @swagger_auto_schema(responses={
         201: OpenAPIResponse("", TokenSerializer),
         400: OpenAPIResponse("parameters error", ValidationErrorSerializer)})
-    def post(self, request, *args, **kwargs): #pylint:disable=unused-argument
+    def post(self, request, *args, **kwargs):
+        #pylint:disable=unused-argument,too-many-nested-blocks
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
             username = serializer.validated_data.get('username')
             password = serializer.validated_data.get('password')
-            user = authenticate(request, username=username, password=password)
-            if user:
-                contact = Contact.objects.find_by_username_or_comm(
-                    username).first()
-                if contact and contact.mfa_backend:
-                    if not contact.mfa_priv_key:
-                        contact.create_mfa_token()
-                        raise serializers.ValidationError({'detail': _(
-                            "missing MFA token")})
-                    code = serializer.validated_data.get('code')
-                    if code != contact.mfa_priv_key:
-                        if (contact.mfa_nb_attempts
-                            >= settings.MFA_MAX_ATTEMPTS):
-                            contact.clear_mfa_token()
-                            raise exceptions.PermissionDenied({'detail': _(
-"You have exceeded the number of attempts to enter the MFA code."\
-" Please start again.")})
-                        contact.mfa_nb_attempts += 1
-                        contact.save()
-                        raise serializers.ValidationError({'detail': _(
-                            "MFA code does not match.")})
-                    contact.clear_mfa_token()
-                self.optional_session_cookie(request, user)
-                return self.create_token(user)
             try:
                 user = self.model.objects.find_user(username)
+
+                # Rate-limit based on the user.
+                self.check_user_throttles(self.request, user)
+
+                user = authenticate(
+                    request, username=username, password=password)
+                if user:
+                    contact = Contact.objects.find_by_username_or_comm(
+                        username).first()
+                    if contact and contact.mfa_backend:
+                        if not contact.mfa_priv_key:
+                            contact.create_mfa_token()
+                            raise serializers.ValidationError({'detail': _(
+                                "missing MFA token")})
+                        code = serializer.validated_data.get('code')
+                        if code != contact.mfa_priv_key:
+                            if (contact.mfa_nb_attempts
+                                >= settings.MFA_MAX_ATTEMPTS):
+                                contact.clear_mfa_token()
+                                raise exceptions.PermissionDenied({'detail': _(
+    "You have exceeded the number of attempts to enter the MFA code."\
+    " Please start again.")})
+                            contact.mfa_nb_attempts += 1
+                            contact.save()
+                            raise serializers.ValidationError({'detail': _(
+                                "MFA code does not match.")})
+                        contact.clear_mfa_token()
+                    self.optional_session_cookie(request, user)
+                    return self.create_token(user)
+
                 if not check_has_credentials(request, user):
                     raise serializers.ValidationError({'detail': _(
                 "This email address has already been registered!"\
@@ -500,10 +513,19 @@ class PasswordResetAPIView(CreateAPIView):
     serializer_class = PasswordResetSerializer
     token_generator = default_token_generator
 
+    def check_user_throttles(self, request, user):
+        throttle = get_password_reset_throttle()
+        if throttle:
+            throttle(request, self, user)
+
     def perform_create(self, serializer):
         try:
-            user = self.model.objects.get(
-                email__iexact=serializer.data.get('email'), is_active=True)
+            username = serializer.validated_data.get('email')
+            user = self.model.objects.find_user(username)
+
+            # Rate-limit based on the user.
+            self.check_user_throttles(self.request, user)
+
             next_url = validate_redirect(self.request)
             if check_has_credentials(self.request, user, next_url=next_url):
                 # Make sure that a reset password email is sent to a user

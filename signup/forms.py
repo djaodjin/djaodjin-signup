@@ -42,6 +42,11 @@ from .helpers import full_name_natural_split
 from .models import Contact
 
 
+class EmailField(forms.EmailField):
+
+    default_validators = [validators.validate_email]
+
+
 class PhoneField(PhoneNumberField):
 
     def __init__(self, *args, region=None, **kwargs):
@@ -84,7 +89,8 @@ class FrictionlessSignupForm(forms.Form):
     a full name and a way to notify user (email or phone) and you are in.
     We will ask for username and password later.
     """
-    email = forms.EmailField(required=False)
+    email = EmailField(label=_("E-mail address"), required=False,
+        widget=forms.TextInput(attrs={'placeholder': _("E-mail")}))
     phone = PhoneField(required=False)
     full_name = forms.RegexField(
         regex=settings.FULL_NAME_PAT, max_length=60,
@@ -101,10 +107,24 @@ class FrictionlessSignupForm(forms.Form):
 
     def clean(self):
         super(FrictionlessSignupForm, self).clean()
-        if not (self.cleaned_data.get('email', None) or
-                self.cleaned_data.get('phone', None)):
-            raise forms.ValidationError(
-                _("Either email or phone must be valid."))
+        if not ('email' in self._errors or 'phone' in self._errors):
+            if 'email' in self.data and 'phone' in self.data:
+                email = self.cleaned_data['email']
+                phone = self.cleaned_data['phone']
+                if not email or not phone:
+                    raise forms.ValidationError(
+                        {'email': _("Either email or phone must be valid."),
+                         'phone': _("Either email or phone must be valid.")})
+            elif 'email' in self.data:
+                email = self.cleaned_data['email']
+                if not email:
+                    raise forms.ValidationError(
+                        {'email': _("An email must be valid.")})
+            elif 'phone' in self.data:
+                phone = self.cleaned_data['phone']
+                if not phone:
+                    raise forms.ValidationError(
+                        {'phone': _("A phone must be valid.")})
         return self.cleaned_data
 
 
@@ -121,8 +141,22 @@ class PasswordConfirmMixin(object):
             attrs={'placeholder': _("Type password again")}))
 
     def clean_new_password(self):
-        password = self.cleaned_data.get('new_password')
-        password_validation.validate_password(password, self.user)
+        password = ""
+        if 'new_password' in self.data:
+            password = self.cleaned_data['new_password']
+            if not password:
+                raise forms.ValidationError(_("Password cannot be empty."))
+            user = self.user if hasattr(self, 'user') else None
+            password_validation.validate_password(password, user=user)
+        return password
+
+    def clean_new_password2(self):
+        password = ""
+        if 'new_password2' in self.data:
+            password = self.cleaned_data['new_password2']
+            if not password:
+                raise forms.ValidationError(
+                    _("Password confirmation cannot be empty."))
         return password
 
     def clean(self):
@@ -131,11 +165,10 @@ class PasswordConfirmMixin(object):
         """
         super(PasswordConfirmMixin, self).clean()
         if not ('new_password' in self._errors
-            or 'new_password2' in self._errors):
-            if ('new_password' in self.cleaned_data and
-                'new_password2' in self.cleaned_data):
-                new_password = self.cleaned_data.get('new_password', False)
-                new_password2 = self.cleaned_data.get('new_password2', True)
+                or 'new_password2' in self._errors):
+            if 'new_password' in self.data and 'new_password2' in self.data:
+                new_password = self.cleaned_data['new_password']
+                new_password2 = self.cleaned_data['new_password2']
                 if new_password != new_password2:
                     self._errors['new_password'] = self.error_class([
                         _("This field does not match password confirmation.")])
@@ -217,7 +250,7 @@ class ActivationForm(PasswordConfirmMixin, forms.Form):
         " do not match."),
     }
 
-    email = forms.EmailField(label=_("E-mail address"),
+    email = EmailField(label=_("E-mail address"),
         disabled=True, required=False)
     phone = PhoneField(label=_("Phone number"),
         disabled=True, required=False)

@@ -57,7 +57,8 @@ from ..helpers import full_name_natural_split
 from ..mixins import ActivateMixin, UrlsMixin
 from ..models import Contact
 from ..utils import (fill_form_errors, get_disabled_authentication,
-    get_disabled_registration, has_invalid_password)
+    get_disabled_registration, get_login_throttle, get_password_reset_throttle,
+    has_invalid_password)
 from ..validators import as_email_or_phone
 
 
@@ -144,11 +145,20 @@ class PasswordResetBaseView(RedirectFormMixin, ProcessFormView):
     form_class = PasswordResetForm
     token_generator = default_token_generator
 
+    def check_user_throttles(self, request, user):
+        throttle = get_password_reset_throttle()
+        if throttle:
+            throttle(request, self, user)
+
     def form_valid(self, form):
         username = form.cleaned_data.get('email', None)
         email, phone = as_email_or_phone(username)
         try:
             user = self.model.objects.find_user(username)
+
+            # Rate-limit based on the user.
+            self.check_user_throttles(self.request, user)
+
             next_url = validate_redirect(self.request)
             if check_has_credentials(self.request, user, next_url=next_url):
                 # Make sure that a reset password email is sent to a user
@@ -497,6 +507,11 @@ class SigninBaseView(RedirectFormMixin, ProcessFormView):
     form_class = AuthenticationForm
     password_form_class = AuthenticationForm
 
+    def check_user_throttles(self, request, user):
+        throttle = get_login_throttle()
+        if throttle:
+            throttle(request, self, user)
+
     def get_form_class(self):
         username = self.request.POST.get('username')
         if username:
@@ -530,13 +545,25 @@ class SigninBaseView(RedirectFormMixin, ProcessFormView):
         return form
 
     def form_valid(self, form):
+        username = form.cleaned_data.get('username')
+        try:
+            user = self.model.objects.find_user(username)
+        except self.model.DoesNotExist:
+            form.add_error('username', _("username or password is incorrect."))
+            return self.form_invalid(form)
+
+        self.check_user_throttles(self.request, user)
+
         password = form.cleaned_data.get('password')
         if not password:
             form = self.get_password_form()
             form.is_valid()
             return self.form_invalid(form)
-        user = form.get_user()
-        contact = Contact.objects.filter(user=user).first()
+
+        user_with_backend = authenticate(self.request,
+            username=username, password=password)
+
+        contact = Contact.objects.filter(user=user_with_backend).first()
         if contact and contact.mfa_backend:
             if not contact.mfa_priv_key:
                 form = self.get_mfa_form()
@@ -547,7 +574,7 @@ class SigninBaseView(RedirectFormMixin, ProcessFormView):
             # if `mfa_priv_key` is not yet set, which in turn
             # will not make it this far is the code is incorrect.
             contact.clear_mfa_token()
-        _login(self.request, user)
+        _login(self.request, user_with_backend)
         return super(SigninBaseView, self).form_valid(form)
 
     def form_invalid(self, form):

@@ -210,7 +210,14 @@ Vue.component('user-update', {
         updateProfile: function(){
             var vm = this;
             vm.validateForm();
-            vm.reqPatch(vm.url, vm.formFields,
+            var data = {}
+            for( var field in vm.formFields ) {
+                if( vm.formFields.hasOwnProperty(field) &&
+                    vm.formFields[field] ) {
+                    data[field] = vm.formFields[field];
+                }
+            }
+            vm.reqPatch(vm.url, data,
             function(resp) {
                 // XXX should really be success but then it needs to be changed
                 // in Django views as well.

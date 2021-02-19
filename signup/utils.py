@@ -1,4 +1,4 @@
-# Copyright (c) 2020, DjaoDjin inc.
+# Copyright (c) 2021, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -208,6 +208,24 @@ def get_disabled_registration(request):
     if isinstance(settings.DISABLED_REGISTRATION, six.string_types):
         return import_string(settings.DISABLED_REGISTRATION)(request)
     return bool(settings.DISABLED_REGISTRATION)
+
+
+def get_email_dynamic_validator():
+    if isinstance(settings.EMAIL_DYNAMIC_VALIDATOR, six.string_types):
+        return import_string(settings.EMAIL_DYNAMIC_VALIDATOR)
+    return None
+
+
+def get_login_throttle():
+    if isinstance(settings.LOGIN_THROTTLE, six.string_types):
+        return import_string(settings.LOGIN_THROTTLE)
+    return None
+
+
+def get_password_reset_throttle():
+    if isinstance(settings.PASSWORD_RESET_THROTTLE, six.string_types):
+        return import_string(settings.PASSWORD_RESET_THROTTLE)
+    return None
 
 
 def get_picture_storage(request, account=None, **kwargs):

@@ -166,7 +166,7 @@ class ContactSerializer(serializers.ModelSerializer):
     For a detailed profile, see `ContactDetailSerializer`.
     """
     printable_name = serializers.CharField(
-        help_text=_("Full name"))
+        help_text=_("Printable name"), read_only=True)
     credentials = serializers.SerializerMethodField(read_only=True,
         help_text=_("True if the user has valid login credentials"))
 
