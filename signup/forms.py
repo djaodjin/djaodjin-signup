@@ -52,7 +52,8 @@ class PhoneField(PhoneNumberField):
     def __init__(self, *args, **kwargs):
         region = kwargs.get('region')
         if not region:
-            params = {'region': 'US'}.update(kwargs)
+            params = {'region': 'US'}
+            params.update(kwargs)
         else:
             params = kwargs
         super(PhoneField, self).__init__(*args, **params)
