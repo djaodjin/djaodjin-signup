@@ -72,7 +72,7 @@ class CommField(serializers.CharField):
     }
 
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+        super(CommField, self).__init__(**kwargs)
         self.validators.append(validate_email_or_phone)
 
 
@@ -85,7 +85,7 @@ class UsernameOrCommField(serializers.CharField):
     }
 
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+        super(UsernameOrCommField, self).__init__(**kwargs)
         self.validators.append(validate_username_or_email_or_phone)
 
 
