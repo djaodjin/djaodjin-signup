@@ -82,7 +82,7 @@ class UsernameOrCommField(CommField):
                'maxlength': 75})
 
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+        super(UsernameOrCommField, self).__init__(**kwargs)
         if not self.label:
             self.label = self.default_label
 
