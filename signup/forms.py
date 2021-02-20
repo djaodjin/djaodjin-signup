@@ -49,10 +49,14 @@ class EmailField(forms.EmailField):
 
 class PhoneField(PhoneNumberField):
 
-    def __init__(self, *args, region=None, **kwargs):
+    def __init__(self, *args, **kwargs):
+        region = kwargs.get('region')
         if not region:
-            region = 'US'
-        super(PhoneField, self).__init__(*args, region=region, **kwargs)
+            params = {'region': 'US'}
+            params.update(kwargs)
+        else:
+            params = kwargs
+        super(PhoneField, self).__init__(*args, **params)
 
 
 class CommField(forms.CharField):
@@ -78,7 +82,7 @@ class UsernameOrCommField(CommField):
                'maxlength': 75})
 
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+        super(UsernameOrCommField, self).__init__(**kwargs)
         if not self.label:
             self.label = self.default_label
 
