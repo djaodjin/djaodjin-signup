@@ -13,9 +13,9 @@ you should decorate the view with an *active_required* decorator.
 
 Tested with
 
-- **Python:** 2.7, **Django:** 1.11, **Django Rest Framework:** 3.9.4
 - **Python:** 3.6, **Django:** 2.2 ([LTS](https://www.djangoproject.com/download/)), **Django Rest Framework:** 3.11
 - **Python:** 3.6, **Django:** 3.0 (latest), **Django Rest Framework:** 3.11
+- **Python:** 2.7 (end-of-life), **Django:** 1.11, **Django Rest Framework:** 3.9.4
 
 This project contains bare bone templates which are compatible with Django
 and Jinja2 template engines. To see djaodjin-signup in action as part
@@ -70,9 +70,10 @@ run the testsite webapp.
 Release Notes
 =============
 
-0.4.6
+0.4.7
 
-  * introduces compatibility with Django3
-  * extends Vue with configuration constants
+  * adds registration and login with phone number
+  * adds hook to rate limit login and password-reset per user
+  * renames `update_or_create_token` to `prepare_email_verification`
 
 [previous release notes](changelog)

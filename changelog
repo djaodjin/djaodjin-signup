@@ -1,7 +1,10 @@
 0.4.7
+
+  * adds registration and login with phone number
+  * adds hook to rate limit login and password-reset per user
   * renames `update_or_create_token` to `prepare_email_verification`
 
- -- Sebastien Mirolo <smirolo@djaodjin.com>  Sun,  7 Jun 2020 07:22:00 -0700
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Mon, 22 Feb 2021 10:20:00 -0700
 
 0.4.6
 
