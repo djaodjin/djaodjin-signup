@@ -1,6 +1,6 @@
 boto3>=1.4.4
 Django>=1.11
-django-phonenumber-field>=5.0.0
+django-phonenumber-field>=2.4.0
 django-recaptcha>=2.0
 djangorestframework>=3.9
 phonenumbers>=8.12.6

@@ -90,7 +90,12 @@ class JWTBase(GenericAPIView):
         payload = UserSerializer().to_representation(user)
         payload.update({'exp': exp})
         token = jwt.encode(payload, settings.JWT_SECRET_KEY,
-            settings.JWT_ALGORITHM).decode('utf-8')
+            settings.JWT_ALGORITHM)
+        try:
+            token = token.decode('utf-8')
+        except AttributeError:
+            # PyJWT==2.0.1 already returns an oject of type `str`.
+            pass
         LOGGER.info("%s signed in.", user,
             extra={'event': 'login', 'request': self.request})
         return Response(TokenSerializer().to_representation({'token': token}),

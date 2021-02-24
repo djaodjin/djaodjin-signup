@@ -1,4 +1,4 @@
-# Copyright (c) 2019, Djaodjin Inc.
+# Copyright (c) 2021, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -23,13 +23,22 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from distutils.core import setup
+
 import signup
+
+requirements = []
+with open('./requirements.txt') as requirements_txt:
+    for line in requirements_txt:
+        prerequisite = line.split('#')[0].strip()
+        if prerequisite:
+            requirements += [prerequisite]
 
 setup(
     name='djaodjin-signup',
     version=signup.__version__,
     author='The DjaoDjin Team',
     author_email='support@djaodjin.com',
+    install_requires=requirements,
     packages=['signup',
               'signup.api',
               'signup.backends',
