@@ -24,7 +24,7 @@
 
 from django.utils.deconstruct import deconstructible
 from django.core.exceptions import ValidationError
-from django.core.validators import validate_email, validate_slug
+from django.core.validators import validate_slug
 from django.utils.translation import gettext_lazy as _
 from phonenumber_field import phonenumber
 #pylint:disable=unused-import
@@ -42,7 +42,7 @@ class EmailValidator(EmailValidatorBase):
     def __call__(self, value):
         super(EmailValidator, self).__call__(value)
         if self.dynamic_validator:
-            self.dynamic_validator(value)
+            EmailValidator.dynamic_validator(value)
 
 
 @deconstructible
@@ -73,6 +73,7 @@ class PhoneValidator:
             (self.code == other.code))
 
 
+validate_email = EmailValidator()
 validate_phone = PhoneValidator() #pylint:disable=invalid-name
 
 
