@@ -127,6 +127,7 @@ class ActivatedUserManager(UserManager):
         password.
         """
         phone = kwargs.pop('phone', None)
+        lang = kwargs.pop('lang', None)
         with transaction.atomic():
             if username:
                 user = super(ActivatedUserManager, self).create_user(
@@ -134,24 +135,27 @@ class ActivatedUserManager(UserManager):
             elif email:
                 user = self.create_user_from_email(
                     email, password=password, **kwargs)
-                # Force is_active to True and create an email verification key
-                # (see above definition of active user).
-                Contact.objects.prepare_email_verification(user, email,
-                    phone=phone)
             elif phone:
                 user = self.create_user_from_phone(
                     phone, password=password, **kwargs)
+            else:
+                raise ValueError("email or phone must be set.")
+            if email:
+                # Force is_active to True and create an email verification key
+                # (see above definition of active user).
+                Contact.objects.prepare_email_verification(user, email,
+                    phone=phone, lang=lang)
+            elif phone:
                 # Force is_active to True and create an email verification key
                 # (see above definition of active user).
                 Contact.objects.prepare_phone_verification(user, phone,
-                    email=email)
-            else:
-                raise ValueError("email or phone must be set.")
+                    email=email, lang=lang)
             user.is_active = True
             user.save()
-            LOGGER.info("'%s <%s>' registered with username '%s'%s",
+            LOGGER.info("'%s <%s>' registered with username '%s'%s%s",
                 user.get_full_name(), user.email, user,
                 (" and phone %s" % str(phone)) if phone else "",
+                (" and preferred language %s" % str(lang)) if lang else "",
                 extra={'event': 'register', 'user': user})
             signals.user_registered.send(sender=__name__, user=user)
         return user
@@ -230,7 +234,7 @@ class ContactManager(models.Manager):
 
     def prepare_email_verification(self, user, email, at_time=None,
                                    verification_key=None, reason=None,
-                                   phone=None):
+                                   **kwargs):
         #pylint:disable=too-many-arguments
         at_time = datetime_or_now(at_time)
         if verification_key is None:
@@ -238,10 +242,6 @@ class ContactManager(models.Manager):
             salt = hashlib.sha1(random_key).hexdigest()[:5]
             verification_key = hashlib.sha1(
                 (salt+user.username).encode('utf-8')).hexdigest()
-        kwargs = {
-            'user': user,
-            'email': email
-        }
         # XXX The get() needs to be targeted at the write database in order
         # to avoid potential transaction consistency problems.
         try:
@@ -249,7 +249,7 @@ class ContactManager(models.Manager):
                 # We have to wrap in a transaction.atomic here, otherwise
                 # we end-up with a TransactionManager error when Contact.slug
                 # already exists in db and we generate new one.
-                contact = self.get(**kwargs)
+                contact = self.get(user=user, email=email)
                 contact.email_verification_key = verification_key
                 contact.email_verification_at = at_time
                 # XXX It is possible a 'reason' field would be a better
@@ -260,9 +260,10 @@ class ContactManager(models.Manager):
                 return contact, False
         except self.model.DoesNotExist:
             kwargs.update({
+                'user': user,
+                'email': email,
                 'full_name': user.get_full_name(),
                 'nick_name': user.first_name,
-                'phone': phone,
                 'email_verification_key': verification_key,
                 'email_verification_at': at_time
             })
@@ -274,7 +275,7 @@ class ContactManager(models.Manager):
 
     def prepare_phone_verification(self, user, phone, at_time=None,
                                    verification_key=None, reason=None,
-                                   email=None):
+                                   **kwargs):
         #pylint:disable=too-many-arguments
         at_time = datetime_or_now(at_time)
         if verification_key is None:
@@ -282,10 +283,6 @@ class ContactManager(models.Manager):
             salt = hashlib.sha1(random_key).hexdigest()[:5]
             verification_key = hashlib.sha1(
                 (salt+user.username).encode('utf-8')).hexdigest()
-        kwargs = {
-            'user': user,
-            'phone': phone
-        }
         # XXX The get() needs to be targeted at the write database in order
         # to avoid potential transaction consistency problems.
         try:
@@ -293,7 +290,7 @@ class ContactManager(models.Manager):
                 # We have to wrap in a transaction.atomic here, otherwise
                 # we end-up with a TransactionManager error when Contact.slug
                 # already exists in db and we generate new one.
-                contact = self.get(**kwargs)
+                contact = self.get(user=user, phone=phone)
                 contact.phone_verification_key = verification_key
                 contact.phone_verification_at = at_time
                 # XXX It is possible a 'reason' field would be a better
@@ -304,9 +301,10 @@ class ContactManager(models.Manager):
                 return contact, False
         except self.model.DoesNotExist:
             kwargs.update({
+                'user': user,
+                'phone': phone,
                 'full_name': user.get_full_name(),
                 'nick_name': user.first_name,
-                'email': email,
                 'phone_verification_key': verification_key,
                 'phone_verification_at': at_time
             })
@@ -433,7 +431,8 @@ class Contact(models.Model):
         help_text=_("Date/time when the phone verification key was sent"))
     phone_verified_at = models.DateTimeField(null=True,
         help_text=_("Date/time when the phone number was last verified"))
-
+    lang = models.CharField(_("Preferred communication language"),
+         default=settings.LANGUAGE_CODE, max_length=5)
     mfa_backend = models.PositiveSmallIntegerField(
         choices=MFA_BACKEND_TYPE, default=NO_MFA,
         help_text=_("Backend to use for multi-factor authentication"))

@@ -28,6 +28,7 @@ Forms for the signup Django app
 
 from captcha.fields import ReCaptchaField
 from django import forms
+from django.conf import locale
 from django.core import validators
 from django.contrib.auth import password_validation, get_user_model
 from django.contrib.auth.forms import (
@@ -340,9 +341,18 @@ class UserForm(forms.ModelForm):
         if instance:
             # define other fields dynamically
             self.fields['phone'] = PhoneField(required=False)
+            lang_code = settings.LANGUAGE_CODE
+            if lang_code not in locale.LANG_INFO:
+                lang_code = lang_code.split('-')[0]
+            self.fields['lang'] = forms.CharField(
+                initial=lang_code,
+                widget=forms.Select(choices=[(lang['code'], lang['name_local'])
+                    for lang in six.itervalues(locale.LANG_INFO)
+                    if 'code' in lang]))
             contact = instance.contacts.order_by('pk').first()
             if contact:
                 self.fields['phone'].initial = contact.phone
+                self.fields['lang'].initial = contact.lang
 
     def clean_full_name(self):
         if self.cleaned_data.get('full_name'):

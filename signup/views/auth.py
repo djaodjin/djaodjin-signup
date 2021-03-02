@@ -35,6 +35,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.http import HttpResponseRedirect
 from django.template.response import TemplateResponse
+from django.utils import translation
 from django.utils.encoding import force_bytes
 from django.utils.http import (urlencode, urlsafe_base64_decode,
     urlsafe_base64_encode)
@@ -390,9 +391,10 @@ class SignupBaseView(RedirectFormMixin, ProcessFormView):
         username = cleaned_data.get('username', None)
         password = cleaned_data.get('new_password',
             cleaned_data.get('password', None))
+        lang = translation.get_language_from_request(self.request)
         user = self.model.objects.create_user(username,
             email=email, password=password, phone=phone,
-            first_name=first_name, last_name=last_name)
+            first_name=first_name, last_name=last_name, lang=lang)
         # Bypassing authentication here, we are doing frictionless registration
         # the first time around.
         user.backend = self.backend_path

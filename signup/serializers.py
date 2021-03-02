@@ -192,7 +192,7 @@ class ContactDetailSerializer(ContactSerializer):
 
     class Meta(ContactSerializer.Meta):
         fields = ContactSerializer.Meta.fields + ('phone',
-            'full_name', 'nick_name', 'extra', 'activities',)
+            'full_name', 'nick_name', 'lang', 'extra', 'activities',)
         read_only_fields = ContactSerializer.Meta.read_only_fields + (
             'activities',)
 
@@ -237,10 +237,12 @@ class CreateUserSerializer(serializers.ModelSerializer):
         help_text=_("Primary phone number to contact user"), required=False)
     full_name = serializers.CharField(
         help_text=_("Full name (effectively first name followed by last name)"))
+    lang = serializers.CharField(
+        help_text=_("Preferred communication language"), required=False)
 
     class Meta:
         model = get_user_model()
-        fields = ('username', 'password', 'email', 'phone', 'full_name')
+        fields = ('username', 'password', 'email', 'phone', 'full_name', 'lang')
 
 
 class PasswordResetConfirmSerializer(NoModelSerializer):

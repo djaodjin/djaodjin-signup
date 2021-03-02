@@ -73,7 +73,7 @@ class PhoneValidator:
             (self.code == other.code))
 
 
-validate_email = EmailValidator()
+validate_email = EmailValidator() #pylint:disable=invalid-name
 validate_phone = PhoneValidator() #pylint:disable=invalid-name
 
 
