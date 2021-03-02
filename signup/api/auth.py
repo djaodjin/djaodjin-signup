@@ -428,9 +428,12 @@ JwcBUUMECj8AKxsHtRHUSypco"
             first_name = (first_name + " " + mid_name).strip()
         username = validated_data.get('username', None)
         password = validated_data.get('password', None)
+        phone = validated_data.get('phone', None)
+        lang = validated_data.get('lang', settings.LANGUAGE_CODE)
         user = self.model.objects.create_user(username,
             email=email, password=password,
-            first_name=first_name, last_name=last_name)
+            first_name=first_name, last_name=last_name,
+            phone=phone, lang=lang)
 
         # Bypassing authentication here, we are doing frictionless registration
         # the first time around.

@@ -476,6 +476,8 @@ class Contact(models.Model):
 
     def save(self, force_insert=False, force_update=False,
              using=None, update_fields=None):
+        if not self.lang:
+            self.lang = settings.LANGUAGE_CODE
         if self.slug: # serializer will set created slug to '' instead of None.
             return super(Contact, self).save(
                 force_insert=force_insert, force_update=force_update,
