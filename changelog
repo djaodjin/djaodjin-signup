@@ -1,3 +1,9 @@
+0.4.9
+
+  * removes optional native python-ldap prerequisite
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Wed,  3 Mar 2021 12:15:00 -0700
+
 0.4.8
 
   * adds preferred communication language

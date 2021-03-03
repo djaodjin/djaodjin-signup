@@ -6,4 +6,6 @@ djangorestframework>=3.9
 phonenumbers>=8.12.6
 PyJWT>=1.6.1
 python-dateutil>=2.2
-python-ldap>=3.2.0
+
+# optional native packages
+#python-ldap>=3.2.0
