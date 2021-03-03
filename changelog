@@ -1,3 +1,10 @@
+0.4.8
+
+  * adds preferred communication language
+  * introduces hook for dynamic validator of e-mail addresses
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Wed,  3 Mar 2021 11:35:00 -0700
+
 0.4.7
 
   * adds registration and login with phone number

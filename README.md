@@ -70,10 +70,9 @@ run the testsite webapp.
 Release Notes
 =============
 
-0.4.7
+0.4.8
 
-  * adds registration and login with phone number
-  * adds hook to rate limit login and password-reset per user
-  * renames `update_or_create_token` to `prepare_email_verification`
+  * adds preferred communication language
+  * introduces hook for dynamic validator of e-mail addresses
 
 [previous release notes](changelog)
