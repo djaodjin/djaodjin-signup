@@ -176,10 +176,9 @@ def verify_token(token):
         payload = jwt.decode(
             token,
             settings.JWT_SECRET_KEY,
-            True, # verify
-            options={'verify_exp': True},
-            algorithms=[settings.JWT_ALGORITHM])
-    except jwt.ExpiredSignature:
+            algorithms=[settings.JWT_ALGORITHM],
+            options={'verify_exp': True})
+    except jwt.ExpiredSignatureError:
         raise serializers.ValidationError(
             _("Signature has expired."))
     except jwt.DecodeError:
