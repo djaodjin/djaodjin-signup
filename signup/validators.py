@@ -29,7 +29,7 @@ from django.utils.translation import gettext_lazy as _
 from phonenumber_field import phonenumber
 #pylint:disable=unused-import
 from django.core.validators import (EmailValidator as EmailValidatorBase,
-    RegexValidator)
+    RegexValidator, validate_email as validate_email_base)
 
 from .utils import get_email_dynamic_validator
 
@@ -79,7 +79,11 @@ validate_phone = PhoneValidator() #pylint:disable=invalid-name
 
 def validate_email_or_phone(value):
     try:
-        validate_email(value)
+        # `validate_email_or_phone` is only used in contextes where an e-mail
+        # has already previously registered (login or password reset). As
+        # a result we don't want to reject suspicious e-mails that made it
+        # into the database (as a result of an profile manager override).
+        validate_email_base(value)
     except ValidationError:
         try:
             validate_phone(value)
