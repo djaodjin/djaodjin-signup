@@ -49,7 +49,7 @@ from __future__ import unicode_literals
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.core.validators import validate_email
+from django.core.validators import validate_email as validate_email_base
 
 from ..models import Contact
 from ..validators import validate_phone
@@ -65,7 +65,7 @@ class UsernameOrEmailModelBackend(object):
 
     def find_user(self, username):
         try:
-            validate_email(username)
+            validate_email_base(username)
             kwargs = {'email__iexact': username}
         except ValidationError:
             kwargs = {'username__iexact': username}
@@ -103,7 +103,7 @@ class UsernameOrEmailPhoneModelBackend(object):
         contact_kwargs = {}
         username = str(username) # We could have a ``PhoneNumber`` here.
         try:
-            validate_email(username)
+            validate_email_base(username)
             contact_kwargs = {'email__iexact': username}
             user_kwargs = {'email__iexact': username}
         except ValidationError:

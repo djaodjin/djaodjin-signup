@@ -31,6 +31,7 @@ from __future__ import unicode_literals
 import datetime, hashlib, logging, random, re
 
 from django.core.exceptions import ValidationError
+from django.core.validators import validate_email as validate_email_base
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import UserManager
 from django.db import models, transaction, IntegrityError
@@ -44,7 +45,7 @@ from .backends.mfa import EmailMFABackend
 from .compat import import_string, python_2_unicode_compatible
 from .helpers import datetime_or_now, full_name_natural_split
 from .utils import generate_random_slug, has_invalid_password
-from .validators import validate_email, validate_phone
+from .validators import validate_phone
 
 
 LOGGER = logging.getLogger(__name__)
@@ -165,7 +166,7 @@ class ActivatedUserManager(UserManager):
         contact_kwargs = {}
         username = str(username) # We could have a ``PhoneNumber`` here.
         try:
-            validate_email(username)
+            validate_email_base(username)
             contact_kwargs = {'email__iexact': username}
             user_kwargs = {'email__iexact': username}
         except ValidationError:
@@ -197,7 +198,7 @@ class ContactManager(models.Manager):
         contact_kwargs = {}
         username = str(username) # We could have a ``PhoneNumber`` here.
         try:
-            validate_email(username)
+            validate_email_base(username)
             contact_kwargs = {'email__iexact': username}
         except ValidationError:
             pass
