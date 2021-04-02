@@ -106,7 +106,7 @@ def validate_username_or_email_or_phone(value): #pylint:disable=invalid-name
 
 def as_email_or_phone(value):
     try:
-        validate_email(value)
+        validate_email_base(value)
         return value, None
     except ValidationError:
         try:
