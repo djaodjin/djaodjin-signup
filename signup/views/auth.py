@@ -565,7 +565,7 @@ class SigninBaseView(RedirectFormMixin, ProcessFormView):
         user_with_backend = authenticate(self.request,
             username=username, password=password)
 
-        contact = Contact.objects.filter(user=user_with_backend).first()
+        contact = Contact.objects.find_by_username_or_comm(username).first()
         if contact and contact.mfa_backend:
             if not contact.mfa_priv_key:
                 form = self.get_mfa_form()

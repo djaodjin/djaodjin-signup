@@ -257,10 +257,10 @@ sbF9uYW1lIjoiRG9ubnkgQ29vcGVyIiwiZXhwIjoxNTI5NjU4NzEwfQ.F2y\
             username = serializer.validated_data.get('username')
             password = serializer.validated_data.get('password')
             try:
-                user = self.model.objects.find_user(username)
+                candidate_user = self.model.objects.find_user(username)
 
                 # Rate-limit based on the user.
-                self.check_user_throttles(self.request, user)
+                self.check_user_throttles(self.request, candidate_user)
 
                 user = authenticate(
                     request, username=username, password=password)
@@ -288,7 +288,7 @@ sbF9uYW1lIjoiRG9ubnkgQ29vcGVyIiwiZXhwIjoxNTI5NjU4NzEwfQ.F2y\
                     self.optional_session_cookie(request, user)
                     return self.create_token(user)
 
-                if not check_has_credentials(request, user):
+                if not check_has_credentials(request, candidate_user):
                     raise serializers.ValidationError({'detail': _(
                 "This email address has already been registered!"\
                " You should now secure and activate your account following"\
