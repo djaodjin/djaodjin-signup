@@ -156,7 +156,7 @@ def aws_bucket_context(request, location, acls=None, aws_upload_role=None,
     Context to use in templates to upload from the client brower
     to the bucket directly.
     """
-    #pylint:disable=too-many-arguments
+    #pylint:disable=too-many-arguments,too-many-locals
     context = {}
     if is_authenticated(request):
         # Derives a bucket_name and key_prefix from a location
@@ -178,8 +178,15 @@ def aws_bucket_context(request, location, acls=None, aws_upload_role=None,
             key_prefix = key_prefix[1:]
         if key_prefix and key_prefix.endswith('/'):
             key_prefix = key_prefix[:-1]
+
+        bucket_location = None
         if not aws_region:
-            aws_region = settings.AWS_REGION
+            s3_client = boto3.client('s3')
+            resp = s3_client.get_bucket_location(Bucket=bucket_name)
+            aws_region = resp['LocationConstraint']
+        if not bucket_location:
+            bucket_location = "https://%s.s3-%s.amazonaws.com/%s" % (
+                bucket_name, aws_region, key_prefix)
 
         requested_at = datetime_or_now()
 
@@ -203,8 +210,7 @@ def aws_bucket_context(request, location, acls=None, aws_upload_role=None,
                 request.session['secret_key'],
                 security_token=request.session['security_token'],
                 bucket=bucket_name, key_prefix=key_prefix))
-        context.update({"location": "https://%s.s3-%s.amazonaws.com/%s" % (
-                bucket_name, aws_region, key_prefix)})
+        context.update({"location": bucket_location})
     return context
 
 
