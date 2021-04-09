@@ -25,6 +25,7 @@
 import datetime, base64, hashlib, hmac, json, logging
 
 import boto3
+from botocore.exceptions import ClientError
 
 from .. import settings
 from ..compat import is_authenticated, urlparse
@@ -182,8 +183,17 @@ def aws_bucket_context(request, location, acls=None, aws_upload_role=None,
         bucket_location = None
         if not aws_region:
             s3_client = boto3.client('s3')
-            resp = s3_client.get_bucket_location(Bucket=bucket_name)
-            aws_region = resp['LocationConstraint']
+            try:
+                resp = s3_client.get_bucket_location(Bucket=bucket_name)
+                aws_region = resp['LocationConstraint']
+                if not aws_region:
+                    aws_region = 'us-east-1' # returns null, go figure!
+                LOGGER.info("derived AWS region '%s' for bucket '%s'",
+                    aws_region, bucket_name)
+            except ClientError as err:
+                aws_region = settings.AWS_REGION
+                LOGGER.info("use default AWS region '%s' for bucket '%s'",
+                    aws_region, bucket_name)
         if not bucket_location:
             bucket_location = "https://%s.s3-%s.amazonaws.com/%s" % (
                 bucket_name, aws_region, key_prefix)

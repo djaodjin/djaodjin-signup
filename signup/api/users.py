@@ -636,6 +636,8 @@ class UserPictureAPIView(ContactMixin, CreateAPIView):
             hashlib.sha256(uploaded_file.read()).hexdigest(), ext)
         default_storage = get_picture_storage(request)
 
+        LOGGER.debug("upload picture to %s on storage %s",
+            key_name, default_storage)
         location = default_storage.url(
             default_storage.save(key_name, uploaded_file))
         # We are removing the query parameters, as they contain
