@@ -195,8 +195,12 @@ def aws_bucket_context(request, location, acls=None, aws_upload_role=None,
                 LOGGER.info("use default AWS region '%s' for bucket '%s'",
                     aws_region, bucket_name)
         if not bucket_location:
-            bucket_location = "https://%s.s3-%s.amazonaws.com/%s" % (
-                bucket_name, aws_region, key_prefix)
+            if aws_region == 'us-east-1':
+                bucket_location = "https://%s.s3.amazonaws.com/%s" % (
+                    bucket_name, key_prefix)
+            else:
+                bucket_location = "https://%s.s3-%s.amazonaws.com/%s" % (
+                    bucket_name, aws_region, key_prefix)
 
         requested_at = datetime_or_now()
 
