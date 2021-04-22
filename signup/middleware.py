@@ -1,4 +1,4 @@
-# Copyright (c) 2019, DjaoDjin inc.
+# Copyright (c) 2021, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -25,13 +25,20 @@
 """
 Middleware to create AWS temporary credentials
 """
+import logging
+
 from django.contrib.auth.middleware import (
     AuthenticationMiddleware as BaseAuthenticationMiddleware)
+from django.utils import translation
 from rest_framework import exceptions
 from rest_framework.settings import api_settings
 
 from .backends.sts_credentials import temporary_security_token
 from .compat import is_authenticated
+from .models import Contact
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 class AWSTemporaryCredentialsMiddleware(object):
@@ -75,7 +82,17 @@ class AuthenticationMiddleware(BaseAuthenticationMiddleware):
                         #pylint:disable=protected-access
                         request._authenticator = authenticator
                         request.user, request.auth = user_auth_tuple
-                        return
+                        break
             except exceptions.AuthenticationFailed:
                 # Keep the anonymous user.
                 pass
+
+        if is_authenticated(request):
+            accept = request.META.get('HTTP_ACCEPT_LANGUAGE', '')
+            if not accept:
+                contact = Contact.objects.filter(
+                    email=request.user.email).order_by('email').first()
+                if contact:
+                    LOGGER.debug("no Accept-Language HTTP header,"\
+                        " defaults to language '%s' in contact.", contact.lang)
+                    translation.activate(contact.lang)
