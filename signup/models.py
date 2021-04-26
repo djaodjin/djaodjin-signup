@@ -42,7 +42,7 @@ from phonenumber_field.modelfields import PhoneNumberField
 
 from . import settings, signals
 from .backends.mfa import EmailMFABackend
-from .compat import import_string, python_2_unicode_compatible
+from .compat import import_string, python_2_unicode_compatible, six
 from .helpers import datetime_or_now, full_name_natural_split
 from .utils import generate_random_slug, has_invalid_password
 from .validators import validate_phone
@@ -600,6 +600,17 @@ class Credentials(models.Model):
             self._api_priv_key = None
             self.save(update_fields=["api_priv_key"])
         return check_password(raw_api_priv_key, self.api_priv_key, setter)
+
+
+def get_user_contact(user):
+    if isinstance(settings.USER_CONTACT_CALLABLE, six.string_types):
+        return import_string(settings.USER_CONTACT_CALLABLE)(user)
+    if user:
+        return Contact.objects.filter(
+            models.Q(slug=user.username)
+            | models.Q(email=user.email)).order_by(
+            'slug', 'email').first()
+    return None
 
 
 # Hack to install our create_user method.

@@ -35,7 +35,7 @@ from rest_framework.settings import api_settings
 
 from .backends.sts_credentials import temporary_security_token
 from .compat import is_authenticated
-from .models import Contact
+from .models import get_user_contact
 
 
 LOGGER = logging.getLogger(__name__)
@@ -90,8 +90,7 @@ class AuthenticationMiddleware(BaseAuthenticationMiddleware):
         if is_authenticated(request):
             accept = request.META.get('HTTP_ACCEPT_LANGUAGE', '')
             if not accept:
-                contact = Contact.objects.filter(
-                    email=request.user.email).order_by('email').first()
+                contact = get_user_contact(request.user)
                 if contact:
                     LOGGER.debug("no Accept-Language HTTP header,"\
                         " defaults to language '%s' in contact.", contact.lang)
