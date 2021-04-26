@@ -120,7 +120,12 @@ class UserActivateAPIView(ContactMixin, GenericAPIView):
         if check_has_credentials(request, instance.user):
             raise ValidationError({'detail': _("User is already active")})
         serializer = self.get_serializer(instance)
-        return Response(serializer.data)
+        resp_data = serializer.data
+        resp_data.update({
+            'detail': _("Activation e-mail successfuly sent to %(email)s") % {
+                'email': instance.email}
+        })
+        return Response(resp_data)
 
 
 class UserDetailAPIView(ContactMixin, RetrieveUpdateDestroyAPIView):
@@ -302,6 +307,10 @@ class UserDetailAPIView(ContactMixin, RetrieveUpdateDestroyAPIView):
                 serializer.save()
             except IntegrityError as err:
                 handle_uniq_error(err)
+        # A little patchy but it works. Otherwise we would need to override
+        # `update` as well.
+        serializer.data
+        serializer._data.update({'detail': _("Profile updated.")})
 
 
 class UserListCreateAPIView(ListCreateAPIView):

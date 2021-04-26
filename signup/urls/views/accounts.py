@@ -46,6 +46,6 @@ urlpatterns = [
         SigninView.as_view(), name='login'),
     url(r'^logout/',
         SignoutView.as_view(), name='logout'),
-    url(r'^reset/(?P<uidb64>[0-9A-Za-z_\-]+)/(?P<token>[0-9A-Za-z]{1,13}-[0-9A-Za-z]{1,20})/$', #pylint: disable=line-too-long
+    url(r'^reset/(?P<uidb64>[0-9A-Za-z_\-]+)/(?P<token>[0-9A-Za-z\-]+)/$',
         PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
 ]

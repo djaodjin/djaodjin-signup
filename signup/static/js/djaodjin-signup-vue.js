@@ -155,7 +155,7 @@ Vue.component('user-update', {
             formFields: {},
             userModalOpen: false,
             apiModalOpen: false,
-            apiKey: gettext("Generating ..."),
+            apiKey: "Generating ...",
             picture: null,
             password: '',
         };
@@ -165,9 +165,9 @@ Vue.component('user-update', {
             var vm = this;
             vm.reqPost(vm.api_activate_url,
             function(resp) {
-                showMessages([interpolate(gettext(
-                    "Activation e-mail successfuly sent to %s"),
-                    [resp.email])], "info");
+                if( resp.detail ) {
+                    showMessages([resp.detail], "info");
+                }
             }, function(resp){
                 showErrorMessages(resp);
             });
@@ -221,9 +221,9 @@ Vue.component('user-update', {
             function(resp) {
                 // XXX should really be success but then it needs to be changed
                 // in Django views as well.
-                showMessages([gettext("Profile updated.")], "info");
-            }, function(resp){
-                showErrorMessages(resp);
+                if( resp.detail ) {
+                    showMessages([resp.detail], "info");
+                }
             });
             if(vm.imageSelected){
                 vm.uploadProfilePicture();
@@ -296,11 +296,6 @@ Vue.component('user-update-password', {
     methods: {
         modalShowAndValidate: function() {
             var vm = this;
-            if(vm.newPassword != vm.newPassword2){
-                showMessages([gettext(
-                    "Password and confirmation do not match.")], "danger");
-                return;
-            }
             vm.modalShow();
         },
         updatePassword: function(){
@@ -316,7 +311,9 @@ Vue.component('user-update-password', {
                 vm.modalHide();
                 vm.newPassword = '';
                 vm.newPassword2 = '';
-                showMessages([gettext("Password was updated.")], "success");
+                if( resp.detail ) {
+                    showMessages([resp.detail], "success");
+                }
             }, vm.failCb);
         },
         submitPassword: function(){
@@ -347,7 +344,9 @@ Vue.component('user-update-pubkey', {
                 password: vm.password,
             }, function(resp){
                 vm.modalHide();
-                showMessages([gettext("Public key was updated.")], "success");
+                if( resp.detail ) {
+                    showMessages([resp.detail], "success");
+                }
             }, vm.failCb);
         },
         submitPassword: function(){
