@@ -14,8 +14,8 @@ you should decorate the view with an *active_required* decorator.
 Tested with
 
 - **Python:** 3.6, **Django:** 2.2 ([LTS](https://www.djangoproject.com/download/)), **Django Rest Framework:** 3.11
-- **Python:** 3.6, **Django:** 3.0 (latest), **Django Rest Framework:** 3.11
-- **Python:** 2.7 (end-of-life), **Django:** 1.11, **Django Rest Framework:** 3.9.4
+- **Python:** 3.6, **Django:** 3.2 (latest), **Django Rest Framework:** 3.11
+- **Python:** 2.7, **Django:** 1.11 (legacy), **Django Rest Framework:** 3.9.4
 
 This project contains bare bone templates which are compatible with Django
 and Jinja2 template engines. To see djaodjin-signup in action as part
@@ -70,9 +70,11 @@ run the testsite webapp.
 Release Notes
 =============
 
-0.4.8
+0.4.10
 
-  * adds preferred communication language
-  * introduces hook for dynamic validator of e-mail addresses
+  * moved all translations server-side
+  * fixes in handling contact language preference
+  * fixes interaction between reset password and bot prevention
+  * fixes generation of AWS credentials for us-east-1 region
 
 [previous release notes](changelog)

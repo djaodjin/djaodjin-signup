@@ -1,3 +1,12 @@
+0.4.10
+
+  * moved all translations server-side
+  * fixes in handling contact language preference
+  * fixes interaction between reset password and bot prevention
+  * fixes generation of AWS credentials for us-east-1 region
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Mon,  26 Apr 2021 13:10:00 -0700
+
 0.4.9
 
   * removes optional native python-ldap prerequisite
