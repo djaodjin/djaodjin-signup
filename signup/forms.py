@@ -110,13 +110,29 @@ class FrictionlessSignupForm(forms.Form):
         if settings.REQUIRES_RECAPTCHA:
             self.fields['captcha'] = ReCaptchaField()
 
+    def clean_email(self):
+        # If we don't convert `''` to `None`, the database will later complain
+        # unique constraints are not respected.
+        email = self.cleaned_data['email']
+        if not email:
+            self.cleaned_data['email'] = None
+        return self.cleaned_data['email']
+
+    def clean_phone(self):
+        # If we don't convert `''` to `None`, the database will later complain
+        # unique constraints are not respected.
+        phone = self.cleaned_data['phone']
+        if not phone:
+            self.cleaned_data['phone'] = None
+        return self.cleaned_data['phone']
+
     def clean(self):
         super(FrictionlessSignupForm, self).clean()
         if not ('email' in self._errors or 'phone' in self._errors):
             if 'email' in self.data and 'phone' in self.data:
                 email = self.cleaned_data['email']
                 phone = self.cleaned_data['phone']
-                if not email or not phone:
+                if not (email or phone):
                     raise forms.ValidationError(
                         {'email': _("Either email or phone must be valid."),
                          'phone': _("Either email or phone must be valid.")})
