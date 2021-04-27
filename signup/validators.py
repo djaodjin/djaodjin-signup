@@ -64,7 +64,7 @@ class PhoneValidator:
             raise ValidationError(
                 _("The phone number entered is not valid."),
                 code="invalid_phone_number")
-        return phone.as_e164()
+        return phone.as_e164
 
     def __eq__(self, other):
         return (
