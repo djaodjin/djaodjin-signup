@@ -70,11 +70,8 @@ run the testsite webapp.
 Release Notes
 =============
 
-0.4.10
+0.4.11
 
-  * moved all translations server-side
-  * fixes in handling contact language preference
-  * fixes interaction between reset password and bot prevention
-  * fixes generation of AWS credentials for us-east-1 region
+  * gives opportunity to UI to internationalize notifications description
 
 [previous release notes](changelog)

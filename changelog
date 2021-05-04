@@ -1,3 +1,9 @@
+0.4.11
+
+  * gives opportunity to UI to internationalize notifications description
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Mon,  04 May 2021 14:02:00 -0700
+
 0.4.10
 
   * moved all translations server-side
