@@ -122,37 +122,43 @@ class UserNotificationsView(UserMixin, UpdateView):
     template_name = 'users/notifications.html'
 
     @staticmethod
-    def get_notifications():
-        return Notification.objects.all()
+    def get_notifications(user=None):#pylint:disable=unused-argument
+        return {}
 
     def form_valid(self, form):
         with transaction.atomic():
             notifications = self.get_initial().get('notifications')
             self.object.notifications.clear()
             for notification_slug, enabled in six.iteritems(form.cleaned_data):
+                if not notification_slug in notifications:
+                    continue
+                #pylint:disable=unused-variable
+                notification, notused = Notification.objects.get_or_create(
+                    slug=notification_slug)
                 if settings.NOTIFICATIONS_OPT_OUT:
                     if not enabled:
-                        self.object.notifications.add(
-                            notifications.get(notification_slug)[0])
+                        self.object.notifications.add(notification)
                 else:
                     if enabled:
-                        self.object.notifications.add(
-                            notifications.get(notification_slug)[0])
+                        self.object.notifications.add(notification)
         return HttpResponseRedirect(self.get_success_url())
 
     def get_initial(self):
         notifications = {}
-        enabled = self.user.notifications.all()
+        enabled = list(self.user.notifications.all().values_list(
+            'slug', flat=True))
         if settings.NOTIFICATIONS_OPT_OUT:
-            for notification in self.get_notifications():
+            for notification_slug, notification_data in six.iteritems(
+                    self.get_notifications(self.user)):
                 notifications.update({
-                    notification.slug: (
-                        notification, notification not in enabled)})
+                    notification_slug: (
+                        notification_data, notification_slug not in enabled)})
         else:
-            for notification in self.get_notifications():
+            for notification_slug, notification_data in six.iteritems(
+                    self.get_notifications(self.user)):
                 notifications.update({
-                    notification.slug: (
-                        notification, notification in enabled)})
+                    notification_slug: (
+                        notification_data, notification_slug in enabled)})
         return {'notifications': notifications}
 
     def get_success_url(self):

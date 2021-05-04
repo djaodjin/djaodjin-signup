@@ -556,7 +556,9 @@ class Notification(models.Model):
     has a M2M relation with users, which allows to store a user's
     email notifications preferences
     """
-    slug = models.SlugField(unique=True,
+    NOTIFICATION_TYPE = settings.NOTIFICATION_TYPE
+
+    slug = models.SlugField(unique=True, choices=NOTIFICATION_TYPE,
         help_text=_("Unique identifier shown in the URL bar"))
     title = models.CharField(max_length=100, blank=True)
     description = models.TextField(null=True, blank=True)

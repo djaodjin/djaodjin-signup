@@ -197,10 +197,14 @@ class ContactDetailSerializer(ContactSerializer):
             'activities',)
 
 
+class StringListField(serializers.ListField):
+    child = serializers.CharField()
+
 class NotificationsSerializer(serializers.ModelSerializer):
 
-    notifications = serializers.SlugRelatedField(many=True,
-        slug_field='slug', queryset=Notification.objects.all())
+    notifications = StringListField(allow_empty=True,
+        help_text=_("List of notifications from %s") %
+            ', '.join([item[0] for item in Notification.NOTIFICATION_TYPE]))
 
     class Meta:
         model = get_user_model()

@@ -1,4 +1,4 @@
-# Copyright (c) 2020, DjaoDjin inc.
+# Copyright (c) 2021, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -33,18 +33,18 @@ from django.utils.translation import ugettext_lazy as _
 from rest_framework import parsers, status
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import (CreateAPIView, ListCreateAPIView,
-    RetrieveUpdateDestroyAPIView, GenericAPIView, UpdateAPIView)
+    RetrieveUpdateDestroyAPIView, GenericAPIView, RetrieveUpdateAPIView)
 from rest_framework.response import Response
 from rest_framework.settings import api_settings
 
 
 from .. import filters, settings
-from ..compat import urlparse, urlunparse
+from ..compat import six, urlparse, urlunparse
 from ..decorators import check_has_credentials
 from ..docs import OpenAPIResponse, no_body, swagger_auto_schema
 from ..helpers import full_name_natural_split
-from ..mixins import ContactMixin
-from ..models import Contact
+from ..mixins import ContactMixin, UserMixin
+from ..models import Contact, Notification
 from ..serializers import (ContactSerializer, ContactDetailSerializer,
     PasswordChangeSerializer, NotificationsSerializer, UploadBlobSerializer,
     ValidationErrorSerializer)
@@ -309,6 +309,7 @@ class UserDetailAPIView(ContactMixin, RetrieveUpdateDestroyAPIView):
                 handle_uniq_error(err)
         # A little patchy but it works. Otherwise we would need to override
         # `update` as well.
+        #pylint:disable=pointless-statement,protected-access
         serializer.data
         serializer._data.update({'detail': _("Profile updated.")})
 
@@ -577,9 +578,9 @@ class PasswordChangeAPIView(GenericAPIView):
         return Response({'detail': _("Password updated successfully.")})
 
 
-class UserNotificationsAPIView(UpdateAPIView):
+class UserNotificationsAPIView(UserMixin, RetrieveUpdateAPIView):
     """
-    Changes a user notifications preferences
+    Lists a user notifications preferences
 
     **Tags: profile
 
@@ -587,13 +588,7 @@ class UserNotificationsAPIView(UpdateAPIView):
 
     .. code-block:: http
 
-        POST /api/users/donny/notifications/ HTTP/1.1
-
-    .. code-block:: json
-
-        {
-          "notifications": ["user_registered_notice"]
-        }
+        GET /api/users/donny/notifications/ HTTP/1.1
 
     responds
 
@@ -605,8 +600,80 @@ class UserNotificationsAPIView(UpdateAPIView):
     """
     lookup_field = 'username'
     lookup_url_kwarg = 'user'
-    serializer_class = NotificationsSerializer
     queryset = get_user_model().objects.filter(is_active=True)
+    serializer_class = NotificationsSerializer
+
+    def put(self, request, *args, **kwargs):
+        """
+        Changes a user notifications preferences
+
+        **Tags: profile
+
+        **Example
+
+        .. code-block:: http
+
+            POST /api/users/donny/notifications/ HTTP/1.1
+
+        .. code-block:: json
+
+            {
+              "notifications": ["user_registered_notice"]
+            }
+
+        responds
+
+        .. code-block:: json
+
+            {
+              "notifications": ["user_registered_notice"]
+            }
+        """
+        return self.update(request, *args, **kwargs)
+
+    @staticmethod
+    def get_notifications(user=None):#pylint:disable=unused-argument
+        return {}
+
+    def retrieve(self, request, *args, **kwargs):
+        notification_slugs = self.user.notifications.values_list(
+            'slug', flat=True)
+        notifications = []
+        for notification_slug in six.iterkeys(self.get_notifications(
+                    user=self.user)):
+            enabled = (notification_slug in notification_slugs)
+            if settings.NOTIFICATIONS_OPT_OUT:
+                if not enabled:
+                    notifications += [notification_slug]
+            else:
+                if enabled:
+                    notifications += [notification_slug]
+        return Response({'notifications': notifications})
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        serializer = self.get_serializer(
+            self.user, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return self.retrieve(request, *args, **kwargs)
+
+    def perform_update(self, serializer):
+        notification_slugs = serializer.validated_data.get('notifications', [])
+        with transaction.atomic():
+            self.user.notifications.clear()
+            for notification_slug in six.iterkeys(self.get_notifications(
+                    user=self.user)):
+                enabled = (notification_slug in notification_slugs)
+                #pylint:disable=unused-variable
+                notification, notused = Notification.objects.get_or_create(
+                    slug=notification_slug)
+                if settings.NOTIFICATIONS_OPT_OUT:
+                    if not enabled:
+                        self.user.notifications.add(notification)
+                else:
+                    if enabled:
+                        self.user.notifications.add(notification)
 
 
 class UserPictureAPIView(ContactMixin, CreateAPIView):
