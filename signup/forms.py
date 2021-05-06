@@ -410,6 +410,10 @@ class StartAuthenticationForm(forms.Form):
 
     submit_title = _("Submit")
 
+    def __init__(self, *args, **kwargs):
+        kwargs.pop('request')
+        super(StartAuthenticationForm, self).__init__(*args, **kwargs)
+
 
 class AuthenticationForm(AuthenticationBaseForm):
 

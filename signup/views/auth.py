@@ -551,7 +551,6 @@ class SigninBaseView(RedirectFormMixin, ProcessFormView):
         try:
             user = self.model.objects.find_user(username)
         except self.model.DoesNotExist:
-            form.add_error('username', _("username or password is incorrect."))
             return self.form_invalid(form)
 
         self.check_user_throttles(self.request, user)
