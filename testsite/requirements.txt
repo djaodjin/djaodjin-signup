@@ -1,5 +1,5 @@
 boto3==1.17.12
-Django==2.2.20
+Django==2.2.22
 django-phonenumber-field==5.0.0
 django-recaptcha==2.0.6
 django-storages==1.9.1
