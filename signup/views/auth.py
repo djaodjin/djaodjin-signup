@@ -33,7 +33,7 @@ from django.contrib.auth import (login as auth_login, logout as auth_logout,
 from django.contrib.auth.tokens import default_token_generator
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
-from django.http import HttpResponseRedirect
+from django.http import Http404, HttpResponseRedirect
 from django.template.response import TemplateResponse
 from django.utils import translation
 from django.utils.encoding import force_bytes
@@ -498,7 +498,10 @@ class ActivationBaseView(RedirectFormMixin, ActivateMixin, UpdateView):
 
     def get_object(self, queryset=None):  #pylint:disable=unused-argument
         token = self.contact
-        return token.user if token else None
+        if not token:
+            raise Http404(_("Cannot find activation token '%(token)s'") % {
+                'token': self.kwargs.get(self.key_url_kwarg)})
+        return token.user
 
 
 class SigninBaseView(RedirectFormMixin, ProcessFormView):

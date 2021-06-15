@@ -251,7 +251,12 @@ class ContactManager(models.Manager):
                 # we end-up with a TransactionManager error when Contact.slug
                 # already exists in db and we generate new one.
                 contact = self.get(user=user, email=email)
-                contact.email_verification_key = verification_key
+                if not contact.email_verification_key:
+                    # If we already have a verification key, let's keep it.
+                    # We want to avoid users clicking multiple times on a link
+                    # that will trigger an activate url, then filling the first
+                    # form that showed up.
+                    contact.email_verification_key = verification_key
                 contact.email_verification_at = at_time
                 # XXX It is possible a 'reason' field would be a better
                 # implementation.
@@ -292,7 +297,12 @@ class ContactManager(models.Manager):
                 # we end-up with a TransactionManager error when Contact.slug
                 # already exists in db and we generate new one.
                 contact = self.get(user=user, phone=phone)
-                contact.phone_verification_key = verification_key
+                if not contact.phone_verification_key:
+                    # If we already have a verification key, let's keep it.
+                    # We want to avoid users clicking multiple times on a link
+                    # that will trigger an activate url, then filling the first
+                    # form that showed up.
+                    contact.phone_verification_key = verification_key
                 contact.phone_verification_at = at_time
                 # XXX It is possible a 'reason' field would be a better
                 # implementation.
