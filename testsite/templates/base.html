@@ -50,8 +50,9 @@
 <script type="text/javascript" charset="utf-8" src="/static/js/djaodjin-resources.js"></script>
 {% if VUEJS %}
 <script type="text/javascript" charset="utf-8" src="/static/vendor/vue.js"></script>
-<script type="text/javascript" charset="utf-8" src="/static/vendor/uiv.min.js"></script>
-<script type="text/javascript" charset="utf-8" src="/static/vendor/vue-croppa.min.js"></script>
+<script type="text/javascript" charset="utf-8" src="/static/vendor/vue-croppa.js"></script>
+<script type="text/javascript" charset="utf-8" src="/static/js/djaodjin-resources-vue.js"></script>
+<script type="text/javascript" charset="utf-8" src="/static/js/djaodjin-signup-vue.js"></script>
 <script type="text/javascript">
 Vue.prototype.$itemsPerPage =
     {% if items_per_page %}{{items_per_page}}{% else %}25{% endif %};
@@ -63,12 +64,8 @@ Vue.prototype.$dateRange = {
 };
 Vue.prototype.$urls = {% if urls %}{{urls|to_json}}{% else %}{}{% endif %};
 
-Vue.use(uiv, {prefix: 'uiv'});
 Vue.use(Croppa);
-</script>
-<script type="text/javascript" charset="utf-8" src="/static/js/djaodjin-resources-vue.js"></script>
-<script type="text/javascript" charset="utf-8" src="/static/js/djaodjin-signup-vue.js"></script>
-<script type="text/javascript">
+
 var app = new Vue({
   el: '#app',
   delimiters: ["[[","]]"],

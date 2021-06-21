@@ -1,20 +1,6 @@
 /** Components running in the browser.
  */
 
-Vue.filter('formatDate', function(value, format) {
-  if (value) {
-    if(!format){
-        format = 'MM/DD/YYYY hh:mm'
-    }
-    if(!(value instanceof Date)){
-        value = String(value);
-    }
-    return moment(value).format(format)
-  }
-});
-
-var DATE_FORMAT = 'MMM DD, YYYY';
-
 
 var userPasswordModalMixin = {
     data: function () {

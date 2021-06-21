@@ -44,7 +44,7 @@
       <div
          ng-repeat="entry in items.results"
          v-for="entry in items.results">
-        <p>[[entry.created_at | formatDate('MMM D, Y')]] by [[entry.created_by]]:</p>
+        <p>[[entry.created_at]] by [[entry.created_by]]:</p>
         <div>[[entry.text]]</div>
       </div>
     </div>

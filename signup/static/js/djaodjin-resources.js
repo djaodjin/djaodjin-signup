@@ -114,6 +114,23 @@ function showErrorMessages(resp) {
 };
 
 
+/** Formats a date shown to the user.
+*/
+var DATE_FORMAT = 'MMM DD, YYYY';
+
+function formatDate(value, format) {
+  if (value) {
+    if(!format){
+        format = DATE_FORMAT;
+    }
+    if(!(value instanceof Date)){
+        value = String(value);
+    }
+    return moment(value).format(format)
+  }
+};
+
+
 /** Retrieves the csrf-token from a <head> meta tag.
 
     <meta name="csrf-token" content="{{csrf_token}}">

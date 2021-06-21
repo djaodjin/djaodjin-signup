@@ -9,6 +9,9 @@ CONFIG_DIR    ?= $(srcDir)
 # XXX CONFIG_DIR should really be $(installTop)/etc/testsite
 LOCALSTATEDIR ?= $(installTop)/var
 
+installDirs   ?= install -d
+installFiles  ?= install -p -m 644
+NPM           ?= npm
 PYTHON        := $(binDir)/python
 SQLITE        := sqlite3
 
@@ -52,3 +55,18 @@ initdb: install-conf
 doc:
 	$(installDirs) build/docs
 	cd $(srcDir) && sphinx-build -b html ./docs $(PWD)/build/docs
+
+
+vendor-assets-prerequisites: $(installTop)/.npm/djaodjin-signup-packages
+
+$(installTop)/.npm/djaodjin-signup-packages: $(srcDir)/testsite/package.json
+	$(installFiles) $^ $(installTop)
+	$(NPM) install --loglevel verbose --cache $(installTop)/.npm --tmp $(installTop)/tmp --prefix $(installTop)
+	$(installDirs) -d $(srcDir)/testsite/static/vendor
+	$(installFiles) $(installTop)/node_modules/jquery/dist/jquery.js $(srcDir)/testsite/static/vendor
+	$(installFiles) $(installTop)/node_modules/moment/moment.js $(srcDir)/testsite/static/vendor
+	$(installFiles) $(installTop)/node_modules/moment-timezone/builds/moment-timezone-with-data.js $(srcDir)/testsite/static/vendor
+	$(installFiles) $(installTop)/node_modules/vue/dist/vue.js $(srcDir)/testsite/static/vendor
+	$(installFiles) $(installTop)/node_modules/vue-croppa/dist/vue-croppa.js $(srcDir)/testsite/static/vendor
+	$(installFiles) $(installTop)/node_modules/vue-infinite-loading/dist/vue-infinite-loading.js $(srcDir)/testsite/static/vendor
+	touch $@
