@@ -8,6 +8,7 @@
             method="post">
             {% csrf_token %}
             {{ form }}
+            <input type="hidden" name="terms-of-use" value="False">
             <input type="submit" name="submit" value="Submit" />
         </form>
         <div>
