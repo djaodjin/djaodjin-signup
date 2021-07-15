@@ -25,7 +25,6 @@
 from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic.base import RedirectView, TemplateView
-from django.views.i18n import JavaScriptCatalog
 from rules.urldecorators import include, url
 from signup.compat import reverse_lazy
 from signup.decorators import fail_authenticated
@@ -65,7 +64,6 @@ urlpatterns = \
         name='registration_register'),
     url(r'^', include('signup.urls.views.accounts')),
 
-    url(r'^jsi18n/$', JavaScriptCatalog.as_view(), name='javascript-catalog'),
     url(r'^app/', TemplateView.as_view(template_name='app.html'),
         redirects=[fail_authenticated]),
     url(r'^$', RedirectView.as_view(url=reverse_lazy('registration_register'))),

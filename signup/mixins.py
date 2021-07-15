@@ -1,4 +1,4 @@
-# Copyright (c) 2020, Djaodjin Inc.
+# Copyright (c) 2021, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -26,10 +26,17 @@ import logging
 
 from django.http import Http404
 from django.contrib.auth import get_user_model
+from django.utils import translation
+from django.utils.safestring import mark_safe
+from django.utils.translation import ugettext_lazy as _
+from rest_framework import serializers
 from rest_framework.generics import get_object_or_404
+from rest_framework.settings import api_settings
 
 from . import signals
 from .compat import is_authenticated, reverse, six
+from .decorators import check_has_credentials
+from .helpers import full_name_natural_split
 from .models import Contact
 
 
@@ -120,6 +127,89 @@ class ContactMixin(UrlsMixin):
             user = get_object_or_404(self.user_queryset, **filter_kwargs)
             obj = self.as_contact(user)
         return obj
+
+
+class RegisterMixin(object):
+
+    backend_path = 'signup.backends.auth.UsernameOrEmailPhoneModelBackend'
+
+    @staticmethod
+    def first_and_last_names(**cleaned_data):
+        first_name = cleaned_data.get('first_name', None)
+        last_name = cleaned_data.get('last_name', None)
+        if not first_name:
+            # If the form does not contain a first_name/last_name pair,
+            # we assume a full_name was passed instead.
+            full_name = cleaned_data.get(
+                'user_full_name', cleaned_data.get('full_name', None))
+            first_name, _, last_name = full_name_natural_split(full_name)
+        return first_name, last_name
+
+    def register_user(self, next_url=None, **cleaned_data):
+        email = cleaned_data.get('email', None)
+        if email:
+            try:
+                user = self.model.objects.find_user(email)
+                if check_has_credentials(self.request, user, next_url=next_url):
+                    raise serializers.ValidationError(
+                        {'email':
+                         _("A user with that e-mail address already exists."),
+                         api_settings.NON_FIELD_ERRORS_KEY:
+                         mark_safe(_(
+                             "This email address has already been registered!"\
+    " Please <a href=\"%s\">login</a> with your credentials. Thank you.")
+                            % reverse('login'))})
+                raise serializers.ValidationError(
+                    {'email':
+                     _("A user with that e-mail address already exists."),
+                     api_settings.NON_FIELD_ERRORS_KEY:
+                     mark_safe(_(
+                         "This email address has already been registered!"\
+    " You should now secure and activate your account following "\
+    " the instructions we just emailed you. Thank you."))})
+            except self.model.DoesNotExist:
+                # OK to continue. We will have raised an exception in all other
+                # cases.
+                pass
+
+        phone = cleaned_data.get('phone', None)
+        if phone:
+            try:
+                user = self.model.objects.find_user(phone)
+                if check_has_credentials(self.request, user, next_url=next_url):
+                    raise serializers.ValidationError(
+                        {'phone':
+                         _("A user with that phone number already exists."),
+                         api_settings.NON_FIELD_ERRORS_KEY:
+                         mark_safe(_(
+                             "This phone number has already been registered!"\
+    " Please <a href=\"%s\">login</a> with your credentials. Thank you.")
+                            % reverse('login'))})
+                raise serializers.ValidationError(
+                    {'phone':
+                     _("A user with that phone number already exists."),
+                     api_settings.NON_FIELD_ERRORS_KEY:
+                     mark_safe(_(
+                         "This phone number has already been registered!"\
+    " You should now secure and activate your account following "\
+    " the instructions we just messaged you. Thank you."))})
+            except self.model.DoesNotExist:
+                # OK to continue. We will have raised an exception in all other
+                # cases.
+                pass
+
+        first_name, last_name = self.first_and_last_names(**cleaned_data)
+        username = cleaned_data.get('username', None)
+        password = cleaned_data.get('new_password',
+            cleaned_data.get('password', None))
+        lang = translation.get_language_from_request(self.request)
+        user = self.model.objects.create_user(username,
+            email=email, password=password, phone=phone,
+            first_name=first_name, last_name=last_name, lang=lang)
+        # Bypassing authentication here, we are doing frictionless registration
+        # the first time around.
+        user.backend = self.backend_path
+        return user
 
 
 class UserMixin(UrlsMixin):

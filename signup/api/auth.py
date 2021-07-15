@@ -29,7 +29,6 @@ from django.contrib.auth import (REDIRECT_FIELD_NAME, get_user_model,
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
-from django.utils.safestring import mark_safe
 from django.utils.translation import ugettext_lazy as _
 import jwt
 from rest_framework import exceptions, permissions, status, serializers
@@ -42,8 +41,8 @@ from ..auth import validate_redirect
 from ..compat import reverse, six
 from ..decorators import check_has_credentials
 from ..docs import OpenAPIResponse, no_body, swagger_auto_schema
-from ..helpers import as_timestamp, datetime_or_now, full_name_natural_split
-from ..mixins import ActivateMixin
+from ..helpers import as_timestamp, datetime_or_now
+from ..mixins import ActivateMixin, RegisterMixin
 from ..models import Contact
 from ..serializers import (ActivateUserSerializer, CredentialsSerializer,
     CreateUserSerializer,
@@ -367,7 +366,7 @@ JwcBUUMECj8AKxsHtRHUSypco"
         raise serializers.ValidationError({'detail': "invalid request"})
 
 
-class JWTRegister(JWTBase):
+class JWTRegister(RegisterMixin, JWTBase):
     """
     Registers a user
 
@@ -405,40 +404,6 @@ JwcBUUMECj8AKxsHtRHUSypco"
     model = get_user_model()
     permission_classes = [AllowAuthenticationEnabled, AllowRegistrationEnabled]
     serializer_class = CreateUserSerializer
-
-    def register_user(self, **validated_data):
-        #pylint: disable=maybe-no-member
-        email = validated_data['email']
-        users = self.model.objects.filter(email=email)
-        if users.exists():
-            user = users.get()
-            if check_has_credentials(self.request, user):
-                raise serializers.ValidationError(mark_safe(_(
-                    'This email address has already been registered!'\
-' Please <a href="%s">login</a> with your credentials. Thank you.'
-                    % reverse('login'))))
-            raise serializers.ValidationError(mark_safe(_(
-                "This email address has already been registered!"\
-" You should now secure and activate your account following "\
-" the instructions we just emailed you. Thank you.")))
-
-        first_name, mid_name, last_name = full_name_natural_split(
-            validated_data['full_name'], middle_initials=False)
-        if mid_name:
-            first_name = (first_name + " " + mid_name).strip()
-        username = validated_data.get('username', None)
-        password = validated_data.get('password', None)
-        phone = validated_data.get('phone', None)
-        lang = validated_data.get('lang', settings.LANGUAGE_CODE)
-        user = self.model.objects.create_user(username,
-            email=email, password=password,
-            first_name=first_name, last_name=last_name,
-            phone=phone, lang=lang)
-
-        # Bypassing authentication here, we are doing frictionless registration
-        # the first time around.
-        user.backend = 'django.contrib.auth.backends.ModelBackend'
-        return user
 
     def register(self, serializer):
         return self.register_user(**serializer.validated_data)

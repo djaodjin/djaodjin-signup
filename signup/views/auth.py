@@ -35,17 +35,14 @@ from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.http import Http404, HttpResponseRedirect
 from django.template.response import TemplateResponse
-from django.utils import translation
 from django.utils.encoding import force_bytes
 from django.utils.http import (urlencode, urlsafe_base64_decode,
     urlsafe_base64_encode)
-from django.utils.safestring import mark_safe
 from django.utils.translation import ugettext_lazy as _
 from django.views.decorators.cache import add_never_cache_headers
 from django.views.generic.base import TemplateResponseMixin, View
 from django.views.generic.edit import FormMixin, ProcessFormView, UpdateView
 from rest_framework import serializers
-from rest_framework.settings import api_settings
 
 from .. import settings, signals
 from ..auth import validate_redirect
@@ -54,8 +51,7 @@ from ..decorators import check_has_credentials
 from ..forms import (ActivationForm, MFACodeForm, FrictionlessSignupForm,
     PasswordResetForm, PasswordResetConfirmForm,
     UserActivateForm, AuthenticationForm)
-from ..helpers import full_name_natural_split
-from ..mixins import ActivateMixin, UrlsMixin
+from ..mixins import ActivateMixin, RegisterMixin, UrlsMixin
 from ..models import Contact
 from ..utils import (fill_form_errors, get_disabled_authentication,
     get_disabled_registration, get_login_throttle, get_password_reset_throttle,
@@ -276,7 +272,7 @@ class PasswordResetConfirmBaseView(RedirectFormMixin, ProcessFormView):
         return kwargs
 
 
-class SignupBaseView(RedirectFormMixin, ProcessFormView):
+class SignupBaseView(RedirectFormMixin, RegisterMixin, ProcessFormView):
     """
     A frictionless registration backend With a full name and email
     address, the user is immediately signed up and logged in.
@@ -284,19 +280,6 @@ class SignupBaseView(RedirectFormMixin, ProcessFormView):
     model = get_user_model()
     form_class = FrictionlessSignupForm
     fail_url = ('registration_register', (), {})
-    backend_path = 'signup.backends.auth.UsernameOrEmailPhoneModelBackend'
-
-    @staticmethod
-    def first_and_last_names(**cleaned_data):
-        first_name = cleaned_data.get('first_name', None)
-        last_name = cleaned_data.get('last_name', None)
-        if not first_name:
-            # If the form does not contain a first_name/last_name pair,
-            # we assume a full_name was passed instead.
-            full_name = cleaned_data.get(
-                'user_full_name', cleaned_data.get('full_name', None))
-            first_name, _, last_name = full_name_natural_split(full_name)
-        return first_name, last_name
 
     def dispatch(self, request, *args, **kwargs):
         if request.method.lower() in self.http_method_names:
@@ -332,76 +315,9 @@ class SignupBaseView(RedirectFormMixin, ProcessFormView):
             initial.update({key: value})
         return initial
 
-    def register_user(self, **cleaned_data):
-        email = cleaned_data.get('email', None)
-        if email:
-            try:
-                user = self.model.objects.find_user(email)
-                if check_has_credentials(self.request, user,
-                                     next_url=self.get_success_url()):
-                    raise serializers.ValidationError(
-                        {'email':
-                         _("A user with that e-mail address already exists."),
-                         api_settings.NON_FIELD_ERRORS_KEY:
-                         mark_safe(_(
-                             "This email address has already been registered!"\
-    " Please <a href=\"%s\">login</a> with your credentials. Thank you.")
-                            % reverse('login'))})
-                raise serializers.ValidationError(
-                    {'email':
-                     _("A user with that e-mail address already exists."),
-                     api_settings.NON_FIELD_ERRORS_KEY:
-                     mark_safe(_(
-                         "This email address has already been registered!"\
-    " You should now secure and activate your account following "\
-    " the instructions we just emailed you. Thank you."))})
-            except self.model.DoesNotExist:
-                # OK to continue. We will have raised an exception in all other
-                # cases.
-                pass
-
-        phone = cleaned_data.get('phone', None)
-        if phone:
-            try:
-                user = self.model.objects.find_user(phone)
-                if check_has_credentials(self.request, user,
-                                     next_url=self.get_success_url()):
-                    raise serializers.ValidationError(
-                        {'phone':
-                         _("A user with that phone number already exists."),
-                         api_settings.NON_FIELD_ERRORS_KEY:
-                         mark_safe(_(
-                             "This phone number has already been registered!"\
-    " Please <a href=\"%s\">login</a> with your credentials. Thank you.")
-                            % reverse('login'))})
-                raise serializers.ValidationError(
-                    {'phone':
-                     _("A user with that phone number already exists."),
-                     api_settings.NON_FIELD_ERRORS_KEY:
-                     mark_safe(_(
-                         "This phone number has already been registered!"\
-    " You should now secure and activate your account following "\
-    " the instructions we just messaged you. Thank you."))})
-            except self.model.DoesNotExist:
-                # OK to continue. We will have raised an exception in all other
-                # cases.
-                pass
-
-        first_name, last_name = self.first_and_last_names(**cleaned_data)
-        username = cleaned_data.get('username', None)
-        password = cleaned_data.get('new_password',
-            cleaned_data.get('password', None))
-        lang = translation.get_language_from_request(self.request)
-        user = self.model.objects.create_user(username,
-            email=email, password=password, phone=phone,
-            first_name=first_name, last_name=last_name, lang=lang)
-        # Bypassing authentication here, we are doing frictionless registration
-        # the first time around.
-        user.backend = self.backend_path
-        return user
-
     def register(self, **cleaned_data):
-        user = self.register_user(**cleaned_data)
+        user = self.register_user(
+            next_url=self.get_success_url(), **cleaned_data)
         _login(self.request, user)
         return user
 

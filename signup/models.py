@@ -77,8 +77,9 @@ class ActivatedUserManager(UserManager):
         username_base = username
         while trials < 10:
             try:
-                return super(ActivatedUserManager, self).create_user(
-                    username, email=email, password=password, **kwargs)
+                with transaction.atomic():
+                    return super(ActivatedUserManager, self).create_user(
+                        username, email=email, password=password, **kwargs)
             except IntegrityError as exp:
                 err = exp
                 if len(username_base) + 4 > max_length:
@@ -455,7 +456,7 @@ class Contact(models.Model):
         help_text=_("Extra meta data (can be stringify JSON)"))
 
     def __str__(self):
-        return self.slug
+        return str(self.slug)
 
     @property
     def username(self):
@@ -577,7 +578,7 @@ class Notification(models.Model):
     extra = _get_extra_field_class()(null=True)
 
     def __str__(self):
-        return self.slug
+        return str(self.slug)
 
 
 @python_2_unicode_compatible
@@ -595,7 +596,7 @@ class Credentials(models.Model):
     extra = _get_extra_field_class()(null=True)
 
     def __str__(self):
-        return self.api_pub_key
+        return str(self.api_pub_key)
 
     def set_priv_key(self, api_priv_key):
         self.api_priv_key = make_password(api_priv_key)

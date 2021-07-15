@@ -327,13 +327,13 @@
         blackList: ["password", "1234", "123456", "12345", "12345678",
             "qwerty", "baseball", "football"],
         infoText: {
-            blacklist: gettext("Too common"),
+            blacklist: "Too common",
             none: "",
-            level0: gettext("Very weak"),
-            level1: gettext("Weak"),
-            level2: gettext("Good"),
-            level3: gettext("Strong"),
-            level4: gettext("Very strong")
+            level0: "Very weak",
+            level1: "Weak",
+            level2: "Good",
+            level3: "Strong",
+            level4: "Very strong"
         }
     };
 
@@ -349,12 +349,12 @@
         init: function(){
             var self = this;
             $(self.options.checkConfirmationTemplate).insertAfter(self.$el);
-
+            var reference = $(self.options.reference).first();
             self.$el.keyup(function(){
-                self.checkPasswordConfirmation($(self.options.reference).val());
+                self.checkPasswordConfirmation(reference.val());
             });
-            $(self.options.reference).keyup(function(){
-                self.checkPasswordConfirmation($(self.options.reference).val());
+            reference.keyup(function(){
+                self.checkPasswordConfirmation(reference.val());
             });
 
         },
@@ -396,16 +396,11 @@
             unmatch: "text-danger"
         },
         checkConfirmationText: {
-            match: gettext("Password confirmed."),
-            unmatch: gettext("Password and confirmation do not match.")
+            match: "Password confirmed.",
+            unmatch: "Password and confirmation do not match."
         },
-        checkConfirmationTemplate: "<div class=\"password-match\"></div>"
+        checkConfirmationTemplate: "<div class=\"password-match\"></div>",
+        reference: "[name='new_password']"
     };
-
-    $(document).ready(function(){
-        $("[name='new_password']").passwordStrength();
-        $("[name='new_password2']").passwordMatch({
-            reference: $("[name='new_password']").first()});
-    });
 
 }(jQuery));

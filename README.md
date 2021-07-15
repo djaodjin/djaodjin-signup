@@ -61,8 +61,8 @@ run the testsite webapp.
     $ python -m venv .venv
     $ source .venv/bin/activate
     $ pip install -r testsite/requirements.txt
-    $ python manage.py syncdb
-    $ python manage.py loaddata testsite/fixtures/default-db.json
+    $ make vendor-assets-prerequisites
+    $ make initdb
     $ python manage.py runserver
 
     # Browse http://localhost:8000/
