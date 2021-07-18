@@ -1,3 +1,11 @@
+0.5.0
+
+  * works with Django3.2
+  * prepares Vue3 migration
+  * keeps same activation key accross multiple clicks on an e-mail backlink
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Mon,  18 Jul 2021 16:55:00 -0700
+
 0.4.11
 
   * gives opportunity to UI to internationalize notifications description

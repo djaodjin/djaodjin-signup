@@ -70,8 +70,10 @@ run the testsite webapp.
 Release Notes
 =============
 
-0.4.11
+0.5.0
 
-  * gives opportunity to UI to internationalize notifications description
+  * works with Django3.2
+  * prepares Vue3 migration
+  * keeps same activation key accross multiple clicks on an e-mail backlink
 
 [previous release notes](changelog)
