@@ -587,6 +587,7 @@ var paginationMixin = {
                 page: 1,
             },
             itemsPerPage: this.$itemsPerPage,
+            ellipsisThreshold: 4,
             getCompleteCb: 'getCompleted',
             getBeforeCb: 'resetPage',
             qsCache: null,
@@ -631,13 +632,58 @@ var paginationMixin = {
                 vm.get();
             }
         },
+        // For pagination buttons
+        onClick: function(pageNumber) {
+            var vm = this;
+            vm.$set(vm.params, 'page', pageNumber);
+            vm.get();
+        }
     },
     computed: {
         totalItems: function(){
             return this.items.count
         },
         pageCount: function(){
-            return Math.ceil(this.totalItems / this.itemsPerPage)
+            var nbFullPages = Math.ceil(this.totalItems / this.itemsPerPage);
+            if( nbFullPages * this.itemsPerPage < this.totalItems ) {
+                ++nbFullPages;
+            }
+            return nbFullPages;
+        },
+        minDirectPageLink: function() {
+            var vm = this;
+            var halfEllipsisThreshold = Math.ceil(vm.ellipsisThreshold / 2);
+            if( halfEllipsisThreshold * 2 == vm.ellipsisThreshold ) {
+                --halfEllipsisThreshold;
+            }
+            var minDPL = Math.max(
+                1, vm.params.page - halfEllipsisThreshold);
+            var maxDPL = Math.min(
+                vm.params.page + halfEllipsisThreshold, vm.pageCount);
+            return ( maxDPL == vm.pageCount ) ? Math.max(
+                vm.pageCount - vm.ellipsisThreshold + 1, 1) : minDPL;
+        },
+        maxDirectPageLink: function() {
+            var vm = this;
+            var halfEllipsisThreshold = Math.ceil(vm.ellipsisThreshold / 2);
+            if( halfEllipsisThreshold * 2 == vm.ellipsisThreshold ) {
+                --halfEllipsisThreshold;
+            }
+            var minDPL = Math.max(
+                1, vm.params.page - halfEllipsisThreshold);
+            var maxDPL = Math.min(
+                vm.params.page + halfEllipsisThreshold, vm.pageCount);
+            return ( minDPL == 1 ) ? Math.min(
+                vm.ellipsisThreshold, vm.pageCount) : maxDPL;
+        },
+        directPageLinks: function() {
+            var vm = this;
+            var pages = [];
+            for( var idx = vm.minDirectPageLink;
+                 idx <= vm.maxDirectPageLink; ++idx ){
+                pages.push(idx);
+            }
+            return pages;
         },
         ISState: function(){
             if(!this.$refs.infiniteLoading) return;
@@ -865,87 +911,6 @@ var itemListMixin = {
                 result = '?' + result;
             }
             return result;
-        },
-        humanizeTotal: function() {
-            var vm = this;
-            return vm.humanizeCell(vm.items.total, vm.items.unit, 0.01);
-        },
-        humanizeBalance: function() {
-            var vm = this;
-            return vm.humanizeCell(
-                vm.items.balance_amount, vm.items.balance_unit, 0.01);
-        },
-
-        // Used to be filters but Vue3 will not allow it.
-        relativeDate: function(at_time) {
-            var vm = this;
-            var cutOff = vm.ends_at ? moment(vm.ends_at, DATE_FORMAT) : moment();
-            var dateTime = moment(at_time);
-            if( dateTime <= cutOff ) {
-                var timeAgoTemplate = (vm.$labels && vm.$labels.timeAgoTemplate) ?
-                    vm.$labels.timeAgoTemplate : "%(timedelta)s ago";
-                return timeAgoTemplate.replace("%(timedelta)s",
-                    moment.duration(cutOff.diff(dateTime)).humanize());
-            }
-            var timeLeftTemplate = (vm.$labels && vm.$labels.timeLeftTemplate) ?
-                vm.$labels.timeLeftTemplate : "%(timedelta)s ago";
-            return timeLeftTemplate.replace("%(timedelta)s",
-                moment.duration(dateTime.diff(cutOff)).humanize());
-        },
-        humanizeCell: function(cell, unit, scale) {
-            var vm = this;
-            if( typeof unit == 'undefined' ) {
-                unit = vm.items.unit;
-            }
-            if( typeof scale == 'undefined' ) {
-                scale = vm.items.scale;
-            }
-            scale = scale || 1;
-            var value = cell * scale;
-
-            if( typeof Intl !== 'undefined' &&
-                typeof Intl.NumberFormat !== 'undefined') {
-                var locale = (vm.$i18n && vm.$i18n.locale) ?
-                    vm.$i18n.locale : 'en-US';
-                if( unit ) {
-                    return (new Intl.NumberFormat(locale, {
-                        style: 'currency', currency: unit})).format(value);
-                }
-                return (new Intl.NumberFormat(locale)).format(value);
-            }
-
-            // `Intl` is not present. Let's do what we can.
-            var precision = 0;
-            var thousandsSeparator = ',';
-            var decimalSeparator = '.';
-            var symbol = '';
-            var symbolOnLeft = true;
-
-            if( unit ) {
-                // We have a currency unit
-                if( unit === "usd" || unit === "cad" ) {
-                    symbol = "$";
-                } else if( unit === "eur" ) {
-                    symbol = "\u20ac";
-                }
-                precision = 2;
-            }
-
-            var stringified = Math.abs(value).toFixed(precision);
-            var decimalPart = precision ? stringified.slice(-1 - precision) : '';
-            var integralPart = precision ? stringified.slice(0, -1 - precision)
-                : stringified;
-
-            var rem = integralPart.length % 3;
-            var head = rem > 0 ? (integralPart.slice(0, rem) + (
-                integralPart.length > 3 ? thousandsSeparator : ''))
-                : '';
-            var sign = value < 0 ? '-' : '';
-            var valueFormatted = sign + head + integralPart.slice(rem).replace(
-                /(\d{3})(?=\d)/g, '$1' + thousandsSeparator) + decimalPart;
-
-            return symbolOnLeft ?
-                symbol + valueFormatted : valueFormatted + symbol;
         },
     },
 }
