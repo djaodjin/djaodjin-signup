@@ -133,6 +133,24 @@ class RegisterMixin(object):
 
     backend_path = 'signup.backends.auth.UsernameOrEmailPhoneModelBackend'
 
+    registration_fields = (
+        'first_name',
+        'last_name',
+        'full_name',
+        'username',
+        'password',
+        'new_password',
+        'new_password2',
+        'email',
+        'username',
+        'phone',
+        'street_address',
+        'locality',
+        'region',
+        'postal_code',
+        'country'
+    )
+
     @staticmethod
     def first_and_last_names(**cleaned_data):
         first_name = cleaned_data.get('first_name', None)
@@ -203,9 +221,17 @@ class RegisterMixin(object):
         password = cleaned_data.get('new_password',
             cleaned_data.get('password', None))
         lang = translation.get_language_from_request(self.request)
+        user_extra = {}
+        for field_name, field_value in six.iteritems(cleaned_data):
+            if field_name not in self.registration_fields:
+                if field_name.startswith('user_'):
+                    user_extra.update({field_name[5:]: field_value})
+        if not user_extra:
+            user_extra = None
         user = self.model.objects.create_user(username,
             email=email, password=password, phone=phone,
-            first_name=first_name, last_name=last_name, lang=lang)
+            first_name=first_name, last_name=last_name,
+            lang=lang, extra=user_extra)
         # Bypassing authentication here, we are doing frictionless registration
         # the first time around.
         user.backend = self.backend_path

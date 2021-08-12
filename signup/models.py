@@ -71,7 +71,9 @@ class ActivatedUserManager(UserManager):
         try:
             field.run_validators(username)
         except ValidationError:
-            username = 'user'
+            prefix = 'user_'
+            username = generate_random_slug(
+                length=min(max_length - len(prefix), 40), prefix=prefix)
         err = IntegrityError()
         trials = 0
         username_base = username
@@ -94,7 +96,9 @@ class ActivatedUserManager(UserManager):
         #pylint:disable=protected-access
         field = self.model._meta.get_field('username')
         max_length = field.max_length
-        username = slugify(phone)
+        prefix = 'user_'
+        username = generate_random_slug(
+            length=min(max_length - len(prefix), 40), prefix=prefix)
         try:
             field.run_validators(username)
         except ValidationError:
@@ -130,6 +134,7 @@ class ActivatedUserManager(UserManager):
         """
         phone = kwargs.pop('phone', None)
         lang = kwargs.pop('lang', None)
+        extra = kwargs.pop('extra', None)
         with transaction.atomic():
             if username:
                 user = super(ActivatedUserManager, self).create_user(
@@ -146,12 +151,12 @@ class ActivatedUserManager(UserManager):
                 # Force is_active to True and create an email verification key
                 # (see above definition of active user).
                 Contact.objects.prepare_email_verification(user, email,
-                    phone=phone, lang=lang)
+                    phone=phone, lang=lang, extra=extra)
             elif phone:
                 # Force is_active to True and create an email verification key
                 # (see above definition of active user).
                 Contact.objects.prepare_phone_verification(user, phone,
-                    email=email, lang=lang)
+                    email=email, lang=lang, extra=extra)
             user.is_active = True
             user.save()
             LOGGER.info("'%s <%s>' registered with username '%s'%s%s",
