@@ -134,21 +134,21 @@ class RegisterMixin(object):
     backend_path = 'signup.backends.auth.UsernameOrEmailPhoneModelBackend'
 
     registration_fields = (
+        'country',
+        'email',
         'first_name',
-        'last_name',
         'full_name',
-        'username',
-        'password',
+        'lang',
+        'last_name',
+        'locality',
+        'postal_code',
         'new_password',
         'new_password2',
-        'email',
-        'username',
+        'password',
         'phone',
-        'street_address',
-        'locality',
         'region',
-        'postal_code',
-        'country'
+        'street_address',
+        'username',
     )
 
     @staticmethod
@@ -220,7 +220,8 @@ class RegisterMixin(object):
         username = cleaned_data.get('username', None)
         password = cleaned_data.get('new_password',
             cleaned_data.get('password', None))
-        lang = translation.get_language_from_request(self.request)
+        lang = cleaned_data.get('lang',
+            translation.get_language_from_request(self.request))
         user_extra = {}
         for field_name, field_value in six.iteritems(cleaned_data):
             if field_name not in self.registration_fields:
