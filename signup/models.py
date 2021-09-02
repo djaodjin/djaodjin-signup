@@ -63,6 +63,14 @@ def _get_extra_field_class():
 
 class ActivatedUserManager(UserManager):
 
+    @classmethod
+    def normalize_email(cls, email):
+        if email is None:
+            # Overrides `email or ''` in superclass such that we can
+            # create User models with no e-mail address.
+            return email
+        return super(ActivatedUserManager, cls).normalize_email(email)
+
     def create_user_from_email(self, email, password=None, **kwargs):
         #pylint:disable=protected-access
         field = self.model._meta.get_field('username')
@@ -108,8 +116,9 @@ class ActivatedUserManager(UserManager):
         username_base = username
         while trials < 10:
             try:
-                return super(ActivatedUserManager, self).create_user(
-                    username, password=password, **kwargs)
+                with transaction.atomic():
+                    return super(ActivatedUserManager, self).create_user(
+                        username, password=password, **kwargs)
             except IntegrityError as exp:
                 err = exp
                 if len(username_base) + 4 > max_length:

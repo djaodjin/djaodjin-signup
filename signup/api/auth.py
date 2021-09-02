@@ -413,9 +413,10 @@ JwcBUUMECj8AKxsHtRHUSypco"
         400: OpenAPIResponse("parameters error", ValidationErrorSerializer)})
     def post(self, request, *args, **kwargs):#pylint:disable=unused-argument
         serializer = self.get_serializer(data=request.data)
-        if serializer.is_valid():
-            # We are not using `is_valid(raise_exception=True)` here
-            # because we do not want to give clues on the reasons for failure.
+        if serializer.is_valid(raise_exception=True):
+            # It is OK to use `raise_exception=True` because the serializer
+            # purely does field validation (i.e. no checks of values
+            # in database).
             user = self.register(serializer)
             if user:
                 self.optional_session_cookie(request, user)

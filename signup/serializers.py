@@ -39,28 +39,36 @@ from .validators import (validate_email_or_phone,
 LOGGER = logging.getLogger(__name__)
 
 
-class PhoneField(serializers.CharField):
+class PhoneField(serializers.Field):
+
+    def to_representation(self, value):
+        return str(value)
 
     def to_internal_value(self, data):
         """
         Returns a formatted phone number as a string.
         """
-        if self.required:
+        try:
+            phone_number = phonenumbers.parse(data, None)
+        except phonenumbers.NumberParseException as err:
+            LOGGER.info("tel %s:%s", data, err)
+            phone_number = None
+        if not phone_number:
             try:
-                phone_number = phonenumbers.parse(data, None)
-            except phonenumbers.NumberParseException as err:
+                phone_number = phonenumbers.parse(data, "US")
+            except phonenumbers.NumberParseException:
                 LOGGER.info("tel %s:%s", data, err)
                 phone_number = None
-            if not phone_number:
-                try:
-                    phone_number = phonenumbers.parse(data, "US")
-                except phonenumbers.NumberParseException:
-                    raise ValidationError(self.error_messages['invalid'])
-            if phone_number and not phonenumbers.is_valid_number(phone_number):
-                raise ValidationError(self.error_messages['invalid'])
-            return phonenumbers.format_number(
-                phone_number, phonenumbers.PhoneNumberFormat.E164)
-        return None
+
+        if not phone_number:
+            if self.required:
+                raise ValidationError(self.error_messages['required'])
+            return None
+
+        if not phonenumbers.is_valid_number(phone_number):
+            raise ValidationError(self.error_messages['invalid'])
+        return phonenumbers.format_number(
+            phone_number, phonenumbers.PhoneNumberFormat.E164)
 
 
 class CommField(serializers.CharField):
@@ -246,7 +254,15 @@ class CreateUserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = get_user_model()
-        fields = ('username', 'password', 'email', 'phone', 'full_name', 'lang')
+        fields = ('username', 'password', 'email', 'phone', 'full_name',
+            'lang')
+
+    def validate(self, attrs):
+        if not (attrs.get('email') or attrs.get('phone')):
+            raise ValidationError(
+                {'email': _("Either email or phone must be valid."),
+                 'phone': _("Either email or phone must be valid.")})
+        return super(CreateUserSerializer, self).validate(attrs)
 
 
 class PasswordResetConfirmSerializer(NoModelSerializer):
