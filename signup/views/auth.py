@@ -31,7 +31,7 @@ from django.contrib import messages
 from django.contrib.auth import (login as auth_login, logout as auth_logout,
     REDIRECT_FIELD_NAME, authenticate, get_user_model)
 from django.contrib.auth.tokens import default_token_generator
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError, NON_FIELD_ERRORS
 from django.core.validators import validate_email
 from django.http import Http404, HttpResponseRedirect
 from django.template.response import TemplateResponse
@@ -375,16 +375,30 @@ class ActivationBaseView(RedirectFormMixin, ActivateMixin, UpdateView):
         return response
 
     def form_valid(self, form):
+        user_with_backend = None
+        if isinstance(form, UserActivateForm):
+            password = form.cleaned_data.get('password')
+            user_with_backend = authenticate(self.request,
+                username=self.contact.user.username, password=password)
+            if not user_with_backend:
+                form.add_error('password', ValidationError(
+                    _("Please enter a correct password.")))
+                return self.form_invalid(form)
+
         user = self.activate_user(**form.cleaned_data)
         if user.last_login:
             messages.info(
                 self.request, _("Thank you. Your account is now active."))
 
         # Okay, security check complete. Log the user in.
-        password = form.cleaned_data.get(
-            'password', form.cleaned_data.get('new_password'))
-        user_with_backend = authenticate(
-            self.request, username=user.username, password=password)
+        if not user_with_backend:
+            password = form.cleaned_data.get(
+                'password', form.cleaned_data.get('new_password'))
+            user_with_backend = authenticate(
+                self.request, username=user.username, password=password)
+
+        # There is something really wrong if user_with_backend is `None`
+        # at that point.
         _login(self.request, user_with_backend)
         if self.request.session.test_cookie_worked():
             self.request.session.delete_test_cookie()
