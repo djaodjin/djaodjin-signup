@@ -39,12 +39,13 @@ from django.template.defaultfilters import slugify
 from django.utils.translation import ugettext_lazy as _
 from django.contrib.auth.hashers import check_password, make_password
 from phonenumber_field.modelfields import PhoneNumberField
+from rest_framework.exceptions import ValidationError as DRFValidationError
 
 from . import settings, signals
 from .backends.mfa import EmailMFABackend
 from .compat import import_string, python_2_unicode_compatible, six
 from .helpers import datetime_or_now, full_name_natural_split
-from .utils import generate_random_slug, has_invalid_password
+from .utils import generate_random_slug, handle_uniq_error, has_invalid_password
 from .validators import validate_phone
 
 
@@ -426,19 +427,19 @@ class Contact(models.Model):
     created_at = models.DateTimeField(auto_now_add=True,
         help_text=_("Date/time of creation (in ISO format)"))
     email = models.EmailField(_("E-mail address"), unique=True, null=True,
-        help_text=_("E-mail address"))
+        help_text=_("E-mail address to contact user"))
     phone = PhoneNumberField(_("Phone number"), unique=True, null=True,
-        help_text=_("Phone number"))
+        help_text=_("Phone number to contact user"))
     full_name = models.CharField(_("Full name"), max_length=60, blank=True,
         help_text=_("Full name (effectively first name followed by last name)"))
     nick_name = models.CharField(_("Nick name"), max_length=60, blank=True,
-        help_text=_("Short casual name used to address the contact"))
+        help_text=_("Short casual name used to address the user"))
     # 2083 number is used because it is a safe option to choose based
     # on some older browsers behavior
     # https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=4&cad=rja&uact=8&ved=2ahUKEwi2hbjPwIPgAhULXCsKHQ-lAj4QFjADegQIBhAL&url=https%3A%2F%2Fstackoverflow.com%2Fquestions%2F417142%2Fwhat-is-the-maximum-length-of-a-url-in-different-browsers&usg=AOvVaw0QgMo_L7jjK0YsXchrJgOQ
     picture = models.URLField(_("URL to a profile picture"), max_length=2083,
         null=True, blank=True,
-        help_text=_("Profile picture"))
+        help_text=_("URL location of the profile picture"))
     user = models.ForeignKey(settings.AUTH_USER_MODEL,
         null=True, on_delete=models.CASCADE, related_name='contacts')
     # key must be unique when used in URLs. IF we use a code,
@@ -458,7 +459,9 @@ class Contact(models.Model):
     phone_verified_at = models.DateTimeField(null=True,
         help_text=_("Date/time when the phone number was last verified"))
     lang = models.CharField(_("Preferred communication language"),
-         default=settings.LANGUAGE_CODE, max_length=5)
+         default=settings.LANGUAGE_CODE, max_length=5,
+        help_text=_("Two-letter ISO 639 code for the preferred"\
+        " communication language (ex: en)"))
     mfa_backend = models.PositiveSmallIntegerField(
         choices=MFA_BACKEND_TYPE, default=NO_MFA,
         help_text=_("Backend to use for multi-factor authentication"))
@@ -519,34 +522,40 @@ class Contact(models.Model):
         self.slug = slug_base
         for idx in range(1, 10): #pylint:disable=unused-variable
             try:
-                with transaction.atomic():
-                    if self.user:
-                        # pylint:disable=unused-variable
-                        save_user = False
-                        first_name, mid_name, last_name = \
-                            full_name_natural_split(self.full_name)
-                        if not self.user.first_name:
-                            self.user.first_name = first_name
-                            save_user = True
-                        if not self.user.last_name:
-                            self.user.last_name = last_name
-                            save_user = True
-                        if not self.user.email and self.email:
-                            self.user.email = self.email
-                            save_user = True
-                        if save_user:
-                            self.user.save()
-                    return super(Contact, self).save(
-                        force_insert=force_insert, force_update=force_update,
-                        using=using, update_fields=update_fields)
-            except IntegrityError as err:
-                if 'uniq' not in str(err).lower():
-                    raise
+                try:
+                    with transaction.atomic():
+                        if self.user:
+                            # pylint:disable=unused-variable
+                            save_user = False
+                            first_name, mid_name, last_name = \
+                                full_name_natural_split(self.full_name)
+                            if not self.user.first_name:
+                                self.user.first_name = first_name
+                                save_user = True
+                            if not self.user.last_name:
+                                self.user.last_name = last_name
+                                save_user = True
+                            if not self.user.email and self.email:
+                                self.user.email = self.email
+                                save_user = True
+                            if save_user:
+                                self.user.save()
+                        return super(Contact, self).save(
+                            force_insert=force_insert,
+                            force_update=force_update,
+                            using=using, update_fields=update_fields)
+                except IntegrityError as err:
+                    if 'uniq' not in str(err).lower():
+                        raise
+                    handle_uniq_error(err)
+            except DRFValidationError as err:
+                if not 'slug' in err.detail:
+                    raise err
                 if len(slug_base) + 8 > max_length:
                     slug_base = slug_base[:(max_length - 8)]
                 self.slug = generate_random_slug(
                     length=len(slug_base) + 8, prefix=slug_base + '-')
-        raise ValidationError({'detail':
+        raise DRFValidationError({'slug':
             _("Unable to create a unique URL slug with a base of '%(base)s'")
                 % {'base': slug_base}})
 

@@ -44,7 +44,7 @@ class JWTVerify(JWTBase):
     The authenticated user and the user associated to the token should be
     identical.
 
-    **Tags: auth
+    **Tags: auth, user, usermodel
 
     **Example
 
@@ -100,7 +100,7 @@ class JWTRefresh(JWTVerify):
     The authenticated user and the user associated to the token should be
     identical.
 
-    **Tags: auth
+    **Tags: auth, user, usermodel
 
     **Example
 

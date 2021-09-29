@@ -39,15 +39,15 @@ from rest_framework.settings import api_settings
 
 
 from .. import filters, settings
-from ..compat import six, urlparse, urlunparse
+from ..compat import reverse, six, urlparse, urlunparse
 from ..decorators import check_has_credentials
 from ..docs import OpenAPIResponse, no_body, swagger_auto_schema
 from ..helpers import full_name_natural_split
 from ..mixins import ContactMixin, UserMixin
 from ..models import Contact, Notification
-from ..serializers import (ContactSerializer, ContactDetailSerializer,
-    PasswordChangeSerializer, NotificationsSerializer, UploadBlobSerializer,
-    ValidationErrorSerializer)
+from ..serializers import (UserSerializer, UserCreateSerializer,
+    UserDetailSerializer, PasswordChangeSerializer, NotificationsSerializer,
+    UploadBlobSerializer, ValidationErrorSerializer)
 from ..utils import generate_random_code, get_picture_storage, handle_uniq_error
 
 
@@ -82,14 +82,14 @@ def get_order_func(fields):
 
 class UserActivateAPIView(ContactMixin, GenericAPIView):
     """
-    Re-sends an activation link
+    Sends an activation link
 
     Re-sends an activation e-mail if the user is not already activated.
 
     The template for the e-mail sent to the user can be found in
     notification/verification.eml.
 
-    **Tags: auth
+    **Tags: auth, user, usermodel
 
     **Example
 
@@ -103,17 +103,18 @@ class UserActivateAPIView(ContactMixin, GenericAPIView):
 
         {
             "slug": "xia",
-            "email": "xia@locahost.localdomain",
+            "printable_name": "Xia",
             "full_name": "Xia Lee",
             "nick_name": "Xia",
+            "email": "xia@locahost.localdomain",
             "created_at": "2018-01-01T00:00:00Z"
         }
     """
-    serializer_class = ContactSerializer
+    serializer_class = UserSerializer
     queryset = Contact.objects.all().select_related('user')
 
     @swagger_auto_schema(request_body=no_body, responses={
-        201: OpenAPIResponse("success", ContactSerializer),
+        201: OpenAPIResponse("success", UserSerializer),
         400: OpenAPIResponse("parameters error", ValidationErrorSerializer)})
     def post(self, request, *args, **kwargs):#pylint:disable=unused-argument
         instance = self.get_object()
@@ -128,19 +129,23 @@ class UserActivateAPIView(ContactMixin, GenericAPIView):
         return Response(resp_data)
 
 
-class UserDetailAPIView(ContactMixin, RetrieveUpdateDestroyAPIView):
+class UserDetailAPIView(UserMixin, RetrieveUpdateDestroyAPIView):
     """
-    Retrieves a login profile
+    Retrieves a user account
 
-    Retrieves details on one single user profile with slug ``{user}``.
+    Retrieves details on one single user account with slug ``{user}``.
 
-    **Tags: profile
+    The API is typically used within an HTML
+    `contact information page </docs/themes/#dashboard_profile>`_
+    as present in the default theme.
+
+    **Tags: profile, user, usermodel
 
     **Examples
 
     .. code-block:: http
 
-        GET /api/users/xia HTTP/1.1
+        GET /api/users/xia/ HTTP/1.1
 
     responds
 
@@ -165,14 +170,20 @@ class UserDetailAPIView(ContactMixin, RetrieveUpdateDestroyAPIView):
             }]
         }
     """
-    serializer_class = ContactDetailSerializer
-    queryset = Contact.objects.all().select_related('user')
+    serializer_class = UserDetailSerializer
+
+    def get_object(self):
+        return self.user
 
     def put(self, request, *args, **kwargs):
         """
-        Updates a login profile
+        Updates a user account
 
-        **Tags: profile
+        The API is typically used within an HTML
+        `contact information page </docs/themes/#dashboard_profile>`_
+        as present in the default theme.
+
+        **Tags: profile, user, usermodel
 
         **Examples
 
@@ -193,18 +204,26 @@ class UserDetailAPIView(ContactMixin, RetrieveUpdateDestroyAPIView):
         .. code-block:: json
 
             {
-              "email": "xia@locahost.localdomain",
+              "slug": "xia",
+              "username": "xia",
+              "created_at": "2018-01-01T00:00:00Z",
+              "printable_name": "Xia",
               "full_name": "Xia Lee",
-              "nick_name": "Xia"
+              "nick_name": "Xia",
+              "email": "xia@locahost.localdomain"
             }
         """
         return self.update(request, *args, **kwargs)
 
     def patch(self, request, *args, **kwargs):
         """
-        Updates a login profile
+        Updates a user account
 
-        **Tags: profile
+        The API is typically used within an HTML
+        `contact information page </docs/themes/#dashboard_profile>`_
+        as present in the default theme.
+
+        **Tags: profile, user, usermodel
 
         **Examples
 
@@ -225,18 +244,26 @@ class UserDetailAPIView(ContactMixin, RetrieveUpdateDestroyAPIView):
         .. code-block:: json
 
             {
-              "email": "xia@locahost.localdomain",
+              "slug": "xia",
+              "username": "xia",
+              "created_at": "2018-01-01T00:00:00Z",
+              "printable_name": "Xia",
               "full_name": "Xia Lee",
-              "nick_name": "Xia"
+              "nick_name": "Xia",
+              "email": "xia@locahost.localdomain"
             }
         """
         return self.partial_update(request, *args, **kwargs)
 
     def delete(self, request, *args, **kwargs):
         """
-        Deletes a login profile
+        Deletes a user account
 
-        **Tags: profile
+        The API is typically used within an HTML
+        `contact information page </docs/themes/#dashboard_profile>`_
+        as present in the default theme.
+
+        **Tags: profile, user, usermodel
 
         **Examples
 
@@ -247,14 +274,10 @@ class UserDetailAPIView(ContactMixin, RetrieveUpdateDestroyAPIView):
         return self.destroy(request, *args, **kwargs)
 
     def perform_destroy(self, instance):
-        if instance.user:
-            pkid = instance.user.pk
-            email = instance.user.email
-            username = instance.user.username
-        else:
-            email = instance.email
-            pkid = instance.pk if instance.pk else generate_random_code()
-            username = instance.slug if instance.slug else ("%d" % pkid)
+        user = instance
+        pkid = user.pk if user.pk else generate_random_code()
+        email = user.email
+        username = user.username
 
         # We mark the user as inactive and scramble personal information
         # such that we don't remove audit records (ex: billing transactions)
@@ -270,11 +293,11 @@ class UserDetailAPIView(ContactMixin, RetrieveUpdateDestroyAPIView):
             email = '%s%s' % (slug, look.group(1))
 
         with transaction.atomic():
-            if instance.pk:
-                instance.slug = slug
-                instance.email = email
-            user = instance.user
-            if user:
+            if not user.pk:
+                Contact.objects.filter(
+                    slug=self.kwargs.get(self.lookup_url_kwarg)).delete()
+            else:
+                user.contacts.all().delete()
                 requires_logout = (self.request.user == user)
                 user.username = slug
                 user.email = email
@@ -285,26 +308,40 @@ class UserDetailAPIView(ContactMixin, RetrieveUpdateDestroyAPIView):
                     auth_logout(self.request)
 
     def perform_update(self, serializer):
+        update_fields = {}
+        slug = serializer.validated_data.get('slug',
+            serializer.validated_data.get('username'))
+        if slug:
+            update_fields.update({'slug': slug})
+        full_name = serializer.validated_data.get('full_name',
+            serializer.validated_data.get('get_full_name'))
+        if full_name:
+            update_fields.update({'full_name': full_name})
+        for key in ('nick_name', 'email', 'phone', 'lang'):
+            value = serializer.validated_data.get(key)
+            if value:
+                update_fields.update({key: value})
         with transaction.atomic():
-            user = serializer.instance.user
+            user = self.get_object()
             try:
-                if user:
-                    if serializer.validated_data.get('email'):
-                        user.email = serializer.validated_data.get('email')
-                    if serializer.validated_data.get('slug'):
-                        user.username = serializer.validated_data.get('slug')
-                    if serializer.validated_data.get('full_name'):
+                if user.pk:
+                    if slug:
+                        user.username = slug
+                    if full_name:
                         first_name, mid_name, last_name = \
                             full_name_natural_split(
-                                serializer.validated_data.get('full_name'),
-                                middle_initials=False)
+                                full_name, middle_initials=False)
                         user.first_name = first_name
                         if mid_name:
                             user.first_name = (
                                 first_name + " " + mid_name).strip()
                         user.last_name = last_name
+                    if serializer.validated_data.get('email'):
+                        user.email = serializer.validated_data.get('email')
                     user.save()
-                serializer.save()
+                Contact.objects.update_or_create(
+                    slug=self.kwargs.get(self.lookup_url_kwarg),
+                    defaults=update_fields)
             except IntegrityError as err:
                 handle_uniq_error(err)
         # A little patchy but it works. Otherwise we would need to override
@@ -316,9 +353,9 @@ class UserDetailAPIView(ContactMixin, RetrieveUpdateDestroyAPIView):
 
 class UserListCreateAPIView(ListCreateAPIView):
     """
-    Lists user profiles
+    Lists user accounts
 
-    Queries a page (``PAGE_SIZE`` records) of organization and user profiles.
+    Returns a list of {{PAGE_SIZE}} profile and user accounts.
 
     The queryset can be filtered for at least one field to match a search
     term (``q``).
@@ -329,7 +366,7 @@ class UserListCreateAPIView(ListCreateAPIView):
     parameters. To reverse the natural order of a field, prefix the field
     name by a minus (-) sign.
 
-    **Tags: profile
+    **Tags: profile, broker, usermodel
 
     **Example
 
@@ -347,10 +384,11 @@ class UserListCreateAPIView(ListCreateAPIView):
             "previous": null,
             "results": [{
               "slug": "xia",
+              "created_at": "2018-01-01T00:00:00Z",
+              "printable_name": "Xia",
               "email": "xia@locahost.localdomain",
               "full_name": "Xia Lee",
               "nick_name": "Xia",
-              "created_at": "2018-01-01T00:00:00Z",
               "activities": [{
                 "created_at": "2018-01-01T00:00:00Z",
                 "created_by": "alice",
@@ -365,36 +403,37 @@ class UserListCreateAPIView(ListCreateAPIView):
             }]
         }
     """
-    filter_backends = (filters.SearchFilter, filters.OrderingFilter)
     search_fields = (
         'email',
         # fields in User model:
         'username',
     )
     ordering_fields = (
-        'full_name',
-        'created_at',
-        'date_joined')
-
+        ('full_name', 'full_name'),
+        ('created_at', 'created_at'),
+        ('date_joined', 'date_joined'),
+    )
     ordering = ('full_name',)
     alternate_ordering = ('first_name', 'last_name')
-    serializer_class = ContactSerializer
+
+    filter_backends = (filters.SearchFilter, filters.OrderingFilter)
+    serializer_class = UserSerializer
     queryset = Contact.objects.all().select_related('user')
     user_queryset = get_user_model().objects.filter(is_active=True)
 
     def get_serializer_class(self):
         if self.request.method.lower() == 'post':
-            return ContactDetailSerializer
+            return UserCreateSerializer
         return super(UserListCreateAPIView, self).get_serializer_class()
 
-    @swagger_auto_schema(request_body=ContactDetailSerializer, responses={
-        201: OpenAPIResponse("success", ContactDetailSerializer),
+    @swagger_auto_schema(responses={
+        201: OpenAPIResponse("success", UserDetailSerializer),
         400: OpenAPIResponse("parameters error", ValidationErrorSerializer)})
     def post(self, request, *args, **kwargs):
         """
-        Creates a user profile
+        Creates a user account
 
-        **Tags: profile
+        **Tags: profile, broker, usermodel
 
         **Examples
 
@@ -405,9 +444,9 @@ class UserListCreateAPIView(ListCreateAPIView):
         .. code-block:: json
 
             {
-              "email": "xia@locahost.localdomain",
               "full_name": "Xia Lee",
-              "nick_name": "Xia"
+              "nick_name": "Xia",
+              "email": "xia@locahost.localdomain"
             }
 
         responds
@@ -415,18 +454,23 @@ class UserListCreateAPIView(ListCreateAPIView):
         .. code-block:: json
 
             {
-              "email": "xia@locahost.localdomain",
+              "slug": "xia",
+              "username": "xia",
+              "created_at": "2018-01-01T00:00:00Z",
+              "printable_name": "Xia",
               "full_name": "Xia Lee",
-              "nick_name": "Xia"
+              "nick_name": "Xia",
+              "email": "xia@locahost.localdomain"
             }
         """
         return self.create(request, *args, **kwargs)
 
-    @staticmethod
-    def as_contact(user):
-        return Contact(slug=user.username, email=user.email,
-            full_name=user.get_full_name(), nick_name=user.first_name,
-            created_at=user.date_joined, user=user)
+    def as_user(self, contact):
+        user_model = self.user_queryset.model
+        first_name, unused, last_name = full_name_natural_split(
+            contact.full_name)
+        return user_model(username=contact.slug, email=contact.email,
+            first_name=first_name, last_name=last_name)
 
     def get_users_queryset(self):
         return self.user_queryset.filter(contacts__isnull=True)
@@ -453,7 +497,7 @@ class UserListCreateAPIView(ListCreateAPIView):
             self.paginator.count += contacts_count
 
         order_func = get_order_func(filters.OrderingFilter().get_ordering(
-            self.request, contacts_queryset, self))
+            self.request, users_queryset, self))
 
         # XXX merge `users_page` into page.
         page = []
@@ -462,11 +506,11 @@ class UserListCreateAPIView(ListCreateAPIView):
         users_iterator = iter(users_page)
         contacts_iterator = iter(contacts_page)
         try:
-            contact = next(contacts_iterator)
+            contact = self.as_user(next(contacts_iterator))
         except StopIteration:
             pass
         try:
-            user = self.as_contact(next(users_iterator))
+            user = next(users_iterator)
         except StopIteration:
             pass
         try:
@@ -474,30 +518,30 @@ class UserListCreateAPIView(ListCreateAPIView):
                 if order_func(contact, user):
                     page += [contact]
                     contact = None
-                    contact = next(contacts_iterator)
+                    contact = self.as_user(next(contacts_iterator))
                 elif order_func(user, contact):
                     page += [user]
                     user = None
-                    user = self.as_contact(next(users_iterator))
+                    user = next(users_iterator)
                 else:
                     page += [contact]
                     contact = None
-                    contact = next(contacts_iterator)
+                    contact = self.as_user(next(contacts_iterator))
                     page += [user]
                     user = None
-                    user = self.as_contact(next(users_iterator))
+                    user = next(users_iterator)
         except StopIteration:
             pass
         try:
             while contact:
                 page += [contact]
-                contact = next(contacts_iterator)
+                contact = self.as_user(next(contacts_iterator))
         except StopIteration:
             pass
         try:
             while user:
                 page += [user]
-                user = self.as_contact(next(users_iterator))
+                user = next(users_iterator)
         except StopIteration:
             pass
 
@@ -508,20 +552,48 @@ class UserListCreateAPIView(ListCreateAPIView):
         serializer = self.get_serializer(page, many=True)
         return self.get_paginated_response(serializer.data)
 
-    def perform_create(self, serializer):
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
         user_model = self.user_queryset.model
+        slug = serializer.validated_data.get('slug',
+            serializer.validated_data.get('username'))
+        full_name = serializer.validated_data.get('full_name',
+            serializer.validated_data.get('get_full_name'))
+        nick_name = serializer.validated_data.get('nick_name')
+        if not nick_name:
+            nick_name, unused1, unused2 = full_name_natural_split(
+                full_name, middle_initials=False)
         with transaction.atomic():
             try:
                 user = user_model.objects.get(
                     email=serializer.validated_data.get('email'))
             except user_model.DoesNotExist:
                 user = None
-            serializer.save(user=user)
+            try:
+                contact = Contact.objects.create(
+                    slug=slug,
+                    full_name=full_name,
+                    nick_name=nick_name,
+                    phone=serializer.validated_data.get('phone'),
+                    email=serializer.validated_data.get('email'),
+                    lang=serializer.validated_data.get('lang'),
+                    user=user)
+                if not user:
+                    user = self.as_user(contact)
+            except IntegrityError as err:
+                handle_uniq_error(err)
+
+        location = self.request.build_absolute_uri(
+            reverse('api_user_profile', args=(user,)))
+        return Response(UserDetailSerializer().to_representation(user),
+            status=status.HTTP_201_CREATED, headers={'Location': location})
 
 
 class PasswordChangeAPIView(GenericAPIView):
     """
-    Changes a user password
+    Updates a user password
     """
     lookup_field = 'username'
     lookup_url_kwarg = 'user'
@@ -532,21 +604,25 @@ class PasswordChangeAPIView(GenericAPIView):
         200: OpenAPIResponse("success", ValidationErrorSerializer)})
     def put(self, request, *args, **kwargs):
         """
-        Changes a user password
+        Updates a user password
 
-        **Tags: auth
+        The API is typically used within an HTML
+        `update password page </docs/themes/#dashboard_users_password>`_
+        as present in the default theme.
+
+        **Tags: auth, user, usermodel
 
         **Example
 
         .. code-block:: http
 
-            PUT /api/users/donny/password/ HTTP/1.1
+            PUT /api/users/xia/password/ HTTP/1.1
 
         .. code-block:: json
 
             {
-              "password": "yeye",
-              "new_password": "yoyo"
+              "password": "yoyo",
+              "new_password": "yeye"
             }
 
         responds
@@ -582,13 +658,17 @@ class UserNotificationsAPIView(UserMixin, RetrieveUpdateAPIView):
     """
     Lists a user notifications preferences
 
-    **Tags: profile
+    The API is typically used within an HTML
+    `notifications page </docs/themes/#dashboard_users_notifications>`_
+    as present in the default theme.
+
+    **Tags: profile, user, usermodel
 
     **Example
 
     .. code-block:: http
 
-        GET /api/users/donny/notifications/ HTTP/1.1
+        GET /api/users/xia/notifications/ HTTP/1.1
 
     responds
 
@@ -605,15 +685,19 @@ class UserNotificationsAPIView(UserMixin, RetrieveUpdateAPIView):
 
     def put(self, request, *args, **kwargs):
         """
-        Changes a user notifications preferences
+        Updates a user notifications preferences
 
-        **Tags: profile
+        The API is typically used within an HTML
+        `notifications page </docs/themes/#dashboard_users_notifications>`_
+        as present in the default theme.
+
+        **Tags: profile, user, usermodel
 
         **Example
 
         .. code-block:: http
 
-            POST /api/users/donny/notifications/ HTTP/1.1
+            PUT /api/users/xia/notifications/ HTTP/1.1
 
         .. code-block:: json
 
@@ -678,21 +762,25 @@ class UserNotificationsAPIView(UserMixin, RetrieveUpdateAPIView):
 
 class UserPictureAPIView(ContactMixin, CreateAPIView):
     """
-        Uploads a picture for the user profile
+    Uploads a picture for a user account
 
-        **Examples
+    The API is typically used within an HTML
+    `contact information page </docs/themes/#dashboard_profile>`_
+    as present in the default theme.
 
-        .. code-block:: http
+    **Examples
 
-            POST /api/users/xia/picture/ HTTP/1.1
+    .. code-block:: http
 
-        responds
+    POST /api/users/xia/picture/ HTTP/1.1
 
-        .. code-block:: json
+    responds
 
-            {
-              "location": "https://cowork.net/picture.jpg"
-            }
+    .. code-block:: json
+
+        {
+            "location": "https://cowork.net/picture.jpg"
+        }
     """
     parser_classes = (parsers.FormParser, parsers.MultiPartParser)
     serializer_class = UploadBlobSerializer

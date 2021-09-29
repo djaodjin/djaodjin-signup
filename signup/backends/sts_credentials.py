@@ -1,4 +1,4 @@
-# Copyright (c) 2020, Djaodjin Inc.
+# Copyright (c) 2021, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -190,7 +190,7 @@ def aws_bucket_context(request, location, acls=None, aws_upload_role=None,
                     aws_region = 'us-east-1' # returns null, go figure!
                 LOGGER.info("derived AWS region '%s' for bucket '%s'",
                     aws_region, bucket_name)
-            except ClientError as err:
+            except ClientError:
                 aws_region = settings.AWS_REGION
                 LOGGER.info("use default AWS region '%s' for bucket '%s'",
                     aws_region, bucket_name)

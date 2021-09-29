@@ -200,6 +200,9 @@ Vue.component('user-update', {
             for( var field in vm.formFields ) {
                 if( vm.formFields.hasOwnProperty(field) &&
                     vm.formFields[field] ) {
+                    if( field == 'username' ) {
+                        data['slug'] = vm.formFields[field];
+                    }
                     data[field] = vm.formFields[field];
                 }
             }

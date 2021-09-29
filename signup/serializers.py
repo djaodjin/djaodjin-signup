@@ -31,7 +31,7 @@ import phonenumbers
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from .models import Activity, Contact, Notification
+from .models import Activity, Notification
 from .utils import get_account_model, has_invalid_password
 from .validators import (validate_email_or_phone,
     validate_username_or_email_or_phone)
@@ -167,46 +167,9 @@ class PublicKeySerializer(AuthenticatedUserPasswordSerializer):
         help_text=_("New public key for the user referenced in the URL"))
 
 
-class ContactSerializer(serializers.ModelSerializer):
-    """
-    This serializer is used in lists and other places where a Contact/User
-    profile is referenced.
-    For a detailed profile, see `ContactDetailSerializer`.
-    """
-    printable_name = serializers.CharField(
-        help_text=_("Printable name"), read_only=True)
-    credentials = serializers.SerializerMethodField(read_only=True,
-        help_text=_("True if the user has valid login credentials"))
-
-    class Meta:
-        model = Contact
-        fields = ('slug', 'printable_name', 'picture', 'email', 'created_at',
-            'credentials',)
-        read_only_fields = ('slug', 'printable_name', 'created_at',
-            'credentials',)
-
-    @staticmethod
-    def get_credentials(obj):
-        return (not has_invalid_password(obj.user)) if obj.user else False
-
-
-class ContactDetailSerializer(ContactSerializer):
-    """
-    This serializer is used in APIs where a single Contact/User
-    profile is returned.
-    For a summary profile, see `ContactSerializer`.
-    """
-    activities = ActivitySerializer(many=True, read_only=True)
-
-    class Meta(ContactSerializer.Meta):
-        fields = ContactSerializer.Meta.fields + ('phone',
-            'full_name', 'nick_name', 'lang', 'extra', 'activities',)
-        read_only_fields = ContactSerializer.Meta.read_only_fields + (
-            'activities',)
-
-
 class StringListField(serializers.ListField):
     child = serializers.CharField()
+
 
 class NotificationsSerializer(serializers.ModelSerializer):
 
@@ -234,35 +197,6 @@ class CredentialsSerializer(NoModelSerializer):
         help_text=_("One-time code. This field will be checked against"\
             " an expected code when multi-factor authentication (MFA)"\
             " is enabled."))
-
-
-class CreateUserSerializer(serializers.ModelSerializer):
-
-    username = serializers.CharField(required=False,
-        help_text=_("Username to identify the account"))
-    password = serializers.CharField(required=False, write_only=True,
-        style={'input_type': 'password'}, help_text=_("Password with which"\
-            " a user can authenticate with the service"))
-    email = serializers.EmailField(
-        help_text=_("Primary e-mail to contact user"), required=False)
-    phone = PhoneField(
-        help_text=_("Primary phone number to contact user"), required=False)
-    full_name = serializers.CharField(
-        help_text=_("Full name (effectively first name followed by last name)"))
-    lang = serializers.CharField(
-        help_text=_("Preferred communication language"), required=False)
-
-    class Meta:
-        model = get_user_model()
-        fields = ('username', 'password', 'email', 'phone', 'full_name',
-            'lang')
-
-    def validate(self, attrs):
-        if not (attrs.get('email') or attrs.get('phone')):
-            raise ValidationError(
-                {'email': _("Either email or phone must be valid."),
-                 'phone': _("Either email or phone must be valid.")})
-        return super(CreateUserSerializer, self).validate(attrs)
 
 
 class PasswordResetConfirmSerializer(NoModelSerializer):
@@ -313,56 +247,118 @@ class UploadBlobSerializer(NoModelSerializer):
 
 class UserSerializer(serializers.ModelSerializer):
     """
-    This serializer is a substitute for `ContactSerializer` whose intent is to
-    facilitate composition of this App with other Django Apps which references
-    a `django.contrib.auth.User model`. It is not used in this App.
+    This serializer is used in lists and other places where a Contact/User
+    profile is referenced. Its intent is to facilitate composition of this App
+    with other Django Apps which references a `django.contrib.auth.User model`.
 
-    XXX currently used in `api.auth.JWTBase` for payloads.
+    For a detailed profile, see `UserDetailSerializer`.
     """
-
     # Only way I found out to remove the ``UniqueValidator``. We are not
     # interested to create new instances here.
     slug = serializers.CharField(source='username', validators=[
         validators.RegexValidator(r'^[\w.@+-]+$', _("Enter a valid username."),
             'invalid')],
         help_text=_("Username"))
-    printable_name = serializers.CharField(source='get_full_name',
-        help_text=_("Full name"))
-    picture = serializers.SerializerMethodField(read_only=True,
-        help_text=_("Picture"))
-    email = serializers.EmailField(
-        help_text=_("Primary e-mail to contact user"), required=False)
-    phone = PhoneField(
-        help_text=_("Primary phone number to contact user"), required=False)
-    created_at = serializers.DateTimeField(source='date_joined',
-        help_text=_("date at which the account was created"))
-    credentials = serializers.SerializerMethodField(read_only=True,
-        help_text=_("True if the user has valid login credentials"))
-    # XXX username and full_name are duplicates of slug and printable_name
-    # respectively. They are still included in this version for backward
-    # compatibility.
     username = serializers.CharField(validators=[
         validators.RegexValidator(r'^[\w.@+-]+$', _("Enter a valid username."),
             'invalid')],
         help_text=_("Username"))
-    full_name = serializers.CharField(source='get_full_name',
-        help_text=_("Full name"))
+    printable_name = serializers.CharField(source='get_full_name',
+        read_only=True,
+        help_text=_("Name that can be safely used for display in HTML pages"))
+    picture = serializers.SerializerMethodField(read_only=True,
+        help_text=_("URL location of the profile picture"))
+    email = serializers.EmailField(
+        help_text=_("Primary e-mail to contact user"), required=False)
+    created_at = serializers.DateTimeField(source='date_joined',
+        read_only=True,
+        help_text=_("date at which the account was created"))
+    credentials = serializers.SerializerMethodField(read_only=True,
+        help_text=_("True if the user has valid login credentials"))
 
     class Meta:
         model = get_user_model()
-        fields = ('slug', 'printable_name', 'picture', 'email', 'phone',
-            'created_at', 'credentials', 'username', 'full_name')
-        read_only_fields = ('slug', 'printable_name', 'created_at',
-            'credentials',)
+        fields = ('slug', 'username', 'printable_name', 'created_at', 'picture',
+            'email', 'credentials')
+        read_only_fields = ('printable_name', 'created_at', 'credentials')
 
     @staticmethod
     def get_credentials(obj):
-        return not has_invalid_password(obj)
+        return hasattr(obj, 'pk') and (not has_invalid_password(obj))
 
     @staticmethod
     def get_picture(obj):
-        contact = obj.contacts.filter(picture__isnull=False).order_by(
-            'created_at').first()
-        if contact:
-            return contact.picture
+        if hasattr(obj, 'picture'):
+            return obj.picture
+        opk = obj.pk if hasattr(obj, 'pk') else None
+        if opk:
+            contact = obj.contacts.filter(picture__isnull=False).order_by(
+                'created_at').first()
+            if contact:
+                return contact.picture
         return None
+
+    @staticmethod
+    def get_nick_name(obj):
+        if hasattr(obj, 'nick_name'):
+            return obj.nick_name
+        opk = obj.pk if hasattr(obj, 'pk') else None
+        if opk:
+            contact = obj.contacts.filter(nick_name__isnull=False).order_by(
+                'created_at').first()
+            if contact:
+                return contact.nick_name
+        return obj.first_name
+
+
+class UserDetailSerializer(UserSerializer):
+    """
+    This serializer is used in APIs where a single Contact/User
+    profile is returned.
+
+    For a summary profile, see `UserSerializer`.
+    """
+    slug = serializers.CharField(source='username', required=False,
+        validators=[validators.RegexValidator(
+            r'^[\w.@+-]+$', _("Enter a valid username."), 'invalid')],
+        help_text=_("Username"))
+    full_name = serializers.CharField(source='get_full_name',
+        help_text=_("Full name (effectively first name followed by last name)"))
+    nick_name = serializers.SerializerMethodField(required=False,
+        help_text=_("Short casual name used to address the user"))
+    phone = PhoneField(
+        help_text=_("Primary phone number to contact user"), required=False)
+    lang = serializers.CharField(
+        help_text=_("Preferred communication language"), required=False)
+    # XXX username and full_name are duplicates of slug and printable_name
+    # respectively. They are still included in this version for backward
+    # compatibility.
+    username = serializers.CharField(read_only=True,
+        validators=[validators.RegexValidator(
+            r'^[\w.@+-]+$', _("Enter a valid username."), 'invalid')],
+        help_text=_("Username"))
+
+    class Meta(UserSerializer.Meta):
+        fields = UserSerializer.Meta.fields + ('phone',
+            'full_name', 'nick_name', 'lang',)
+
+
+class UserCreateSerializer(UserDetailSerializer):
+
+    username = serializers.CharField(required=False,
+        help_text=_("Username to identify the account"))
+    password = serializers.CharField(required=False, write_only=True,
+        style={'input_type': 'password'}, help_text=_("Password with which"\
+            " a user can authenticate with the service"))
+    full_name = serializers.CharField(
+        help_text=_("Full name (effectively first name followed by last name)"))
+
+    class Meta(UserDetailSerializer.Meta):
+        fields = UserDetailSerializer.Meta.fields + ('password',)
+
+    def validate(self, attrs):
+        if not (attrs.get('email') or attrs.get('phone')):
+            raise ValidationError(
+                {'email': _("Either email or phone must be valid."),
+                 'phone': _("Either email or phone must be valid.")})
+        return super(UserCreateSerializer, self).validate(attrs)

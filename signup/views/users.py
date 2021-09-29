@@ -1,4 +1,4 @@
-# Copyright (c) 2020, Djaodjin Inc.
+# Copyright (c) 2021, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -27,7 +27,7 @@
 import logging
 
 from django.contrib import messages
-from django.contrib.auth import update_session_auth_hash, get_user_model
+from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
@@ -56,10 +56,7 @@ class UserProfileView(UserMixin, UpdateView):
     profile. If a user is manager for an Organization subscribed to another
     Organization, she can access the product provided by that organization.
     """
-    model = get_user_model()
     form_class = UserForm
-    slug_field = 'username'
-    slug_url_kwarg = 'user'
     template_name = 'users/index.html'
 
     def form_valid(self, form):
@@ -115,10 +112,7 @@ class UserNotificationsView(UserMixin, UpdateView):
     """
     A view where a user can configure their notification settings
     """
-    model = get_user_model()
     form_class = UserNotificationsForm
-    slug_field = 'username'
-    slug_url_kwarg = 'user'
     template_name = 'users/notifications.html'
 
     @staticmethod
@@ -170,7 +164,6 @@ class PasswordChangeView(UserProfileView):
     """
     Update password for a User
     """
-
     form_class = PasswordChangeForm
     template_name = 'users/password.html'
 

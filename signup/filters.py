@@ -1,4 +1,4 @@
-# Copyright (c) 2020, DjaoDjin inc.
+# Copyright (c) 2021, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -28,7 +28,7 @@ from functools import reduce
 
 from django.db import models
 from django.utils.encoding import force_text
-from rest_framework.compat import coreapi, coreschema, distinct
+from rest_framework.compat import distinct
 from rest_framework.filters import (OrderingFilter as BaseOrderingFilter,
     SearchFilter as BaseSearchFilter)
 
@@ -77,6 +77,22 @@ class SearchFilter(BaseSearchFilter):
             queryset = distinct(queryset, base)
         return queryset
 
+    def get_schema_operation_parameters(self, view):
+        search_fields = getattr(view, 'search_fields', [])
+        search_fields_description = "search for matching text in %s"  % (
+            ', '.join(search_fields))
+        return [
+            {
+                'name': self.search_param,
+                'required': False,
+                'in': 'query',
+                'description': force_text(search_fields_description),
+                'schema': {
+                    'type': 'string',
+                },
+            },
+        ]
+
 
 class OrderingFilter(BaseOrderingFilter):
 
@@ -115,6 +131,26 @@ class OrderingFilter(BaseOrderingFilter):
             ordering = view.alternate_ordering
         return ordering
 
+    def get_schema_operation_parameters(self, view):
+        # validating presence of coreapi and coreschema
+        super(OrderingFilter, self).get_schema_fields(view)
+        ordering_fields = getattr(view, 'ordering_fields', [])
+        sort_fields_description = "sort by %s. If a field is preceded by"\
+            " a minus sign ('-'), the order will be reversed. Multiple 'o'"\
+            " parameters can be specified to produce a stable"\
+            " result." % ', '.join([field[1] for field in ordering_fields])
+        return [
+            {
+                'name': self.ordering_param,
+                'required': False,
+                'in': 'query',
+                'description': force_text(sort_fields_description),
+                'schema': {
+                    'type': 'string',
+                },
+            },
+        ]
+
 
 class SortableSearchableFilterBackend(object):
 
@@ -129,40 +165,35 @@ class SortableSearchableFilterBackend(object):
         #pylint:disable=no-self-use,unused-argument
         return queryset
 
-    def get_schema_fields(self, view):
-        #pylint:disable=unused-argument
-        assert coreapi is not None, 'coreapi must be installed to use'\
-            ' `get_schema_fields()`'
-        assert coreschema is not None, 'coreschema must be installed '\
-            'to use `get_schema_fields()`'
+    def get_schema_operation_parameters(self, view):
+        search_fields = getattr(view, 'search_fields', [])
+        search_fields_description = "search for matching text in %s"  % (
+            ', '.join(search_fields))
+        ordering_fields = getattr(view, 'ordering_fields', [])
         sort_fields_description = "sort by %s. If a field is preceded by"\
             "a minus sign ('-'), the order will be reversed. Multiple 'o'"\
             " parameters can be specified to produce a stable"\
-            " result." % ', '.join([field[1] for field in self.sort_fields])
-        search_fields_description = "search for matching text in %s"  % (
-            ', '.join(self.search_fields))
-
-        fields = [
-            coreapi.Field(
-                name='o',
-                required=False,
-                location='query',
-                schema=coreschema.String(
-                    title='O',
-                    description=force_text(sort_fields_description)
-                )
-            ),
-            coreapi.Field(
-                name='q',
-                required=False,
-                location='query',
-                schema=coreschema.String(
-                    title='Q',
-                    description=force_text(search_fields_description)
-                )
-            )
+            " result." % ', '.join([field[1] for field in ordering_fields])
+        return [
+            {
+                'name': self.search_param,
+                'required': False,
+                'in': 'query',
+                'description': force_text(search_fields_description),
+                'schema': {
+                    'type': 'string',
+                },
+            },
+            {
+                'name': self.ordering_param,
+                'required': False,
+                'in': 'query',
+                'description': force_text(sort_fields_description),
+                'schema': {
+                    'type': 'string',
+                },
+            }
         ]
-        return fields
 
 
 class SortableDateRangeSearchableFilterBackend(SortableSearchableFilterBackend):
@@ -171,29 +202,29 @@ class SortableDateRangeSearchableFilterBackend(SortableSearchableFilterBackend):
 #        super(SortableDateRangeSearchableFilterBackend, self).__init__(
 #            sort_fields, search_fields)
 
-    def get_schema_fields(self, view):
+    def get_schema_operation_parameters(self, view):
         fields = super(SortableDateRangeSearchableFilterBackend,
-            self).get_schema_fields(view)
+            self).get_schema_operation_parameters(view)
         fields += [
-            coreapi.Field(
-                name='start_at',
-                required=False,
-                location='query',
-                schema=coreschema.String(
-                    title='StartAt',
-                    description=force_text("date/time in ISO format"\
-                        " after which records were created.")
-                )
-            ),
-            coreapi.Field(
-                name='ends_at',
-                required=False,
-                location='query',
-                schema=coreschema.String(
-                    title='EndsAt',
-                    description=force_text("date/time in ISO format"\
-                        " before which records were created.")
-                )
-            ),
+            {
+                'name': 'start_at',
+                'required': False,
+                'in': 'query',
+                'description': force_text("date/time in ISO format"\
+                        " after which records were created."),
+                'schema': {
+                    'type': 'string',
+                },
+            },
+            {
+                'name': 'ends_at',
+                'required': False,
+                'in': 'query',
+                'description': force_text("date/time in ISO format"\
+                        " before which records were created."),
+                'schema': {
+                    'type': 'string',
+                },
+            }
         ]
         return fields

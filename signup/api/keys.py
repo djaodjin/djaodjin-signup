@@ -49,7 +49,13 @@ class ResetAPIKeysAPIView(UserMixin, GenericAPIView):
     """
     serializer_class = APIKeysSerializer
 
-    @swagger_auto_schema(request_body=AuthenticatedUserPasswordSerializer)
+    def get_serializer_class(self):
+        if self.request.method.lower() == 'post':
+            return AuthenticatedUserPasswordSerializer
+        return super(ResetAPIKeysAPIView, self).get_serializer_class()
+
+    @swagger_auto_schema(responses={
+        201: OpenAPIResponse("Reset successful", APIKeysSerializer)})
     def post(self, request, *args, **kwargs):#pylint:disable=unused-argument
         """
         Resets a user secret API key
@@ -57,18 +63,18 @@ class ResetAPIKeysAPIView(UserMixin, GenericAPIView):
         Resets the secret API key with which a user can authenticate
         with the service.
 
-        **Tags: auth
+        **Tags: auth, user, usermodel
 
         **Example
 
         .. code-block:: http
 
-            POST /api/users/donny/api-keys/  HTTP/1.1
+            POST /api/users/xia/api-keys/  HTTP/1.1
 
         .. code-block:: json
 
             {
-              "password": "secret"
+              "password": "yoyo"
             }
 
         responds
@@ -118,19 +124,19 @@ class PublicKeyAPIView(UserMixin, GenericAPIView):
         """
         Updates a user public RSA key
 
-        **Tags: auth
+        **Tags: auth, user, usermodel
 
         **Example
 
         .. code-block:: http
 
-            PUT /api/users/donny/ssh-keys/  HTTP/1.1
+            PUT /api/users/xia/ssh-keys/  HTTP/1.1
 
         .. code-block:: json
 
             {
               "pubkey": "ssh-rsa AAAAB3N...",
-              "password": "secret"
+              "password": "yoyo"
             }
 
         responds

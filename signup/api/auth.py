@@ -45,7 +45,7 @@ from ..helpers import as_timestamp, datetime_or_now
 from ..mixins import ActivateMixin, RegisterMixin
 from ..models import Contact
 from ..serializers import (ActivateUserSerializer, CredentialsSerializer,
-    CreateUserSerializer,
+    UserCreateSerializer,
     PasswordResetSerializer, PasswordResetConfirmSerializer,
     TokenSerializer, UserSerializer, ValidationErrorSerializer)
 from ..utils import (get_disabled_authentication, get_disabled_registration,
@@ -105,7 +105,7 @@ class JWTBase(GenericAPIView):
         if request.query_params.get('cookie', False):
             auth_login(request, user)
 
-    def permission_denied(self, request, message=None):
+    def permission_denied(self, request, message=None, code=None):
         # We override this function from `APIView`. The request will never
         # be authenticated by definition since we are dealing with login
         # and register APIs.
@@ -114,17 +114,23 @@ class JWTBase(GenericAPIView):
 
 class JWTActivate(ActivateMixin, JWTBase):
     """
-    Retrieves user associated to an activation key
+    Retrieves an activation key
 
-    Retrieves information about a user based on an activation key.
+    This API is typically used to pre-populate a registration form
+    when a user was invited to the site by another user.
 
-    **Tags: auth
+    The response is usually presented in an HTML
+    `activate page </docs/themes/#workflow_activate>`_
+    as present in the default theme.
+
+    **Tags: auth, visitor, usermodel
 
     **Example
 
     .. code-block:: http
 
-        GET /api/auth/activate/0123456789abcef0123456789abcef/ HTTP/1.1
+        GET /api/auth/activate/16793aa72a4c7ae94b50b20c2eca52df5b0fe2c6/\
+ HTTP/1.1
 
     responds
 
@@ -165,13 +171,14 @@ class JWTActivate(ActivateMixin, JWTBase):
         Activates a new user and returns a JSON Web Token that can subsequently
         be used to authenticate the new user in HTTP requests.
 
-        **Tags: auth
+        **Tags: auth, visitor, usermodel
 
         **Example
 
         .. code-block:: http
 
-            POST /api/auth/activate/0123456789abcef0123456789abcef/ HTTP/1.1
+            POST /api/auth/activate/16793aa72a4c7ae94b50b20c2eca52df5b0fe2c6/\
+ HTTP/1.1
 
         .. code-block:: json
 
@@ -209,12 +216,16 @@ class JWTActivate(ActivateMixin, JWTBase):
 
 class JWTLogin(JWTBase):
     """
-    Logs a user in
+    Authenticates a user
 
-    Returns a JSON Web Token that can be used in requests that require
+    Returns a JSON Web Token that can be used in HTTP requests that require
     authentication.
 
-    **Tags: auth
+    The API is typically used within an HTML
+    `login page </docs/themes/#workflow_login>`_
+    as present in the default theme.
+
+    **Tags: auth, visitor, usermodel
 
     **Example
 
@@ -238,6 +249,7 @@ ImRvbm55IiwiZW1haWwiOiJzbWlyb2xvKzRAZGphb2RqaW4uY29tIiwiZnV\
 sbF9uYW1lIjoiRG9ubnkgQ29vcGVyIiwiZXhwIjoxNTI5NjU4NzEwfQ.F2y\
 1iwj5NHlImmPfSff6IHLN7sUXpBFmX0qjCbFTe6A"}
     """
+    # XXX add "How to enable MFA" in the documentation
     model = get_user_model()
     serializer_class = CredentialsSerializer
 
@@ -305,7 +317,11 @@ class JWTPasswordResetConfirm(JWTBase):
     and returns a JSON Web Token that can subsequently
     be used to authenticate the new user in HTTP requests.
 
-    **Tags: auth
+    The API is typically used within an HTML
+    `reset password page </docs/themes/#workflow_reset>`_
+    as present in the default theme.
+
+    **Tags: auth, visitor, usermodel
 
     **Example
 
@@ -373,7 +389,11 @@ class JWTRegister(RegisterMixin, JWTBase):
     Creates a new user and returns a JSON Web Token that can subsequently
     be used to authenticate the new user in HTTP requests.
 
-    **Tags: auth
+    The API is typically used within an HTML
+    `register page </docs/themes/#workflow_register>`_
+    as present in the default theme.
+
+    **Tags: auth, visitor, usermodel
 
     **Example
 
@@ -403,7 +423,7 @@ JwcBUUMECj8AKxsHtRHUSypco"
     """
     model = get_user_model()
     permission_classes = [AllowAuthenticationEnabled, AllowRegistrationEnabled]
-    serializer_class = CreateUserSerializer
+    serializer_class = UserCreateSerializer
 
     def register(self, serializer):
         return self.register_user(**serializer.validated_data)
@@ -433,7 +453,7 @@ class JWTLogout(JWTBase):
     This API endpoint is only useful when the user is using Cookie-based
     authentication. Tokens expire; they cannot be revoked.
 
-    **Tags: auth
+    **Tags: auth, user, usermodel
 
     **Example
 
@@ -456,11 +476,15 @@ class JWTLogout(JWTBase):
 
 class PasswordResetAPIView(CreateAPIView):
     """
-    Emails a password reset link
+    Sends a password reset link
 
     The user is uniquely identified by her email address.
 
-    **Tags: auth
+    The API is typically used within an HTML
+    `recover credentials page </docs/themes/#workflow_recover>`_
+    as present in the default theme.
+
+    **Tags: auth, visitor, usermodel
 
     **Examples
 
@@ -527,7 +551,7 @@ class PasswordResetAPIView(CreateAPIView):
                 "We cannot find an account"\
                 " for this e-mail address. Please verify the spelling.")})
 
-    def permission_denied(self, request, message=None):
+    def permission_denied(self, request, message=None, code=None):
         # We override this function from `APIView`. The request will never
         # be authenticated by definition since we are dealing with login
         # and register APIs.

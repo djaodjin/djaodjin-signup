@@ -244,6 +244,17 @@ class UserMixin(UrlsMixin):
     user_field = 'username'
     user_url_kwarg = 'user'
     user_queryset = get_user_model().objects.filter(is_active=True)
+    user_model = get_user_model()
+
+    # django-restframework
+    lookup_field = 'username'
+    lookup_url_kwarg = 'user'
+    queryset = get_user_model().objects.filter(is_active=True)
+    model = get_user_model()
+
+    # Django
+    slug_field = 'username'
+    slug_url_kwarg = 'user'
 
     @property
     def user(self):
@@ -258,6 +269,12 @@ class UserMixin(UrlsMixin):
                 self._user = get_object_or_404(self.user_queryset, **kwargs)
         return self._user
 
+    def as_user(self, contact):
+        first_name, unused, last_name = full_name_natural_split(
+            contact.full_name)
+        return self.queryset.model(username=contact.slug, email=contact.email,
+            first_name=first_name, last_name=last_name)
+
     def get_context_data(self, **kwargs):
         context = super(UserMixin, self).get_context_data(**kwargs)
         # URLs for user
@@ -269,3 +286,14 @@ class UserMixin(UrlsMixin):
                 'profile_redirect': reverse('accounts_profile')
             }})
         return context
+
+    def get_object(self):
+        try:
+            obj = super(UserMixin, self).get_object()
+        except Http404:
+            # We might still have a `User` model that matches.
+            lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
+            filter_kwargs = {'slug': self.kwargs[lookup_url_kwarg]}
+            contact = get_object_or_404(Contact.objects.all(), **filter_kwargs)
+            obj = self.as_user(contact)
+        return obj

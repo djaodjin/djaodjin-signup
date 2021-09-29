@@ -77,7 +77,6 @@ class AuthenticationMiddleware(BaseAuthenticationMiddleware):
                         # DRF is using a wrapper around a Django request
                         # which we don't have here.
                         continue
-
                     if user_auth_tuple is not None:
                         #pylint:disable=protected-access
                         request._authenticator = authenticator

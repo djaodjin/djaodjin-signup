@@ -1,4 +1,4 @@
-# Copyright (c) 2020, Djaodjin Inc.
+# Copyright (c) 2021, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -26,10 +26,10 @@
 
 import logging
 
-from rest_framework import filters
 from rest_framework.generics import ListCreateAPIView
 
 from .users import UserDetailAPIView, UserListCreateAPIView, UserPictureAPIView
+from .. import filters
 from ..mixins import ContactMixin
 from ..models import Activity
 from ..serializers import ActivitySerializer
@@ -41,17 +41,17 @@ LOGGER = logging.getLogger(__name__)
 # XXX smart list? search and order?
 class ActivityListCreateAPIView(ContactMixin, ListCreateAPIView):
     """
-    Lists activities for a contact
+    Lists activities for a user
 
-    Returns ``PAGE_SIZE`` activity records for a user.
+    Returns a list of {{PAGE_SIZE}} activity records for user account {user}.
 
-    **Tags: profile
+    **Tags: profile, broker, usermodel
 
     **Example
 
     .. code-block:: http
 
-        GET /api/contacts/xia/activities HTTP/1.1
+        GET /api/contacts/xia/activities/ HTTP/1.1
 
     responds
 
@@ -74,10 +74,15 @@ class ActivityListCreateAPIView(ContactMixin, ListCreateAPIView):
             }]
         }
     """
-    filter_backends = (filters.SearchFilter, filters.OrderingFilter)
-    search_fields = ('text',)
-    ordering_fields = ('created_at',)
+    search_fields = (
+        'text',
+    )
+    ordering_fields = (
+        ('created_at', 'created_at'),
+    )
     ordering = ('created_at',)
+
+    filter_backends = (filters.SearchFilter, filters.OrderingFilter)
     serializer_class = ActivitySerializer
 
     def get_queryset(self):
@@ -88,9 +93,9 @@ class ActivityListCreateAPIView(ContactMixin, ListCreateAPIView):
 
     def post(self, request, *args, **kwargs):
         """
-        Records new activity with a contact
+        Records new activity with a user
 
-        **Tags: profile
+        **Tags: profile, broker, usermodel
 
         **Examples
 
@@ -122,7 +127,7 @@ class ContactDetailAPIView(UserDetailAPIView):
     This API end-point is a shadow of `UserDetailAPIView` and is marked
     to be deprecated in the future.
     """
-    swagger_schema = None
+    schema = None
 
 
 class ContactListAPIView(UserListCreateAPIView):
@@ -130,7 +135,7 @@ class ContactListAPIView(UserListCreateAPIView):
     This API end-point is a shadow of `UserListCreateAPIView` and is marked
     to be deprecated in the future.
     """
-    swagger_schema = None
+    schema = None
 
 
 class ContactPictureAPIView(UserPictureAPIView):

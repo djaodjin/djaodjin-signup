@@ -347,6 +347,9 @@ class UserForm(forms.ModelForm):
     full_name = forms.CharField(widget=forms.TextInput(
         attrs={'placeholder': _("First and last names")}),
         max_length=254, label=_("Full name"))
+    nick_name = forms.CharField(widget=forms.TextInput(
+        attrs={'placeholder': _("Short casual name used to address the user")}),
+        max_length=254, label=_("Nick name"))
 
     class Meta:
         model = get_user_model()
@@ -366,6 +369,8 @@ class UserForm(forms.ModelForm):
                     for lang in six.itervalues(locale.LANG_INFO)
                     if 'code' in lang]))
             contact = instance.contacts.order_by('pk').first()
+            self.fields['nick_name'].initial = (contact.nick_name
+                if contact else instance.first_name)
             if contact:
                 self.fields['phone'].initial = contact.phone
                 self.fields['lang'].initial = contact.lang

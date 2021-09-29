@@ -31,7 +31,7 @@ from django.contrib import messages
 from django.contrib.auth import (login as auth_login, logout as auth_logout,
     REDIRECT_FIELD_NAME, authenticate, get_user_model)
 from django.contrib.auth.tokens import default_token_generator
-from django.core.exceptions import ValidationError, NON_FIELD_ERRORS
+from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.http import Http404, HttpResponseRedirect
 from django.template.response import TemplateResponse
