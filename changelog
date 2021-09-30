@@ -1,3 +1,9 @@
+0.5.1
+
+  * enables to customize html/css for pagination links
+  * registers user with phone number only (no email)
+  * uses browser default lang only if not override in registration field
+
 0.5.0
 
   * works with Django3.2

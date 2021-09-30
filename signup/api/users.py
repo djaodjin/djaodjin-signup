@@ -103,6 +103,7 @@ class UserActivateAPIView(ContactMixin, GenericAPIView):
 
         {
             "slug": "xia",
+            "username": "xia",
             "printable_name": "Xia",
             "full_name": "Xia Lee",
             "nick_name": "Xia",
@@ -153,6 +154,7 @@ class UserDetailAPIView(UserMixin, RetrieveUpdateDestroyAPIView):
 
         {
             "slug": "xia",
+            "username": "xia",
             "email": "xia@locahost.localdomain",
             "full_name": "Xia Lee",
             "nick_name": "Xia",
@@ -384,6 +386,7 @@ class UserListCreateAPIView(ListCreateAPIView):
             "previous": null,
             "results": [{
               "slug": "xia",
+              "username": "xia",
               "created_at": "2018-01-01T00:00:00Z",
               "printable_name": "Xia",
               "email": "xia@locahost.localdomain",

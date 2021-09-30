@@ -70,10 +70,10 @@ run the testsite webapp.
 Release Notes
 =============
 
-0.5.0
+0.5.1
 
-  * works with Django3.2
-  * prepares Vue3 migration
-  * keeps same activation key accross multiple clicks on an e-mail backlink
+  * enables to customize html/css for pagination links
+  * registers user with phone number only (no email)
+  * uses browser default lang only if not override in registration field
 
 [previous release notes](changelog)
