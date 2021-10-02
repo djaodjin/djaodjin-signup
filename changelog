@@ -4,6 +4,8 @@
   * registers user with phone number only (no email)
   * uses browser default lang only if not override in registration field
 
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Thu,  30 Sep 2021 09:32:00 -0700
+
 0.5.0
 
   * works with Django3.2

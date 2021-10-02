@@ -30,7 +30,7 @@ from ...api.auth import (JWTActivate, JWTLogin, JWTPasswordResetConfirm,
 
 
 urlpatterns = [
-    url(r'^auth/activate/(?P<verification_key>%s)/$'
+    url(r'^auth/activate/(?P<verification_key>%s)/?$'
         % settings.EMAIL_VERIFICATION_PAT,
         JWTActivate.as_view(), name='api_activate'),
     url(r'^auth/register/', JWTRegister.as_view(), name='api_register'),

@@ -347,7 +347,7 @@ class UserForm(forms.ModelForm):
     full_name = forms.CharField(widget=forms.TextInput(
         attrs={'placeholder': _("First and last names")}),
         max_length=254, label=_("Full name"))
-    nick_name = forms.CharField(widget=forms.TextInput(
+    nick_name = forms.CharField(required=False, widget=forms.TextInput(
         attrs={'placeholder': _("Short casual name used to address the user")}),
         max_length=254, label=_("Nick name"))
 
