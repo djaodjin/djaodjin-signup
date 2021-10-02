@@ -70,10 +70,8 @@ run the testsite webapp.
 Release Notes
 =============
 
-0.5.1
+0.5.2
 
-  * enables to customize html/css for pagination links
-  * registers user with phone number only (no email)
-  * uses browser default lang only if not override in registration field
+  * makes nick_name optional in profile form
 
 [previous release notes](changelog)
