@@ -121,7 +121,7 @@ class UserActivateAPIView(ContactMixin, GenericAPIView):
         instance = self.get_object()
         if check_has_credentials(request, instance.user):
             raise ValidationError({'detail': _("User is already active")})
-        serializer = self.get_serializer(instance)
+        serializer = self.get_serializer(instance.user)
         resp_data = serializer.data
         resp_data.update({
             'detail': _("Activation e-mail successfuly sent to %(email)s") % {

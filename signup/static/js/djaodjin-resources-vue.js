@@ -11,6 +11,11 @@ var DESC_SORT_PRE = '-';
 var httpRequestMixin = {
     // basically a wrapper around jQuery ajax functions
     methods: {
+
+        _isArray: function (obj) {
+            return obj instanceof Object && obj.constructor === Array;
+        },
+
         _isFunction: function (func){
             // https://stackoverflow.com/a/7356528/1491475
             return func && {}.toString.call(func) === '[object Function]';
@@ -18,7 +23,7 @@ var httpRequestMixin = {
 
         _isObject: function (obj) {
             // https://stackoverflow.com/a/46663081/1491475
-            return obj instanceof Object && obj.constructor === Object
+            return obj instanceof Object && obj.constructor === Object;
         },
 
         _getAuthToken: function() {
@@ -48,6 +53,21 @@ var httpRequestMixin = {
                 }
             }
             return "";
+        },
+
+        _safeUrl: function(base, path) {
+            if( !path ) return base;
+
+            if( base && base[base.length - 1] == '/') {
+                if( path && path[0] == '/') {
+                    return base + path.substring(1);
+                }
+                return base + path;
+            }
+            if( path && path[0] == '/') {
+                return base + path;
+            }
+            return base + '/' + path;
         },
 
         /** This method generates a GET HTTP request to `url` with a query
@@ -158,7 +178,7 @@ var httpRequestMixin = {
                 } else if (arg2 !== undefined){
                     throw 'arg2 should be a failureCallback function';
                 }
-            } else if(vm._isObject(arg)){
+            } else if( vm._isObject(arg) || vm._isArray(arg) ) {
                 // We are parsing reqPost(url, data)
                 // or reqPost(url, data, successCallback)
                 // or reqPost(url, data, successCallback, errorCallback).
@@ -913,4 +933,4 @@ var itemListMixin = {
             return result;
         },
     },
-}
+};

@@ -1,8 +1,10 @@
 {% extends "base.html" %}
 
+{% block localheader_title %}Forgot Password{% endblock %}
+
 {% block content %}
 <div>
-<h1>Forgotten password</h1>
+  <h1>Forgot Password</h1>
 <p>
 Please enter your e-mail or phone.
 Your password will be reset and you will get a chance to choose a new password.
@@ -10,7 +12,7 @@ Your password will be reset and you will get a chance to choose a new password.
 <form method="post" action=".">
     {% csrf_token %}
     {{ form }}
-    <input type="submit" name="submit" value="Submit">
+    <button type="submit" name="submit">Submit</button>
 </form>
 <p>
     Don't have an account? -- <a href="{% url 'registration_register' %}">Sign up</a>
