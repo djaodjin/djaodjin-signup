@@ -70,8 +70,8 @@ run the testsite webapp.
 Release Notes
 =============
 
-0.5.2
+0.5.3
 
-  * makes nick_name optional in profile form
+  * fixes regression on activate API
 
 [previous release notes](changelog)
