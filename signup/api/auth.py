@@ -45,7 +45,7 @@ from ..helpers import as_timestamp, datetime_or_now
 from ..mixins import ActivateMixin, RegisterMixin
 from ..models import Contact
 from ..serializers import (ActivateUserSerializer, CredentialsSerializer,
-    UserCreateSerializer,
+    UserCreateSerializer, UserDetailSerializer,
     PasswordResetSerializer, PasswordResetConfirmSerializer,
     TokenSerializer, UserSerializer, ValidationErrorSerializer)
 from ..utils import (get_disabled_authentication, get_disabled_registration,
@@ -150,7 +150,7 @@ class JWTActivate(ActivateMixin, JWTBase):
 
     def get_serializer_class(self):
         if self.request.method.lower() == 'get':
-            return UserSerializer
+            return UserDetailSerializer
         return super(JWTActivate, self).get_serializer_class()
 
     def get(self, request, *args, **kwargs):#pylint:disable=unused-argument
