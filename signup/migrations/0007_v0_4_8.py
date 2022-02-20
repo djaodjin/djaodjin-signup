@@ -14,6 +14,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='contact',
             name='lang',
-            field=models.CharField(default='en-us', max_length=5, verbose_name='Preferred communication language'),
+            field=models.CharField(default='en', help_text='Two-letter ISO 639 code for the preferred communication language (ex: en)', max_length=5, verbose_name='Preferred communication language'),
         )
     ]

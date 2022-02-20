@@ -79,6 +79,7 @@ INSTALLED_APPS = (
     'phonenumber_field',
     'captcha',
     'signup',
+    'social_django',
     'rules',
     'testsite'
 )
@@ -141,7 +142,30 @@ if logging.getLogger('gunicorn.error').handlers:
     })
 
 
+SOCIAL_AUTH_RAISE_EXCEPTIONS = False
+SOCIAL_AUTH_LOGIN_ERROR_URL = reverse_lazy('homepage')
+SOCIAL_AUTH_GITHUB_SCOPE = ['user:email']
+SOCIAL_AUTH_USER_FIELDS = ['username', 'email', 'first_name', 'last_name']
+SOCIAL_AUTH_PIPELINE = (
+    'social_core.pipeline.social_auth.social_details',
+#    'social_core.pipeline.social_auth.social_uid',
+    'signup.utils.social_uid',
+    'social_core.pipeline.social_auth.auth_allowed',
+    'social_core.pipeline.social_auth.social_user',
+    'social_core.pipeline.user.get_username',
+    # adds the following to the default pipeline because sites offer
+    # login by e-mail, which be definition then is unique in `auth_user`.
+    'social_core.pipeline.social_auth.associate_by_email',
+    'social_core.pipeline.user.create_user',
+    'social_core.pipeline.social_auth.associate_user',
+    'social_core.pipeline.social_auth.load_extra_data',
+    'social_core.pipeline.user.user_details',
+)
+
 AUTHENTICATION_BACKENDS = (
+    'social_core.backends.azuread.AzureADOAuth2',
+    'social_core.backends.google.GoogleOAuth2',
+    'social_core.backends.github.GithubOAuth2',
     'signup.backends.auth.UsernameOrEmailPhoneModelBackend',
     'django.contrib.auth.backends.ModelBackend'
 )
@@ -164,6 +188,7 @@ MIDDLEWARE = (
     'signup.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'social_django.middleware.SocialAuthExceptionMiddleware',
 )
 
 ROOT_URLCONF = 'testsite.urls'
@@ -201,7 +226,7 @@ MESSAGE_TAGS = {
 # Internationalization
 # https://docs.djangoproject.com/en/1.6/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'en'
 TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_L10N = True

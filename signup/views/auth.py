@@ -1,4 +1,4 @@
-# Copyright (c) 2021, Djaodjin Inc.
+# Copyright (c) 2022, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -35,26 +35,23 @@ from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.http import Http404, HttpResponseRedirect
 from django.template.response import TemplateResponse
-from django.utils.encoding import force_bytes
-from django.utils.http import (urlencode, urlsafe_base64_decode,
-    urlsafe_base64_encode)
+from django.utils.http import urlencode, urlsafe_base64_decode
 from django.utils.translation import ugettext_lazy as _
 from django.views.decorators.cache import add_never_cache_headers
 from django.views.generic.base import TemplateResponseMixin, View
 from django.views.generic.edit import FormMixin, ProcessFormView, UpdateView
-from rest_framework import serializers
+from rest_framework import serializers, exceptions
 
-from .. import settings, signals
+from .. import settings
 from ..auth import validate_redirect
 from ..compat import reverse, is_authenticated, six
-from ..decorators import check_has_credentials
-from ..forms import (ActivationForm, MFACodeForm, FrictionlessSignupForm,
-    PasswordResetForm, PasswordResetConfirmForm,
-    UserActivateForm, AuthenticationForm)
-from ..mixins import ActivateMixin, RegisterMixin, UrlsMixin
+from ..forms import (ActivationForm, AuthenticationForm, FrictionlessSignupForm,
+    MFACodeForm, PasswordResetForm, PasswordResetConfirmForm, UserActivateForm)
+from ..mixins import (ActivateMixin, LoginMixin, RecoverMixin, RegisterMixin,
+    SSORequired, UrlsMixin)
 from ..models import Contact
 from ..utils import (fill_form_errors, get_disabled_authentication,
-    get_disabled_registration, get_login_throttle, get_password_reset_throttle,
+    get_disabled_registration, get_password_reset_throttle,
     has_invalid_password)
 from ..validators import as_email_or_phone
 
@@ -134,7 +131,7 @@ class RedirectFormView(RedirectFormMixin, ProcessFormView):
     """
 
 
-class PasswordResetBaseView(RedirectFormMixin, ProcessFormView):
+class PasswordResetBaseView(RecoverMixin, RedirectFormMixin, ProcessFormView):
     """
     Enter email address or phone number to reset password.
     """
@@ -151,59 +148,30 @@ class PasswordResetBaseView(RedirectFormMixin, ProcessFormView):
         username = form.cleaned_data.get('email', None)
         email, phone = as_email_or_phone(username)
         try:
-            user = self.model.objects.find_user(username)
-
-            # Rate-limit based on the user.
-            self.check_user_throttles(self.request, user)
-
-            next_url = validate_redirect(self.request)
-            if check_has_credentials(self.request, user, next_url=next_url):
-                # Make sure that a reset password email is sent to a user
-                # that actually has an activated account.
-                uid = urlsafe_base64_encode(force_bytes(user.pk))
-                if not isinstance(uid, six.string_types):
-                    # See Django2.2 release notes
-                    uid = uid.decode()
-                token = self.token_generator.make_token(user)
-                back_url = self.request.build_absolute_uri(
-                    reverse('password_reset_confirm', args=(uid, token)))
-                if next_url:
-                    back_url += '?%s=%s' % (REDIRECT_FIELD_NAME, next_url)
-                signals.user_reset_password.send(
-                    sender=__name__, user=user, request=self.request,
-                    back_url=back_url, expiration_days=settings.KEY_EXPIRATION)
-                if phone:
-                    messages.info(self.request,
+            self.recover_user(**form.cleaned_data)
+            if phone:
+                messages.info(self.request,
                     _("Please follow the instructions in the phone message"\
                     " that has just been sent to you to reset"\
                     " your password."))
-                elif email:
-                    messages.info(self.request,
+            elif email:
+                messages.info(self.request,
                     _("Please follow the instructions"\
                     " in the email that has just been sent to you to reset"\
                     " your password."))
-            else:
-                if phone:
-                    messages.info(self.request,
-                        _("You should now secure and activate"\
-                          " your account following the instructions"\
-                          " we just phoned you. Thank you."))
-                elif email:
-                    messages.info(self.request,
-                        _("You should now secure and activate"\
-                          " your account following the instructions"\
-                          " we just emailed you. Thank you."))
             return super(PasswordResetBaseView, self).form_valid(form)
-        except self.model.DoesNotExist:
-            # We don't want to give a clue about registered users, yet
-            # it already possible to do a straight register to get the same.
-            if phone:
-                messages.error(self.request, _("We cannot find an account"\
-                    " for this phone number. Please verify the spelling."))
-            else:
-                messages.error(self.request, _("We cannot find an account"\
-                    " for this e-mail address. Please verify the spelling."))
-        return super(PasswordResetBaseView, self).form_invalid(form)
+        except serializers.ValidationError as err:
+            fill_form_errors(form, err)
+
+        except SSORequired as err:
+            context = self.get_context_data(form=form)
+            context.update({'sso_required': err})
+            return self.render_to_response(context)
+
+        except exceptions.PermissionDenied as err:
+            pass
+
+        return self.form_invalid(form)
 
 
 class PasswordResetConfirmBaseView(RedirectFormMixin, ProcessFormView):
@@ -303,6 +271,10 @@ class SignupBaseView(RedirectFormMixin, RegisterMixin, ProcessFormView):
         except serializers.ValidationError as err:
             fill_form_errors(form, err)
             return self.form_invalid(form)
+        except SSORequired as err:
+            context = self.get_context_data(form=form)
+            context.update({'sso_required': err})
+            return self.render_to_response(context)
         if new_user:
             success_url = self.get_success_url()
         else:
@@ -334,18 +306,14 @@ class ActivationBaseView(RedirectFormMixin, ActivateMixin, UpdateView):
     form_class = ActivationForm
     http_method_names = ['get', 'post']
 
-    @property
-    def contact(self):
-        if not hasattr(self, '_contact'):
-            self._contact = Contact.objects.get_token(
-                self.kwargs.get(self.key_url_kwarg))
-        return self._contact
-
     def get_context_data(self, **kwargs):
         context = super(ActivationBaseView, self).get_context_data(**kwargs)
-        if self.contact and self.contact.extra:
-            # XXX might be best as a separate field.
-            context.update({'reason': self.contact.extra})
+        user = self.object
+        if user:
+            contact = getattr(user, '_contact', None)
+            if contact and contact.extra:
+                # XXX 'reason' might be best as a separate field.
+                context.update({'reason': contact.extra})
         return context
 
     def get_form_class(self):
@@ -378,12 +346,14 @@ class ActivationBaseView(RedirectFormMixin, ActivateMixin, UpdateView):
         user_with_backend = None
         if isinstance(form, UserActivateForm):
             password = form.cleaned_data.get('password')
-            user_with_backend = authenticate(self.request,
-                username=self.contact.user.username, password=password)
-            if not user_with_backend:
-                form.add_error('password', ValidationError(
-                    _("Please enter a correct password.")))
-                return self.form_invalid(form)
+            user = self.object
+            if user:
+                user_with_backend = authenticate(self.request,
+                    username=user.username, password=password)
+                if not user_with_backend:
+                    form.add_error('password', ValidationError(
+                        _("Please enter a correct password.")))
+                    return self.form_invalid(form)
 
         user = self.activate_user(**form.cleaned_data)
         if user.last_login:
@@ -410,51 +380,60 @@ class ActivationBaseView(RedirectFormMixin, ActivateMixin, UpdateView):
         # in an e-mail leads to a 404.
         status_code = 200
         next_url = validate_redirect(self.request)
-        if not self.object:
+        context = self.get_context_data(**kwargs)
+        user = self.object
+        if not user:
             status_code = 404
             messages.error(request, _("Activation failed. You may have"\
                 " already activated your account previously. In that case,"\
                 " just login. Thank you."))
             if next_url:
                 return HttpResponseRedirect(next_url)
-        elif is_authenticated(request) and self.request.user == self.object:
+            return self.render_to_response(context, status=status_code)
+
+        if is_authenticated(request) and self.request.user == user:
             user = self.activate_user()
             if user.last_login:
                 messages.info(self.request,
                     _("Thank you for verifying your e-mail address."))
             return HttpResponseRedirect(self.get_success_url())
-        return self.render_to_response(self.get_context_data(**kwargs),
-            status=status_code)
+
+        email = user.email
+        try:
+            self.check_sso_required(email)
+        except SSORequired as err:
+            context.update({'sso_required': err})
+
+        return self.render_to_response(context, status=status_code)
 
     def get_object(self, queryset=None):  #pylint:disable=unused-argument
-        token = self.contact
-        if not token:
+        contact = Contact.objects.get_token(self.kwargs.get(self.key_url_kwarg))
+        if not contact:
             raise Http404(_("Cannot find activation token '%(token)s'") % {
                 'token': self.kwargs.get(self.key_url_kwarg)})
-        return token.user
+        user = contact.user
+        if user:
+            # Set the Contact instance that was used to identify the User.
+            #pylint:disable=protected-access
+            user._contact = contact
+        return user
 
 
-class SigninBaseView(RedirectFormMixin, ProcessFormView):
+class SigninBaseView(LoginMixin, RedirectFormMixin, ProcessFormView):
     """
     Check credentials and sign in the authenticated user.
     """
     model = get_user_model()
     form_class = AuthenticationForm
     password_form_class = AuthenticationForm
-
-    def check_user_throttles(self, request, user):
-        throttle = get_login_throttle()
-        if throttle:
-            throttle(request, self, user)
+    mfa_code_form_class = MFACodeForm
 
     def get_form_class(self):
-        username = self.request.POST.get('username')
-        if username:
-            contact = Contact.objects.filter(user__username=username).first()
-            if contact and contact.mfa_backend and contact.mfa_priv_key:
-                return MFACodeForm
-        password = self.request.POST.get('password')
-        if password and not 'password' in self.form_class.base_fields:
+        if ('code' in self.request.POST and
+            not 'code' in self.form_class.base_fields):
+            return self.mfa_code_form_class
+        if ('password' in self.request.POST and
+            not 'password' in self.form_class.base_fields):
             return self.password_form_class
         return self.form_class
 
@@ -471,7 +450,7 @@ class SigninBaseView(RedirectFormMixin, ProcessFormView):
         return form
 
     def get_mfa_form(self):
-        form = MFACodeForm(**self.get_form_kwargs())
+        form = self.mfa_code_form_class(**self.get_form_kwargs())
         # We must pass the username and password back to the browser
         # as hidden fields, but prevent calls to `form.non_field_errors()`
         # in the templates to inadvertently trigger a call
@@ -480,36 +459,27 @@ class SigninBaseView(RedirectFormMixin, ProcessFormView):
         return form
 
     def form_valid(self, form):
-        username = form.cleaned_data.get('username')
         try:
-            user = self.model.objects.find_user(username)
-        except self.model.DoesNotExist:
-            return self.form_invalid(form)
+            user = self.login_user(**form.cleaned_data)
+            _login(self.request, user)
+            return super(SigninBaseView, self).form_valid(form)
+        except serializers.ValidationError as err:
+            for error in err.detail:
+                if 'password' in error:
+                    form = self.get_password_form()
+                elif 'code' in error:
+                    form = self.get_mfa_form()
+            fill_form_errors(form, err)
 
-        self.check_user_throttles(self.request, user)
+        except SSORequired as err:
+            context = self.get_context_data(form=form)
+            context.update({'sso_required': err})
+            return self.render_to_response(context)
 
-        password = form.cleaned_data.get('password')
-        if not password:
-            form = self.get_password_form()
-            form.is_valid()
-            return self.form_invalid(form)
+        except exceptions.PermissionDenied as err:
+            pass
 
-        user_with_backend = authenticate(self.request,
-            username=username, password=password)
-
-        contact = Contact.objects.find_by_username_or_comm(username).first()
-        if contact and contact.mfa_backend:
-            if not contact.mfa_priv_key:
-                form = self.get_mfa_form()
-                contact.create_mfa_token()
-                context = self.get_context_data(form=form)
-                return self.render_to_response(context)
-            # `get_form_class` will have returned `MFACodeForm`
-            # if `mfa_priv_key` is not yet set, which in turn
-            # will not make it this far is the code is incorrect.
-            contact.clear_mfa_token()
-        _login(self.request, user_with_backend)
-        return super(SigninBaseView, self).form_valid(form)
+        return self.form_invalid(form)
 
     def form_invalid(self, form):
         username = form.cleaned_data.get('username')
@@ -518,25 +488,7 @@ class SigninBaseView(RedirectFormMixin, ProcessFormView):
         # won't be present in the `cleaned_data`.
         if username:
             try:
-                user = self.model.objects.find_user(username)
-                if not check_has_credentials(self.request, user):
-                    form.add_error(None, _(
-                        "This email address has already been registered!"\
-                        " You should now secure and activate your account"\
-                        " following the instructions we just emailed you."\
-                        " Thank you."))
-                else:
-                    contact = Contact.objects.filter(user=user).first()
-                    if contact and contact.mfa_backend:
-                        if contact.mfa_nb_attempts >= settings.MFA_MAX_ATTEMPTS:
-                            contact.clear_mfa_token()
-                            form = self.get_form()
-                            form.add_error(None, _("You have exceeded the"\
-                                " number of attempts to enter the MFA code."\
-                                " Please start again."))
-                        else:
-                            contact.mfa_nb_attempts += 1
-                            contact.save()
+                self.model.objects.find_user(username)
             except self.model.DoesNotExist:
                 # Django takes extra steps to make sure an attacker finds
                 # it difficult to distinguish between a non-existant user

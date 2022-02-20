@@ -1,4 +1,4 @@
-# Copyright (c) 2021, Djaodjin Inc.
+# Copyright (c) 2022, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -28,10 +28,11 @@ User Model for the signup app
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
-import datetime, hashlib, logging, random, re
+import datetime, hashlib, logging, random, re, string
 
 from django.core.exceptions import ValidationError
-from django.core.validators import validate_email as validate_email_base
+from django.core.validators import (RegexValidator, URLValidator,
+    validate_email as validate_email_base)
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import UserManager
 from django.db import models, transaction, IntegrityError
@@ -60,6 +61,21 @@ def _get_extra_field_class():
     elif isinstance(extra_class, str):
         extra_class = import_string(extra_class)
     return extra_class
+
+
+def domain_name_validator(value):
+    """
+    Validates that the given value contains no whitespaces to prevent common
+    typos.
+    """
+    if not value:
+        return
+    checks = ((s in value) for s in string.whitespace)
+    if any(checks):
+        raise ValidationError(
+            _("The domain name cannot contain any spaces or tabs."),
+            code='invalid',
+        )
 
 
 class ActivatedUserManager(UserManager):
@@ -636,6 +652,22 @@ class Credentials(models.Model):
             self._api_priv_key = None
             self.save(update_fields=["api_priv_key"])
         return check_password(raw_api_priv_key, self.api_priv_key, setter)
+
+
+@python_2_unicode_compatible
+class DelegateAuth(models.Model):
+    """
+    Authentication for users with e-mail addresses in these domains must be
+    delegated to a SSO provider.
+    """
+    domain = models.CharField(max_length=100, unique=True,
+        validators=[domain_name_validator, RegexValidator(URLValidator.host_re,
+            _("Enter a valid 'domain', ex: example.com"), 'invalid')],
+        help_text=_(
+            _("fully qualified domain name at which the site is available")))
+    provider = models.CharField(max_length=32)
+    created_at = models.DateTimeField(auto_now_add=True,
+        help_text=_("Date/time of creation (in ISO format)"))
 
 
 def get_user_contact(user):

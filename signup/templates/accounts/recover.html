@@ -1,21 +1,30 @@
 {% extends "base.html" %}
 
-{% block localheader_title %}Forgot Password{% endblock %}
+{% block localheader_title %}Recover Password{% endblock %}
 
 {% block content %}
 <div>
-  <h1>Forgot Password</h1>
-<p>
+  <h1>Recover Password</h1>
+  <div>
+    {% if sso_required %}
+    <p>
+        You are required to login through the following Single Sign On (SSO) provider:
+    </p>
+    <a href="{{sso_required.url}}">{{sso_required.printable_name}}</a>
+    {% else %}
+    <p>
 Please enter your e-mail or phone.
 Your password will be reset and you will get a chance to choose a new password.
-</p>
-<form method="post" action=".">
-    {% csrf_token %}
-    {{ form }}
-    <button type="submit" name="submit">Submit</button>
-</form>
-<p>
-    Don't have an account? -- <a href="{% url 'registration_register' %}">Sign up</a>
-</p>
+    </p>
+    <form method="post" action=".">
+      {% csrf_token %}
+      {{ form }}
+      <button type="submit" name="submit">Submit</button>
+    </form>
+    <p>
+      Don't have an account? -- <a href="{% url 'registration_register' %}">Sign up</a>
+    </p>
+    {% endif %}
+  </div>
 </div>
 {% endblock %}

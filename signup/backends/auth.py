@@ -1,4 +1,4 @@
-# Copyright (c) 2020, Djaodjin Inc.
+# Copyright (c) 2022, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -123,7 +123,12 @@ class UsernameOrEmailPhoneModelBackend(object):
         try:
             contact = Contact.objects.filter(user__is_active=True,
                 **contact_kwargs).select_related('user').get()
-            return contact.user
+            user = contact.user
+            if user:
+                # Set the Contact instance that was used to identify the User.
+                #pylint:disable=protected-access
+                user._contact = contact
+            return user
         except Contact.DoesNotExist:
             pass
         raise self.model.DoesNotExist()

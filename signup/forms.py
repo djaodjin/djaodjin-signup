@@ -1,4 +1,4 @@
-# Copyright (c) 2021, Djaodjin Inc.
+# Copyright (c) 2022, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -411,8 +411,7 @@ class StartAuthenticationForm(forms.Form):
     """
     Form to present a user who may or may not have an account yet.
     """
-    username = CommField()
-
+    username = UsernameOrCommField()
     submit_title = _("Submit")
 
     def __init__(self, *args, **kwargs):

@@ -109,4 +109,61 @@
       "email": "xia+login@localhost.localdomain"
     },
     "model": "signup.Contact", "pk": 6
+},
+{
+    "fields": {
+      "domain": "example.com",
+      "created_at": "2022-01-10T00:00:00-00:00",
+      "provider": "azuread-oauth2"
+    },
+    "model": "signup.DelegateAuth", "pk": 1
+},
+{
+    "fields": {
+      "date_joined": "2022-01-01T00:00:00-09:00",
+      "email": "xia+7@example.com",
+      "first_name": "Xia",
+      "is_active": true,
+      "is_staff": false,
+      "is_superuser": false,
+      "last_login": "2022-01-01T00:00:00-09:00",
+      "last_name": "Login with SSO provider",
+      "password": "!iZdC6uHomlE07qGK/TqfcfxNzKJtFp03c0JILF1frRc=",
+      "username": "xia7"
+    },
+    "model": "auth.User", "pk": 7
+},
+{
+    "fields": {
+      "slug": "xia7",
+      "created_at": "2022-01-10T00:00:00-00:00",
+      "user": 7,
+      "phone": "+14155555557",
+      "email": "xia+7@example.com"
+    },
+    "model": "signup.Contact", "pk": 7
+},
+{
+    "fields": {
+      "date_joined": "2022-01-01T00:00:00-09:00",
+      "email": "xia+8@example.com",
+      "first_name": "Xia",
+      "is_active": true,
+      "is_staff": false,
+      "is_superuser": false,
+      "last_login": "2022-01-01T00:00:00-09:00",
+      "last_name": "Activate with SSO provider",
+      "password": "!iZdC6uHomlE07qGK/TqfcfxNzKJtFp03c0JILF1frRc=",
+      "username": "xia8"
+    },
+    "model": "auth.User", "pk": 8
+},
+{
+    "fields": {
+      "slug": "xia8",
+      "created_at": "2022-01-10T00:00:00-00:00",
+      "user": 8,
+      "email_verification_key": "16793aa72a4c7ae94b50b20c2eca52df5b0fe2c8"
+    },
+    "model": "signup.Contact", "pk": 8
 }]

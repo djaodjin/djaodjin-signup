@@ -95,6 +95,13 @@ def printable_name(user):
     return user.username
 
 
+def social_uid(backend, details, response, *args, **kwargs):
+    uid = backend.get_user_id(details, response)
+    if not uid:
+        uid = details.get('email')
+    return {'uid': uid}
+
+
 def update_db_row(instance, form):
     """
     Updates the record in the underlying database, or adds a validation

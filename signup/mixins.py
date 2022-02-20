@@ -1,4 +1,4 @@
-# Copyright (c) 2021, Djaodjin Inc.
+# Copyright (c) 2022, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -25,45 +25,64 @@
 import logging
 
 from django.http import Http404
-from django.contrib.auth import get_user_model
+from django.contrib.auth import (REDIRECT_FIELD_NAME, authenticate,
+    get_user_model)
 from django.utils import translation
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
 from django.utils.safestring import mark_safe
 from django.utils.translation import ugettext_lazy as _
-from rest_framework import serializers
+from rest_framework import exceptions, serializers
 from rest_framework.generics import get_object_or_404
 from rest_framework.settings import api_settings
 
-from . import signals
+from . import signals, settings
+from .auth import validate_redirect
 from .compat import is_authenticated, reverse, six
 from .decorators import check_has_credentials
 from .helpers import full_name_natural_split
-from .models import Contact
-
+from .models import Contact, DelegateAuth
+from .utils import get_login_throttle, get_password_reset_throttle
+from .validators import as_email_or_phone
 
 LOGGER = logging.getLogger(__name__)
 
 
-class UrlsMixin(object):
+class SSORequired(exceptions.AuthenticationFailed):
+
+    sso_providers = settings.SSO_PROVIDERS
+
+    def __init__(self, provider, detail=None, code=None):
+        self.provider = provider
+        super(SSORequired, self).__init__(detail=detail, code=code)
+
+    @property
+    def url(self):
+        return reverse('social:begin', args=(self.provider,))
+
+    @property
+    def provider_info(self):
+        return self.sso_providers.get(
+            self.provider, {'name': str(self.provider)})
+
+    @property
+    def printable_name(self):
+        return self.provider_info.get('name', str(self.provider))
+
+
+class ChecksMixin(object):
 
     @staticmethod
-    def update_context_urls(context, urls):
-        if 'urls' in context:
-            for key, val in six.iteritems(urls):
-                if key in context['urls']:
-                    if isinstance(val, dict):
-                        context['urls'][key].update(val)
-                    else:
-                        # Because organization_create url is added in this mixin
-                        # and in ``OrganizationRedirectView``.
-                        context['urls'][key] = val
-                else:
-                    context['urls'].update({key: val})
-        else:
-            context.update({'urls': urls})
-        return context
+    def check_sso_required(email):
+        domain = email.split('@')[-1]
+        try:
+            delegate_auth = DelegateAuth.objects.get(domain=domain)
+            raise SSORequired(delegate_auth.provider)
+        except DelegateAuth.DoesNotExist:
+            pass
 
 
-class ActivateMixin(object):
+class ActivateMixin(ChecksMixin):
 
     key_url_kwarg = 'verification_key'
 
@@ -98,38 +117,144 @@ class ActivateMixin(object):
         return user
 
 
-class ContactMixin(UrlsMixin):
+class AuthMixin(ChecksMixin):
+    """
+    Steps used in authentiction workflows, either login through a password
+    or through an e-mail link.
+    """
+    def check_user_throttles(self, request, user):
+        throttle = get_login_throttle()
+        if throttle:
+            throttle(request, self, user)
 
-    lookup_field = 'slug'
-    lookup_url_kwarg = 'user'
-    user_queryset = get_user_model().objects.filter(is_active=True)
-
-    @property
-    def contact(self):
-        if not hasattr(self, '_contact'):
-            kwargs = {self.lookup_field: self.kwargs.get(self.lookup_url_kwarg)}
-            self._contact = get_object_or_404(Contact.objects.all(), **kwargs)
-        return self._contact
-
-    @staticmethod
-    def as_contact(user):
-        return Contact(slug=user.username, email=user.email,
-            full_name=user.get_full_name(), nick_name=user.first_name,
-            created_at=user.date_joined, user=user)
-
-    def get_object(self):
+    def candidate_user(self, username):
+        """
+        Login through an e-mail link.
+        """
+        email, phone = as_email_or_phone(username)
         try:
-            obj = super(ContactMixin, self).get_object()
-        except Http404:
-            # We might still have a `User` model that matches.
-            lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
-            filter_kwargs = {'username': self.kwargs[lookup_url_kwarg]}
-            user = get_object_or_404(self.user_queryset, **filter_kwargs)
-            obj = self.as_contact(user)
-        return obj
+            user = self.model.objects.find_user(username)
+
+            # Rate-limit based on the user.
+            self.check_user_throttles(self.request, user)
+            if not email:
+                email = user.email
+
+        except self.model.DoesNotExist:
+            user = None
+
+        # If the user cannot be found and we are not login
+        # with an e-mail address, we cannot tell if we should
+        # redirect to an SSO provider or not.
+        if email:
+            self.check_sso_required(email)
+
+        if not user:
+            if phone:
+                raise self.model.DoesNotExist({'detail': _(
+                    "We cannot find an account"\
+                    " for this phone number. Please verify the spelling.")})
+            if email:
+                raise self.model.DoesNotExist({'detail': _(
+                    "We cannot find an account"\
+                    " for this e-mail address. Please verify the spelling.")})
+            raise self.model.DoesNotExist({'detail': _(
+                "We cannot find an account"\
+                " for this username. Please verify the spelling.")})
+
+        next_url = validate_redirect(self.request)
+        if not check_has_credentials(self.request, user,
+                    next_url=next_url):
+            if phone:
+                raise serializers.ValidationError({'detail':
+                    _("You should now secure and activate"\
+                      " your account following the instructions"\
+                      " we just phoned you. Thank you.")})
+            if email:
+                raise serializers.ValidationError({'detail':
+                    _("You should now secure and activate"\
+                      " your account following the instructions"\
+                      " we just emailed you. Thank you.")})
+
+        return user
 
 
-class RegisterMixin(object):
+class LoginMixin(AuthMixin):
+    """
+    Workflow for authentication (login/sign-in) either through an HTML page
+    view or an API call.
+    """
+    def login_user(self, **cleaned_data):
+        """
+        Login through a password.
+        """
+        username = cleaned_data.get('username', None)
+        self.candidate_user(username)
+
+        password = cleaned_data.get('password')
+        if not password:
+            raise serializers.ValidationError({
+                'password': _("password is required.")})
+
+        user_with_backend = authenticate(self.request,
+            username=username, password=password)
+
+        contact = getattr(user_with_backend, '_contact', None)
+        if contact and contact.mfa_backend:
+            if not contact.mfa_priv_key:
+                contact.create_mfa_token()
+                raise serializers.ValidationError({
+                    'code': _("MFA code is required.")})
+
+            code = cleaned_data.get('code')
+            if code != contact.mfa_priv_key:
+                if contact.mfa_nb_attempts >= settings.MFA_MAX_ATTEMPTS:
+                    contact.clear_mfa_token()
+                    raise exceptions.PermissionDenied({'detail': _(
+            "You have exceeded the number of attempts to enter the MFA code."\
+                        " Please start again.")})
+                contact.mfa_nb_attempts += 1
+                contact.save()
+                raise serializers.ValidationError({
+                    'code': _("MFA code does not match.")})
+
+            contact.clear_mfa_token()
+
+        return user_with_backend
+
+
+class RecoverMixin(AuthMixin):
+
+    def check_user_throttles(self, request, user):
+        throttle = get_password_reset_throttle()
+        if throttle:
+            throttle(request, self, user)
+
+    def recover_user(self, **cleaned_data):
+        """
+        Login through an e-mail link.
+        """
+        username = cleaned_data.get('email', None)
+        user = self.candidate_user(username)
+
+        # Make sure that a reset password email is sent to a user
+        # that actually has an activated account.
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        if not isinstance(uid, six.string_types):
+            # See Django2.2 release notes
+            uid = uid.decode()
+        token = self.token_generator.make_token(user)
+        next_url = validate_redirect(self.request)
+        back_url = self.request.build_absolute_uri(
+            reverse('password_reset_confirm', args=(uid, token)))
+        if next_url:
+            back_url += '?%s=%s' % (REDIRECT_FIELD_NAME, next_url)
+        signals.user_reset_password.send(
+            sender=__name__, user=user, request=self.request,
+            back_url=back_url, expiration_days=settings.KEY_EXPIRATION)
+
+
+class RegisterMixin(ChecksMixin):
 
     backend_path = 'signup.backends.auth.UsernameOrEmailPhoneModelBackend'
 
@@ -166,6 +291,7 @@ class RegisterMixin(object):
     def register_user(self, next_url=None, **cleaned_data):
         email = cleaned_data.get('email', None)
         if email:
+            self.check_sso_required(email)
             try:
                 user = self.model.objects.find_user(email)
                 if check_has_credentials(self.request, user, next_url=next_url):
@@ -237,6 +363,57 @@ class RegisterMixin(object):
         # the first time around.
         user.backend = self.backend_path
         return user
+
+
+class UrlsMixin(object):
+
+    @staticmethod
+    def update_context_urls(context, urls):
+        if 'urls' in context:
+            for key, val in six.iteritems(urls):
+                if key in context['urls']:
+                    if isinstance(val, dict):
+                        context['urls'][key].update(val)
+                    else:
+                        # Because organization_create url is added in this mixin
+                        # and in ``OrganizationRedirectView``.
+                        context['urls'][key] = val
+                else:
+                    context['urls'].update({key: val})
+        else:
+            context.update({'urls': urls})
+        return context
+
+
+class ContactMixin(UrlsMixin):
+
+    lookup_field = 'slug'
+    lookup_url_kwarg = 'user'
+    user_queryset = get_user_model().objects.filter(is_active=True)
+
+    @property
+    def contact(self):
+        if not hasattr(self, '_contact'):
+            kwargs = {self.lookup_field: self.kwargs.get(self.lookup_url_kwarg)}
+            self._contact = get_object_or_404(Contact.objects.all(), **kwargs)
+        return self._contact
+
+    @staticmethod
+    def as_contact(user):
+        return Contact(slug=user.username, email=user.email,
+            full_name=user.get_full_name(), nick_name=user.first_name,
+            created_at=user.date_joined, user=user)
+
+    def get_object(self):
+        try:
+            obj = super(ContactMixin, self).get_object()
+        except Http404:
+            # We might still have a `User` model that matches.
+            lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
+            filter_kwargs = {'username': self.kwargs[lookup_url_kwarg]}
+            user = get_object_or_404(self.user_queryset, **filter_kwargs)
+            obj = self.as_contact(user)
+        return obj
 
 
 class UserMixin(UrlsMixin):

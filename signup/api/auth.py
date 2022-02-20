@@ -1,4 +1,4 @@
-# Copyright (c) 2021, DjaoDjin inc.
+# Copyright (c) 2022, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -24,11 +24,10 @@
 
 import logging
 
-from django.contrib.auth import (REDIRECT_FIELD_NAME, get_user_model,
+from django.contrib.auth import (get_user_model,
     authenticate, login as auth_login, logout as auth_logout)
 from django.contrib.auth.tokens import default_token_generator
-from django.utils.encoding import force_bytes
-from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
+from django.utils.http import urlsafe_base64_decode
 from django.utils.translation import ugettext_lazy as _
 import jwt
 from rest_framework import exceptions, permissions, status, serializers
@@ -36,20 +35,18 @@ from rest_framework.generics import GenericAPIView, CreateAPIView
 from rest_framework.response import Response
 
 
-from .. import settings, signals
-from ..auth import validate_redirect
-from ..compat import reverse, six
-from ..decorators import check_has_credentials
+from .. import settings
+from ..compat import six
 from ..docs import OpenAPIResponse, no_body, swagger_auto_schema
 from ..helpers import as_timestamp, datetime_or_now
-from ..mixins import ActivateMixin, RegisterMixin
+from ..mixins import (ActivateMixin, LoginMixin, RecoverMixin, RegisterMixin,
+    SSORequired)
 from ..models import Contact
 from ..serializers import (ActivateUserSerializer, CredentialsSerializer,
     UserCreateSerializer, UserDetailSerializer,
     PasswordResetSerializer, PasswordResetConfirmSerializer,
     TokenSerializer, UserSerializer, ValidationErrorSerializer)
-from ..utils import (get_disabled_authentication, get_disabled_registration,
-    get_login_throttle, get_password_reset_throttle)
+from ..utils import get_disabled_authentication, get_disabled_registration
 
 
 LOGGER = logging.getLogger(__name__)
@@ -214,7 +211,7 @@ class JWTActivate(ActivateMixin, JWTBase):
         raise serializers.ValidationError({'detail': "invalid request"})
 
 
-class JWTLogin(JWTBase):
+class JWTLogin(LoginMixin, JWTBase):
     """
     Authenticates a user
 
@@ -253,11 +250,6 @@ sbF9uYW1lIjoiRG9ubnkgQ29vcGVyIiwiZXhwIjoxNTI5NjU4NzEwfQ.F2y\
     model = get_user_model()
     serializer_class = CredentialsSerializer
 
-    def check_user_throttles(self, request, user):
-        throttle = get_login_throttle()
-        if throttle:
-            throttle(request, self, user)
-
     @swagger_auto_schema(responses={
         201: OpenAPIResponse("", TokenSerializer),
         400: OpenAPIResponse("parameters error", ValidationErrorSerializer)})
@@ -265,47 +257,17 @@ sbF9uYW1lIjoiRG9ubnkgQ29vcGVyIiwiZXhwIjoxNTI5NjU4NzEwfQ.F2y\
         #pylint:disable=unused-argument,too-many-nested-blocks
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
-            username = serializer.validated_data.get('username')
-            password = serializer.validated_data.get('password')
             try:
-                candidate_user = self.model.objects.find_user(username)
+                user = self.login_user(**serializer.validated_data)
+                self.optional_session_cookie(request, user)
+                return self.create_token(user)
+            except SSORequired as err:
+                raise serializers.ValidationError({'detail': _(
+                    "SSO required through %(provider)s") % {
+                        'provider': err.printable_name},
+                    'provider': err.provider,
+                    'url': self.request.build_absolute_uri(err.url)})
 
-                # Rate-limit based on the user.
-                self.check_user_throttles(self.request, candidate_user)
-
-                user = authenticate(
-                    request, username=username, password=password)
-                if user:
-                    contact = Contact.objects.find_by_username_or_comm(
-                        username).first()
-                    if contact and contact.mfa_backend:
-                        if not contact.mfa_priv_key:
-                            contact.create_mfa_token()
-                            raise serializers.ValidationError({'detail': _(
-                                "missing MFA token")})
-                        code = serializer.validated_data.get('code')
-                        if code != contact.mfa_priv_key:
-                            if (contact.mfa_nb_attempts
-                                >= settings.MFA_MAX_ATTEMPTS):
-                                contact.clear_mfa_token()
-                                raise exceptions.PermissionDenied({'detail': _(
-    "You have exceeded the number of attempts to enter the MFA code."\
-    " Please start again.")})
-                            contact.mfa_nb_attempts += 1
-                            contact.save()
-                            raise serializers.ValidationError({'detail': _(
-                                "MFA code does not match.")})
-                        contact.clear_mfa_token()
-                    self.optional_session_cookie(request, user)
-                    return self.create_token(user)
-
-                if not check_has_credentials(request, candidate_user):
-                    raise serializers.ValidationError({'detail': _(
-                "This email address has already been registered!"\
-               " You should now secure and activate your account following"\
-                " the instructions we just emailed you. Thank you.")})
-            except self.model.DoesNotExist:
-                pass
         raise exceptions.PermissionDenied()
 
 
@@ -474,7 +436,7 @@ class JWTLogout(JWTBase):
         return response
 
 
-class PasswordResetAPIView(CreateAPIView):
+class PasswordResetAPIView(RecoverMixin, CreateAPIView):
     """
     Sends a password reset link
 
@@ -511,45 +473,15 @@ class PasswordResetAPIView(CreateAPIView):
     serializer_class = PasswordResetSerializer
     token_generator = default_token_generator
 
-    def check_user_throttles(self, request, user):
-        throttle = get_password_reset_throttle()
-        if throttle:
-            throttle(request, self, user)
-
     def perform_create(self, serializer):
         try:
-            username = serializer.validated_data.get('email')
-            user = self.model.objects.find_user(username)
-
-            # Rate-limit based on the user.
-            self.check_user_throttles(self.request, user)
-
-            next_url = validate_redirect(self.request)
-            if check_has_credentials(self.request, user, next_url=next_url):
-                # Make sure that a reset password email is sent to a user
-                # that actually has an activated account.
-                uid = urlsafe_base64_encode(force_bytes(user.pk))
-                if not isinstance(uid, six.string_types):
-                    # See Django2.2 release notes
-                    uid = uid.decode()
-                token = self.token_generator.make_token(user)
-                back_url = self.request.build_absolute_uri(
-                    reverse('password_reset_confirm', args=(uid, token)))
-                if next_url:
-                    back_url += '?%s=%s' % (REDIRECT_FIELD_NAME, next_url)
-                signals.user_reset_password.send(
-                    sender=__name__, user=user, request=self.request,
-                    back_url=back_url, expiration_days=settings.KEY_EXPIRATION)
-            else:
-                raise serializers.ValidationError({'detail': _(
-                    "Please activate your"\
-                    " account first. You should receive an email shortly.")})
-        except self.model.DoesNotExist:
-            # We don't want to give a clue about registered users, yet
-            # it already possible to do a straight register to get the same.
+            self.recover_user(**serializer.validated_data)
+        except SSORequired as err:
             raise serializers.ValidationError({'detail': _(
-                "We cannot find an account"\
-                " for this e-mail address. Please verify the spelling.")})
+                "SSO required through %(provider)s") % {
+                    'provider': err.printable_name},
+                'provider': err.provider,
+                'url': self.request.build_absolute_uri(err.url)})
 
     def permission_denied(self, request, message=None, code=None):
         # We override this function from `APIView`. The request will never

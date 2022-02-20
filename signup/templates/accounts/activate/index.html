@@ -1,12 +1,20 @@
 {% extends "base.html" %}
 
+{% block localheader_title %}Sign In{% endblock %}
+
 {% block content %}
 <div>
-    <form method="post" action=".{% if next %}/?next={{next}}{% endif %}">
+  {% if sso_required %}
+  <p>
+  You are required to login through the following Single Sign On (SSO) provider:
+  </p>
+  <a href="{{sso_required.url}}">{{sso_required.printable_name}}</a>
+  {% else %}
+  <form method="post" action=".{% if next %}/?next={{next}}{% endif %}">
         {% csrf_token %}
         {% with form.username as bound_field %}
         <label>{{ bound_field.label|safe }}</label>
-        <input class="form-control" name="{{bound_field.name}}"
+        <input name="{{bound_field.name}}"
           {% if bound_field.value %}
           value="{{bound_field.value}}"
           {% endif %}
@@ -16,10 +24,10 @@
           type="{{bound_field.field.widget.input_type}}"
         />
         {% endwith %}
-        {% if form.username.value %}
+        {% if form.password %}
         {% with form.password as bound_field %}
         <label>{{ bound_field.label|safe }}</label>
-        <input class="form-control" name="{{bound_field.name}}"
+        <input name="{{bound_field.name}}"
           {% if bound_field.value %}
           value="{{bound_field.value}}"
           {% endif %}
@@ -30,7 +38,8 @@
         />
         {% endwith %}
         {% endif %}
-        <input type="submit" name="submit" value="Submit">
-    </form>
+        <button type="submit" name="submit">Submit</button>
+  </form>
+  {% endif %}
 </div>
 {% endblock %}

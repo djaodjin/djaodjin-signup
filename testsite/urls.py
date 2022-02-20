@@ -66,5 +66,6 @@ urlpatterns = \
 
     url(r'^app/', TemplateView.as_view(template_name='app.html'),
         redirects=[fail_authenticated]),
-    url(r'^$', RedirectView.as_view(url=reverse_lazy('registration_register'))),
+    url(r'^$', RedirectView.as_view(url=reverse_lazy('registration_register')),
+        name='homepage'),
 ]

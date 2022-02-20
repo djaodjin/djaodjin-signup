@@ -35,7 +35,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='contact',
             name='phone',
-            field=phonenumber_field.modelfields.PhoneNumberField(help_text='Phone number', max_length=128, null=True, region=None, unique=True, verbose_name='Phone number'),
+            field=phonenumber_field.modelfields.PhoneNumberField(help_text='Phone number to contact user', max_length=128, null=True, region=None, unique=True, verbose_name='Phone number'),
         ),
         migrations.AddField(
             model_name='contact',
@@ -84,11 +84,6 @@ class Migration(migrations.Migration):
         ),
         migrations.AlterField(
             model_name='contact',
-            name='email',
-            field=models.EmailField(help_text='E-mail address', max_length=254, null=True, unique=True, verbose_name='E-mail address'),
-        ),
-        migrations.AlterField(
-            model_name='contact',
             name='extra',
             field=models.TextField(help_text='Extra meta data (can be stringify JSON)', null=True),
         ),
@@ -99,13 +94,8 @@ class Migration(migrations.Migration):
         ),
         migrations.AlterField(
             model_name='contact',
-            name='nick_name',
-            field=models.CharField(blank=True, help_text='Short casual name used to address the contact', max_length=60, verbose_name='Nick name'),
-        ),
-        migrations.AlterField(
-            model_name='contact',
             name='picture',
-            field=models.URLField(blank=True, help_text='Profile picture', max_length=2083, null=True, verbose_name='URL to a profile picture'),
+            field=models.URLField(blank=True, help_text='URL location of the profile picture', max_length=2083, null=True, verbose_name='URL to a profile picture'),
         ),
         migrations.AlterField(
             model_name='contact',

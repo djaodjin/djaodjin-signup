@@ -1,4 +1,4 @@
-# Copyright (c) 2020, Djaodjin Inc.
+# Copyright (c) 2022, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,9 +22,10 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from django.conf.urls import url
+from django.conf.urls import include, url
 
 from ... import settings
+from ...forms import StartAuthenticationForm
 from ...views.auth import (ActivationView, PasswordResetView,
     PasswordResetConfirmView, SigninView, SignoutView, SignupView)
 
@@ -36,16 +37,19 @@ urlpatterns = [
         % settings.EMAIL_VERIFICATION_PAT,
         ActivationView.as_view(), name='registration_activate'),
     url(r'^activate/',
-        SigninView.as_view(template_name='accounts/activate/index.html'),
+        SigninView.as_view(
+            form_class=StartAuthenticationForm,
+            template_name='accounts/activate/index.html'),
         name='registration_activate_start'),
     url(r'^register/$',
         SignupView.as_view(), name='registration_register'),
     url(r'^recover/',
         PasswordResetView.as_view(), name='password_reset'),
-    url(r'^login/',
-        SigninView.as_view(), name='login'),
     url(r'^logout/',
         SignoutView.as_view(), name='logout'),
     url(r'^reset/(?P<uidb64>[0-9A-Za-z_\-]+)/(?P<token>[0-9A-Za-z\-]+)/$',
         PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
+    url('', include('social_django.urls', namespace='social')),
+    url(r'^login/',
+        SigninView.as_view(), name='login'),
 ]

@@ -74,6 +74,11 @@ _SETTINGS = {
     'PICTURE_STORAGE_CALLABLE': None,
     'RANDOM_SEQUENCE': [],
     'REQUIRES_RECAPTCHA': False,
+    'SSO_PROVIDERS': {
+        'azuread-oauth2': {'name': 'Microsoft'},
+        'github': {'name': 'GitHub'},
+        'google-oauth2': {'name': 'Google'},
+    },
     'USER_CONTACT_CALLABLE': None,
 }
 _SETTINGS.update(getattr(settings, 'SIGNUP', {}))
@@ -106,6 +111,7 @@ PASSWORD_RESET_THROTTLE = _SETTINGS.get('PASSWORD_RESET_THROTTLE')
 PICTURE_STORAGE_CALLABLE = _SETTINGS.get('PICTURE_STORAGE_CALLABLE')
 RANDOM_SEQUENCE = _SETTINGS.get('RANDOM_SEQUENCE')
 REQUIRES_RECAPTCHA = _SETTINGS.get('REQUIRES_RECAPTCHA')
+SSO_PROVIDERS = _SETTINGS.get('SSO_PROVIDERS')
 USER_CONTACT_CALLABLE = _SETTINGS.get('USER_CONTACT_CALLABLE')
 
 LANGUAGE_CODE = getattr(settings, 'LANGUAGE_CODE')

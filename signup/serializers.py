@@ -1,4 +1,4 @@
-# Copyright (c) 2021, DjaoDjin inc.
+# Copyright (c) 2022, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -189,7 +189,7 @@ class CredentialsSerializer(NoModelSerializer):
     username = UsernameOrCommField(
         help_text=_("Username, e-mail address or phone number to identify"\
         " the account"))
-    password = serializers.CharField(write_only=True,
+    password = serializers.CharField(required=False, write_only=True,
         style={'input_type': 'password'},
         help_text=_("Secret password for the account"))
     code = serializers.IntegerField(required=False, write_only=True,
