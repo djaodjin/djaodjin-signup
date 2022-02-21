@@ -151,14 +151,14 @@ class AuthMixin(ChecksMixin):
 
         if not user:
             if phone:
-                raise self.model.DoesNotExist({'detail': _(
+                raise serializers.ValidationError({'detail': _(
                     "We cannot find an account"\
                     " for this phone number. Please verify the spelling.")})
             if email:
-                raise self.model.DoesNotExist({'detail': _(
+                raise serializers.ValidationError({'detail': _(
                     "We cannot find an account"\
                     " for this e-mail address. Please verify the spelling.")})
-            raise self.model.DoesNotExist({'detail': _(
+            raise serializers.ValidationError({'detail': _(
                 "We cannot find an account"\
                 " for this username. Please verify the spelling.")})
 
