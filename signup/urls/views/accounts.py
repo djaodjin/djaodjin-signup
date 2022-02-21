@@ -33,7 +33,7 @@ urlpatterns = [
     # When the key and/or token are wrong we don't want to give any clue
     # as to why that is so. Less information communicated to an attacker,
     # the better.
-    url(r'^activate/(?P<verification_key>%s)/$'
+    url(r'^activate/(?P<verification_key>%s)/'
         % settings.EMAIL_VERIFICATION_PAT,
         ActivationView.as_view(), name='registration_activate'),
     url(r'^activate/',
@@ -41,15 +41,15 @@ urlpatterns = [
             form_class=StartAuthenticationForm,
             template_name='accounts/activate/index.html'),
         name='registration_activate_start'),
-    url(r'^register/$',
-        SignupView.as_view(), name='registration_register'),
-    url(r'^recover/',
-        PasswordResetView.as_view(), name='password_reset'),
-    url(r'^logout/',
-        SignoutView.as_view(), name='logout'),
-    url(r'^reset/(?P<uidb64>[0-9A-Za-z_\-]+)/(?P<token>[0-9A-Za-z\-]+)/$',
-        PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
     url('', include('social_django.urls', namespace='social')),
     url(r'^login/',
         SigninView.as_view(), name='login'),
+    url(r'^logout/',
+        SignoutView.as_view(), name='logout'),
+    url(r'^recover/',
+        PasswordResetView.as_view(), name='password_reset'),
+    url(r'^register/',
+        SignupView.as_view(), name='registration_register'),
+    url(r'^reset/(?P<uidb64>[0-9A-Za-z_\-]+)/(?P<token>[0-9A-Za-z\-]+)/$',
+        PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
 ]

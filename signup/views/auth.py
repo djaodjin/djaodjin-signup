@@ -25,7 +25,7 @@
 """Extra Views that might prove useful to register users."""
 from __future__ import unicode_literals
 
-import logging
+import logging, re
 
 from django.contrib import messages
 from django.contrib.auth import (login as auth_login, logout as auth_logout,
@@ -114,6 +114,25 @@ class AuthTemplateResponseMixin(UrlsMixin, TemplateResponseMixin):
 
     def dispatch(self, request, *args, **kwargs):
         if request.method.lower() in self.http_method_names:
+            if request.method.lower() == 'post':
+                # The authentication URLs are anonymously accessible, hence
+                # prime candidates for bots. These will POST to '/login/.' for
+                # example because there is a `action="."` in the <form> tag
+                # in login.html.
+                # We cannot catch these by restricting the match pattern.
+                # 1. '^login/$' will not match 'login/.' hence trigger the catch
+                #    all pattern that might forward the HTTP request.
+                # 2. 'login/(?P<extra>.*)' will through a missing argument
+                #    exception in `reverse` calls.
+                pat = (r'(?P<expected_path>%s)(?P<extra>.*)' %
+                    request.resolver_match.route)
+                look = re.match(pat, request.path.lstrip('/'))
+                if look:
+                    expected_path = '/' + look.group('expected_path')
+                    extra =  look.group('extra')
+                    if extra:
+                        return HttpResponseRedirect(
+                            self.request.build_absolute_uri(expected_path))
             if get_disabled_authentication(request):
                 context = {'disabled_authentication': True}
                 response_kwargs = {}
