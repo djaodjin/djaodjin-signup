@@ -507,8 +507,15 @@ class SigninBaseView(LoginMixin, RedirectFormMixin, ProcessFormView):
         # won't be present in the `cleaned_data`.
         if username:
             try:
-                self.model.objects.find_user(username)
-            except self.model.DoesNotExist:
+                user = self.candidate_user(username)
+            except SSORequired as err:
+                form._errors = {} #pylint:disable=protected-access
+                context = self.get_context_data(form=form)
+                context.update({'sso_required': err})
+                return self.render_to_response(context)
+
+            except serializers.ValidationError as err:
+                fill_form_errors(form, err)
                 # Django takes extra steps to make sure an attacker finds
                 # it difficult to distinguish between a non-existant user
                 # and an incorrect password on login.
