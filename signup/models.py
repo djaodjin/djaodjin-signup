@@ -161,6 +161,17 @@ class ActivatedUserManager(UserManager):
         phone = kwargs.pop('phone', None)
         lang = kwargs.pop('lang', None)
         extra = kwargs.pop('extra', None)
+        uses_sso_provider = False
+        if email:
+            domain = email.split('@')[-1]
+            uses_sso_provider = bool(DelegateAuth.objects.filter(
+                domain=domain).exists())
+        if uses_sso_provider:
+            # Prevents `check_has_credentials`, hence `fail_active`
+            # to trigger a re-login when using a SSO provider.
+            # By definition, all users created through a SSO provider
+            # are active.
+            password = "*****"
         with transaction.atomic():
             if username:
                 user = super(ActivatedUserManager, self).create_user(
@@ -176,8 +187,26 @@ class ActivatedUserManager(UserManager):
             if email:
                 # Force is_active to True and create an email verification key
                 # (see above definition of active user).
-                Contact.objects.prepare_email_verification(user, email,
-                    phone=phone, lang=lang, extra=extra)
+                # In case we delegate auth to a SSO provider, we assume
+                # the e-mail address has already been verified.
+                if uses_sso_provider:
+                    at_time = datetime_or_now()
+                    try:
+                        contact = Contact.objects.get(user=user, email=email)
+                        contact.email_verified_at = at_time
+                        contact.save()
+                    except Contact.DoesNotExist:
+                        create_kwargs = {
+                            'user': user,
+                            'email': email,
+                            'full_name': user.get_full_name(),
+                            'nick_name': user.first_name,
+                            'email_verified_at': at_time
+                        }
+                        Contact.objects.create(**create_kwargs)
+                else:
+                    Contact.objects.prepare_email_verification(user, email,
+                        phone=phone, lang=lang, extra=extra)
             elif phone:
                 # Force is_active to True and create an email verification key
                 # (see above definition of active user).
@@ -685,3 +714,4 @@ def get_user_contact(user):
 User = get_user_model() #pylint:disable=invalid-name
 User.objects = ActivatedUserManager()
 User.objects.model = User
+User.objects.contribute_to_class(User, 'objects')
