@@ -515,6 +515,9 @@ class SigninBaseView(LoginMixin, RedirectFormMixin, ProcessFormView):
                 return self.render_to_response(context)
 
             except serializers.ValidationError as err:
+                # We want to prevent duplicate error messages when the user
+                # cannot be found in the database.
+                form._errors = {} #pylint:disable=protected-access
                 fill_form_errors(form, err)
                 # Django takes extra steps to make sure an attacker finds
                 # it difficult to distinguish between a non-existant user

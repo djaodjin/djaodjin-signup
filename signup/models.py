@@ -164,6 +164,8 @@ class ActivatedUserManager(UserManager):
         uses_sso_provider = False
         if email:
             domain = email.split('@')[-1]
+            # XXX Technically we should do the same for all SSO logins,
+            # even if the SSO workflow wasn't forced on the user.
             uses_sso_provider = bool(DelegateAuth.objects.filter(
                 domain=domain).exists())
         if uses_sso_provider:

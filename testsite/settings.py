@@ -261,9 +261,6 @@ LOGIN_REDIRECT_URL = '/app/'
 # Applications settings
 
 REST_FRAMEWORK = {
-    'PAGE_SIZE': 25,
-    'DEFAULT_PAGINATION_CLASS':
-        'rest_framework.pagination.PageNumberPagination',
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'signup.authentication.JWTAuthentication',
         'signup.authentication.APIKeyAuthentication',
@@ -272,8 +269,12 @@ REST_FRAMEWORK = {
         # is absent.
         'rest_framework.authentication.SessionAuthentication',
     ),
+    'DEFAULT_PAGINATION_CLASS':
+        'rest_framework.pagination.PageNumberPagination',
+    'NON_FIELD_ERRORS_KEY': 'detail',
+    'ORDERING_PARAM': 'o',
+    'PAGE_SIZE': 25,
     'SEARCH_PARAM': 'q',
-    'ORDERING_PARAM': 'o'
 }
 
 # Debug toolbar and panel
