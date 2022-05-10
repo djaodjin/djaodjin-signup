@@ -1,4 +1,4 @@
-# Copyright (c) 2021, Djaodjin Inc.
+# Copyright (c) 2022, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -33,11 +33,11 @@ from django.contrib import messages
 from django.contrib.auth import (REDIRECT_FIELD_NAME, logout as auth_logout)
 from django.contrib.auth.views import redirect_to_login
 from django.core.exceptions import PermissionDenied
-from django.utils.translation import ugettext_lazy as _
 
 from . import settings, signals
 from .auth import validate_redirect
-from .compat import available_attrs, is_authenticated, reverse, six
+from .compat import (available_attrs, gettext_lazy as _, is_authenticated,
+    reverse, six)
 from .models import Contact
 from .utils import has_invalid_password, get_accept_list
 

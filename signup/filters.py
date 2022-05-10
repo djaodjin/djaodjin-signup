@@ -1,4 +1,4 @@
-# Copyright (c) 2021, DjaoDjin inc.
+# Copyright (c) 2022, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -27,12 +27,11 @@ import operator
 from functools import reduce
 
 from django.db import models
-from django.utils.encoding import force_text
 from rest_framework.compat import distinct
 from rest_framework.filters import (OrderingFilter as BaseOrderingFilter,
     SearchFilter as BaseSearchFilter)
 
-from .compat import six
+from .compat import force_str, six
 
 
 class SearchFilter(BaseSearchFilter):
@@ -86,7 +85,7 @@ class SearchFilter(BaseSearchFilter):
                 'name': self.search_param,
                 'required': False,
                 'in': 'query',
-                'description': force_text(search_fields_description),
+                'description': force_str(search_fields_description),
                 'schema': {
                     'type': 'string',
                 },
@@ -144,7 +143,7 @@ class OrderingFilter(BaseOrderingFilter):
                 'name': self.ordering_param,
                 'required': False,
                 'in': 'query',
-                'description': force_text(sort_fields_description),
+                'description': force_str(sort_fields_description),
                 'schema': {
                     'type': 'string',
                 },
@@ -179,7 +178,7 @@ class SortableSearchableFilterBackend(object):
                 'name': self.search_param,
                 'required': False,
                 'in': 'query',
-                'description': force_text(search_fields_description),
+                'description': force_str(search_fields_description),
                 'schema': {
                     'type': 'string',
                 },
@@ -188,7 +187,7 @@ class SortableSearchableFilterBackend(object):
                 'name': self.ordering_param,
                 'required': False,
                 'in': 'query',
-                'description': force_text(sort_fields_description),
+                'description': force_str(sort_fields_description),
                 'schema': {
                     'type': 'string',
                 },
@@ -210,7 +209,7 @@ class SortableDateRangeSearchableFilterBackend(SortableSearchableFilterBackend):
                 'name': 'start_at',
                 'required': False,
                 'in': 'query',
-                'description': force_text("date/time in ISO format"\
+                'description': force_str("date/time in ISO format"\
                         " after which records were created."),
                 'schema': {
                     'type': 'string',
@@ -220,7 +219,7 @@ class SortableDateRangeSearchableFilterBackend(SortableSearchableFilterBackend):
                 'name': 'ends_at',
                 'required': False,
                 'in': 'query',
-                'description': force_text("date/time in ISO format"\
+                'description': force_str("date/time in ISO format"\
                         " before which records were created."),
                 'schema': {
                     'type': 'string',

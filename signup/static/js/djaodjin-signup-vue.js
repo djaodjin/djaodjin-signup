@@ -49,8 +49,7 @@ var userPasswordModalMixin = {
 
 Vue.component('contact-list', {
     mixins: [
-        itemListMixin,
-        paginationMixin
+        itemListMixin
     ],
     data: function () {
         return {
@@ -85,7 +84,9 @@ Vue.component('contact-list', {
 
 
 Vue.component('contact-update', {
-    mixins: [itemListMixin, paginationMixin],
+    mixins: [
+        itemListMixin
+    ],
     data: function () {
         return {
             url: this.$urls.api_activities,

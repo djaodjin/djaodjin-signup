@@ -1,4 +1,4 @@
-# Copyright (c) 2021, DjaoDjin inc.
+# Copyright (c) 2022, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -28,8 +28,6 @@ from django.contrib.auth import logout as auth_logout
 from django.db import transaction, IntegrityError
 from django.core.exceptions import PermissionDenied
 from django.contrib.auth import update_session_auth_hash, get_user_model
-from django.utils.encoding import force_text
-from django.utils.translation import ugettext_lazy as _
 from rest_framework import parsers, status
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import (CreateAPIView, ListCreateAPIView,
@@ -39,7 +37,8 @@ from rest_framework.settings import api_settings
 
 
 from .. import filters, settings
-from ..compat import reverse, six, urlparse, urlunparse
+from ..compat import (force_str, gettext_lazy as _, reverse, six,
+    urlparse, urlunparse)
 from ..decorators import check_has_credentials
 from ..docs import OpenAPIResponse, no_body, swagger_auto_schema
 from ..helpers import full_name_natural_split
@@ -797,7 +796,7 @@ class UserPictureAPIView(ContactMixin, CreateAPIView):
 
         # tentatively extract file extension.
         parts = os.path.splitext(
-            force_text(uploaded_file.name.replace('\\', '/')))
+            force_str(uploaded_file.name.replace('\\', '/')))
         ext = parts[-1].lower() if len(parts) > 1 else ""
         key_name = "%s%s" % (
             hashlib.sha256(uploaded_file.read()).hexdigest(), ext)

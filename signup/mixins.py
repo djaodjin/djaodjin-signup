@@ -31,14 +31,13 @@ from django.utils import translation
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 from django.utils.safestring import mark_safe
-from django.utils.translation import ugettext_lazy as _
 from rest_framework import exceptions, serializers
 from rest_framework.generics import get_object_or_404
 from rest_framework.settings import api_settings
 
 from . import signals, settings
 from .auth import validate_redirect
-from .compat import is_authenticated, reverse, six
+from .compat import gettext_lazy as _, is_authenticated, reverse, six
 from .decorators import check_has_credentials
 from .helpers import full_name_natural_split
 from .models import Contact, DelegateAuth

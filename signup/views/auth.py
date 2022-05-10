@@ -36,7 +36,6 @@ from django.core.validators import validate_email
 from django.http import Http404, HttpResponseRedirect
 from django.template.response import TemplateResponse
 from django.utils.http import urlencode, urlsafe_base64_decode
-from django.utils.translation import ugettext_lazy as _
 from django.views.decorators.cache import add_never_cache_headers
 from django.views.generic.base import TemplateResponseMixin, View
 from django.views.generic.edit import FormMixin, ProcessFormView, UpdateView
@@ -44,7 +43,7 @@ from rest_framework import serializers, exceptions
 
 from .. import settings
 from ..auth import validate_redirect
-from ..compat import reverse, is_authenticated, six
+from ..compat import gettext_lazy as _, is_authenticated, reverse, six
 from ..forms import (ActivationForm, AuthenticationForm, FrictionlessSignupForm,
     MFACodeForm, PasswordResetForm, PasswordResetConfirmForm, UserActivateForm)
 from ..mixins import (ActivateMixin, LoginMixin, RecoverMixin, RegisterMixin,

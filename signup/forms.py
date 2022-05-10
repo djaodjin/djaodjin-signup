@@ -34,11 +34,10 @@ from django.contrib.auth import password_validation, get_user_model
 from django.contrib.auth.forms import (
     AuthenticationForm as AuthenticationBaseForm,
     PasswordResetForm as PasswordResetBaseForm)
-from django.utils.translation import ugettext_lazy as _
 from phonenumber_field.formfields import PhoneNumberField
 
 from . import settings, validators
-from .compat import six
+from .compat import gettext_lazy as _, six
 from .helpers import full_name_natural_split
 from .models import Contact
 

@@ -28,7 +28,6 @@ from django.contrib.auth import (get_user_model,
     authenticate, login as auth_login, logout as auth_logout)
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_decode
-from django.utils.translation import ugettext_lazy as _
 import jwt
 from rest_framework import exceptions, permissions, status, serializers
 from rest_framework.generics import GenericAPIView, CreateAPIView
@@ -36,7 +35,7 @@ from rest_framework.response import Response
 
 
 from .. import settings
-from ..compat import six
+from .compat import gettext_lazy as _, six
 from ..docs import OpenAPIResponse, no_body, swagger_auto_schema
 from ..helpers import as_timestamp, datetime_or_now
 from ..mixins import (ActivateMixin, LoginMixin, RecoverMixin, RegisterMixin,

@@ -37,14 +37,14 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import UserManager
 from django.db import models, transaction, IntegrityError
 from django.template.defaultfilters import slugify
-from django.utils.translation import ugettext_lazy as _
 from django.contrib.auth.hashers import check_password, make_password
 from phonenumber_field.modelfields import PhoneNumberField
 from rest_framework.exceptions import ValidationError as DRFValidationError
 
 from . import settings, signals
 from .backends.mfa import EmailMFABackend
-from .compat import import_string, python_2_unicode_compatible, six
+from .compat import (gettext_lazy as _, import_string,
+    python_2_unicode_compatible, six)
 from .helpers import datetime_or_now, full_name_natural_split
 from .utils import generate_random_slug, handle_uniq_error, has_invalid_password
 from .validators import validate_phone

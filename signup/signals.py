@@ -1,4 +1,4 @@
-# Copyright (c) 2019, Djaodjin Inc.
+# Copyright (c) 2022, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -29,12 +29,18 @@ Signals for user registration and activation.
 from django.dispatch import Signal
 
 #pylint: disable=invalid-name
-user_registered = Signal(providing_args=['user'])
-user_activated = Signal(providing_args=[
-    'user', 'verification_key', 'request'])
-user_verification = Signal(providing_args=[
-    'user', 'request', 'back_url', 'expiration_days'])
-user_reset_password = Signal(providing_args=[
-    'user', 'request', 'back_url', 'expiration_days'])
-user_mfa_code = Signal(providing_args=[
-    'user', 'code', 'request'])
+user_registered = Signal(
+#    providing_args=['user']
+)
+user_activated = Signal(
+#    providing_args=['user', 'verification_key', 'request']
+)
+user_verification = Signal(
+#    providing_args=['user', 'request', 'back_url', 'expiration_days']
+)
+user_reset_password = Signal(
+#    providing_args=['user', 'request', 'back_url', 'expiration_days']
+)
+user_mfa_code = Signal(
+#    providing_args=['user', 'code', 'request']
+)

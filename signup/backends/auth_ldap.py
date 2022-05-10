@@ -40,9 +40,10 @@ import logging
 import ldap  # pip install python-ldap==3.1.0
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
-from django.utils.encoding import force_text, force_bytes
+from django.utils.encoding import force_bytes
 
 from .. import settings
+from ..compat import force_str
 
 
 LOGGER = logging.getLogger(__name__)
@@ -72,7 +73,7 @@ class LDAPUser(object):
 
     @staticmethod
     def _get_bind_dn(user):
-        return settings.LDAP_USER_SEARCH_DN % {'user': force_text(user)}
+        return settings.LDAP_USER_SEARCH_DN % {'user': force_str(user)}
 
     def set_password(self, raw_password, bind_password=None):
         bind_dn = self._get_bind_dn(self._dbuser.username)
@@ -80,12 +81,12 @@ class LDAPUser(object):
             settings.LDAP_SERVER_URI, bytes_mode=False)
         try:
             ldap_connection.simple_bind_s(
-                force_text(bind_dn),
-                force_text(bind_password))
+                force_str(bind_dn),
+                force_str(bind_password))
             ldap_connection.passwd_s(
-                force_text(bind_dn),
-                oldpw=force_text(bind_password),
-                newpw=force_text(raw_password))
+                force_str(bind_dn),
+                oldpw=force_str(bind_password),
+                newpw=force_str(raw_password))
         except ldap.LDAPError as err:
             raise PermissionDenied(str(err))
         finally:
@@ -97,9 +98,9 @@ class LDAPUser(object):
             settings.LDAP_SERVER_URI, bytes_mode=False)
         try:
             ldap_connection.simple_bind_s(
-                force_text(bind_dn),
-                force_text(bind_password))
-            ldap_connection.modify_s(force_text(bind_dn),
+                force_str(bind_dn),
+                force_str(bind_password))
+            ldap_connection.modify_s(force_str(bind_dn),
                 [(ldap.MOD_REPLACE, 'sshPublicKey',
                   [force_bytes(pubkey)])])
         except ldap.LDAPError as err:
@@ -116,7 +117,7 @@ class LDAPBackend(object):
 
     @staticmethod
     def _get_bind_dn(user):
-        return settings.LDAP_USER_SEARCH_DN % {'user': force_text(user)}
+        return settings.LDAP_USER_SEARCH_DN % {'user': force_str(user)}
 
     def authenticate(self, request, username=None, password=None, **kwargs):
         #pylint:disable=unused-argument
@@ -126,7 +127,7 @@ class LDAPBackend(object):
             ldap_connection = ldap.initialize(
                 settings.LDAP_SERVER_URI, bytes_mode=False)
             ldap_connection.simple_bind_s(
-                force_text(bind_dn), force_text(password))
+                force_str(bind_dn), force_str(password))
 
             defaults = {}
             #pylint:disable=protected-access

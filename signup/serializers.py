@@ -26,11 +26,11 @@ import logging
 
 from django.core import validators
 from django.contrib.auth import get_user_model
-from django.utils.translation import ugettext_lazy as _
 import phonenumbers
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
+from .compat import gettext_lazy as _
 from .models import Activity, Notification
 from .utils import get_account_model, has_invalid_password
 from .validators import (validate_email_or_phone,
@@ -279,8 +279,9 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = get_user_model()
         fields = ('slug', 'username', 'printable_name', 'created_at', 'picture',
-            'email', 'credentials')
-        read_only_fields = ('printable_name', 'created_at', 'credentials')
+            'email', 'credentials', 'last_login')
+        read_only_fields = ('printable_name', 'created_at', 'credentials',
+            'last_login')
 
     @staticmethod
     def get_credentials(obj):
