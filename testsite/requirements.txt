@@ -20,3 +20,7 @@ django-extensions==2.2.9
 djaodjin-rules==0.2.8
 gunicorn==20.0.4
 whitenoise==5.1.0
+
+# development
+Sphinx==3.0.3
+sphinxcontrib-httpdomain==1.7.0

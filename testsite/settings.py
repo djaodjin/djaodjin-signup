@@ -14,15 +14,18 @@ import logging, os, re, sys
 from django.contrib.messages import constants as messages
 from signup.compat import reverse_lazy
 
-BASE_DIR = os.path.dirname(os.path.dirname(__file__))
-RUN_DIR = os.getcwd()
-
-#JS_FRAMEWORK = 'angularjs'
-JS_FRAMEWORK = 'vuejs'
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+RUN_DIR = os.getenv('RUN_DIR', os.getcwd())
+DB_NAME = os.path.join(RUN_DIR, 'db.sqlite')
+LOG_FILE = os.path.join(RUN_DIR, 'testsite-app.log')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 BYPASS_VERIFICATION_KEY_EXPIRED_CHECK = False
+JS_FRAMEWORK = 'vuejs'
+
+ALLOWED_HOSTS = []
+
 
 def load_config(confpath):
     '''
@@ -64,8 +67,6 @@ if os.getenv('BYPASS_VERIFICATION_KEY_EXPIRED_CHECK'):
     BYPASS_VERIFICATION_KEY_EXPIRED_CHECK = (int(os.getenv(
         'BYPASS_VERIFICATION_KEY_EXPIRED_CHECK')) > 0)
 
-ALLOWED_HOSTS = []
-
 SILENCED_SYSTEM_CHECKS = ['captcha.recaptcha_test_key_error']
 
 INSTALLED_APPS = (
@@ -83,6 +84,49 @@ INSTALLED_APPS = (
     'rules',
     'testsite'
 )
+
+ROOT_URLCONF = 'testsite.urls'
+WSGI_APPLICATION = 'testsite.wsgi.application'
+
+MIDDLEWARE = (
+    'django.middleware.common.CommonMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'signup.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'social_django.middleware.SocialAuthExceptionMiddleware',
+)
+
+# Database
+# https://docs.djangoproject.com/en/1.6/ref/settings/#databases
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': DB_NAME,
+    }
+}
+
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'signup.authentication.JWTAuthentication',
+        'signup.authentication.APIKeyAuthentication',
+        # `rest_framework.authentication.SessionAuthentication` is the last
+        # one in the list because it will raise a PermissionDenied if the CSRF
+        # is absent.
+        'rest_framework.authentication.SessionAuthentication',
+    ),
+    'DEFAULT_PAGINATION_CLASS':
+        'rest_framework.pagination.PageNumberPagination',
+    'NON_FIELD_ERRORS_KEY': 'detail',
+    'ORDERING_PARAM': 'o',
+    'PAGE_SIZE': 25,
+    'SEARCH_PARAM': 'q',
+}
+
 
 LOGGING = {
     'version': 1,
@@ -138,7 +182,7 @@ LOGGING = {
 if logging.getLogger('gunicorn.error').handlers:
     LOGGING['handlers']['log'].update({
         'class':'logging.handlers.WatchedFileHandler',
-        'filename': os.path.join(RUN_DIR, 'testsite-app.log')
+        'filename': LOG_FILE
     })
 
 
@@ -169,32 +213,6 @@ AUTHENTICATION_BACKENDS = (
     'signup.backends.auth.UsernameOrEmailPhoneModelBackend',
     'django.contrib.auth.backends.ModelBackend'
 )
-
-# Database
-# https://docs.djangoproject.com/en/1.6/ref/settings/#databases
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite'),
-    }
-}
-
-DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
-
-MIDDLEWARE = (
-    'django.middleware.common.CommonMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'signup.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'social_django.middleware.SocialAuthExceptionMiddleware',
-)
-
-ROOT_URLCONF = 'testsite.urls'
-WSGI_APPLICATION = 'testsite.wsgi.application'
 
 TEMPLATES = [{
     'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -261,23 +279,6 @@ LOGIN_URL = reverse_lazy('login')
 LOGIN_REDIRECT_URL = '/app/'
 
 # Applications settings
-
-REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'signup.authentication.JWTAuthentication',
-        'signup.authentication.APIKeyAuthentication',
-        # `rest_framework.authentication.SessionAuthentication` is the last
-        # one in the list because it will raise a PermissionDenied if the CSRF
-        # is absent.
-        'rest_framework.authentication.SessionAuthentication',
-    ),
-    'DEFAULT_PAGINATION_CLASS':
-        'rest_framework.pagination.PageNumberPagination',
-    'NON_FIELD_ERRORS_KEY': 'detail',
-    'ORDERING_PARAM': 'o',
-    'PAGE_SIZE': 25,
-    'SEARCH_PARAM': 'q',
-}
 
 # Debug toolbar and panel
 # -----------------------
