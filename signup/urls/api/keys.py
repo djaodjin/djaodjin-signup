@@ -1,4 +1,4 @@
-# Copyright (c) 2019, Djaodjin Inc.
+# Copyright (c) 2022, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,14 +22,13 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from django.conf.urls import url
-
 from ... import settings
+from ...compat import re_path
 from ...api.keys import ResetAPIKeysAPIView, PublicKeyAPIView
 
 urlpatterns = [
-    url(r'^users/(?P<user>%s)/ssh-keys/' % settings.USERNAME_PAT,
+    re_path(r'^users/(?P<user>%s)/ssh-keys/' % settings.USERNAME_PAT,
         PublicKeyAPIView.as_view(), name='api_pubkey'),
-    url(r'^users/(?P<user>%s)/api-keys/' % settings.USERNAME_PAT,
+    re_path(r'^users/(?P<user>%s)/api-keys/' % settings.USERNAME_PAT,
         ResetAPIKeysAPIView.as_view(), name='api_generate_keys')
 ]

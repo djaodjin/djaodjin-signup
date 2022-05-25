@@ -1,4 +1,4 @@
-# Copyright (c) 2019, Djaodjin Inc.
+# Copyright (c) 2022, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,18 +22,17 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from django.conf.urls import url
-
 from ... import settings
+from ...compat import re_path
 from ...api.contacts import (ActivityListCreateAPIView, ContactDetailAPIView,
     ContactListAPIView, ContactPictureAPIView)
 
 urlpatterns = [
-    url(r'^contacts/(?P<user>%s)/activities/' % settings.USERNAME_PAT,
+    re_path(r'^contacts/(?P<user>%s)/activities/' % settings.USERNAME_PAT,
         ActivityListCreateAPIView.as_view(), name='api_activities'),
-    url(r'^contacts/(?P<user>%s)/picture/' % settings.USERNAME_PAT,
+    re_path(r'^contacts/(?P<user>%s)/picture/' % settings.USERNAME_PAT,
         ContactPictureAPIView.as_view(), name='api_contact_picture'),
-    url(r'^contacts/(?P<user>%s)/?' % settings.USERNAME_PAT,
+    re_path(r'^contacts/(?P<user>%s)/?' % settings.USERNAME_PAT,
         ContactDetailAPIView.as_view(), name='api_contact'),
-    url(r'^contacts/?', ContactListAPIView.as_view(), name='api_contacts'),
+    re_path(r'^contacts/?', ContactListAPIView.as_view(), name='api_contacts'),
 ]

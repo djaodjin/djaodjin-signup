@@ -35,7 +35,7 @@ from rest_framework.response import Response
 
 
 from .. import settings
-from .compat import gettext_lazy as _, six
+from ..compat import gettext_lazy as _, six
 from ..docs import OpenAPIResponse, no_body, swagger_auto_schema
 from ..helpers import as_timestamp, datetime_or_now
 from ..mixins import (ActivateMixin, LoginMixin, RecoverMixin, RegisterMixin,

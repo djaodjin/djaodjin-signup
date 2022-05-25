@@ -1,4 +1,4 @@
-# Copyright (c) 2019, Djaodjin Inc.
+# Copyright (c) 2022, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,13 +22,12 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from django.conf.urls import url
-
 from ...api.auth import JWTLogout
+from ...compat import re_path
 from ...api.tokens import JWTRefresh, JWTVerify
 
 urlpatterns = [
-    url(r'^auth/tokens/verify/', JWTVerify.as_view()),
-    url(r'^auth/tokens/', JWTRefresh.as_view()),
-    url(r'^auth/logout/', JWTLogout.as_view(), name='api_logout'),
+    re_path(r'^auth/tokens/verify/', JWTVerify.as_view()),
+    re_path(r'^auth/tokens/', JWTRefresh.as_view()),
+    re_path(r'^auth/logout/', JWTLogout.as_view(), name='api_logout'),
 ]

@@ -22,9 +22,8 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from django.conf.urls import include, url
-
 from ... import settings
+from ...compat import include, re_path
 from ...forms import StartAuthenticationForm
 from ...views.auth import (ActivationView, PasswordResetView,
     PasswordResetConfirmView, SigninView, SignoutView, SignupView)
@@ -33,23 +32,23 @@ urlpatterns = [
     # When the key and/or token are wrong we don't want to give any clue
     # as to why that is so. Less information communicated to an attacker,
     # the better.
-    url(r'^activate/(?P<verification_key>%s)/'
+    re_path(r'^activate/(?P<verification_key>%s)/'
         % settings.EMAIL_VERIFICATION_PAT,
         ActivationView.as_view(), name='registration_activate'),
-    url(r'^activate/',
+    re_path(r'^activate/',
         SigninView.as_view(
             form_class=StartAuthenticationForm,
             template_name='accounts/activate/index.html'),
         name='registration_activate_start'),
-    url('', include('social_django.urls', namespace='social')),
-    url(r'^login/',
+    re_path('', include('social_django.urls', namespace='social')),
+    re_path(r'^login/',
         SigninView.as_view(), name='login'),
-    url(r'^logout/',
+    re_path(r'^logout/',
         SignoutView.as_view(), name='logout'),
-    url(r'^recover/',
+    re_path(r'^recover/',
         PasswordResetView.as_view(), name='password_reset'),
-    url(r'^register/',
+    re_path(r'^register/',
         SignupView.as_view(), name='registration_register'),
-    url(r'^reset/(?P<uidb64>[0-9A-Za-z_\-]+)/(?P<token>[0-9A-Za-z\-]+)/$',
+    re_path(r'^reset/(?P<uidb64>[0-9A-Za-z_\-]+)/(?P<token>[0-9A-Za-z\-]+)/$',
         PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
 ]

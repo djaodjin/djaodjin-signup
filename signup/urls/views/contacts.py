@@ -1,4 +1,4 @@
-# Copyright (c) 2019, Djaodjin Inc.
+# Copyright (c) 2022, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,14 +22,13 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from django.conf.urls import url
-
 from ... import settings
+from ...compat import re_path
 from ...views.contacts import ContactListView, ContactDetailView
 
 urlpatterns = [
     # These three URLs must be protected.
-    url(r'^(?P<user>%s)/' % settings.USERNAME_PAT,
+    re_path(r'^(?P<user>%s)/' % settings.USERNAME_PAT,
         ContactDetailView.as_view(), name='contact'),
-    url(r'^', ContactListView.as_view(), name='contacts'),
+    re_path(r'^', ContactListView.as_view(), name='contacts'),
 ]

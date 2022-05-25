@@ -1,4 +1,4 @@
-# Copyright (c) 2019, Djaodjin Inc.
+# Copyright (c) 2022, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,13 +22,12 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from django.conf.urls import url
-
 from ...settings import USERNAME_PAT
+from ...compat import re_path
 from ...api.users import UserActivateAPIView
 
 
 urlpatterns = [
-    url(r'^users/(?P<user>%s)/activate/' % USERNAME_PAT,
+    re_path(r'^users/(?P<user>%s)/activate/' % USERNAME_PAT,
         UserActivateAPIView.as_view(), name='api_user_activate'),
 ]

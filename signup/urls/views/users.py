@@ -1,4 +1,4 @@
-# Copyright (c) 2019, Djaodjin Inc.
+# Copyright (c) 2022, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,21 +22,20 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from django.conf.urls import url
-
 from ...settings import USERNAME_PAT
+from ...compat import re_path
 from ...views.users import (PasswordChangeView, UserPublicKeyUpdateView,
     UserProfileView, UserNotificationsView, redirect_to_user_profile)
 
 urlpatterns = [
     # These three URLs must be protected.
-    url(r'^(?P<user>%s)/password/' % USERNAME_PAT,
+    re_path(r'^(?P<user>%s)/password/' % USERNAME_PAT,
         PasswordChangeView.as_view(), name='password_change'),
-    url(r'^(?P<user>%s)/pubkey/' % USERNAME_PAT,
+    re_path(r'^(?P<user>%s)/pubkey/' % USERNAME_PAT,
         UserPublicKeyUpdateView.as_view(), name='pubkey_update'),
-    url(r'^(?P<user>%s)/notifications/' % USERNAME_PAT,
+    re_path(r'^(?P<user>%s)/notifications/' % USERNAME_PAT,
         UserNotificationsView.as_view(), name='users_notifications'),
-    url(r'^(?P<user>%s)/' % USERNAME_PAT,
+    re_path(r'^(?P<user>%s)/' % USERNAME_PAT,
         UserProfileView.as_view(), name='users_profile'),
-    url(r'^', redirect_to_user_profile, name='accounts_profile'),
+    re_path(r'^', redirect_to_user_profile, name='accounts_profile'),
 ]

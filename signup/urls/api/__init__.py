@@ -1,4 +1,4 @@
-# Copyright (c) 2019, Djaodjin Inc.
+# Copyright (c) 2022, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,13 +22,13 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from django.conf.urls import url, include
+from ...compat import include, re_path
 
 urlpatterns = [
-    url(r'^', include('signup.urls.api.contacts')),
-    url(r'^', include('signup.urls.api.keys')),
-    url(r'^', include('signup.urls.api.activate')),
-    url(r'^', include('signup.urls.api.users')),
-    url(r'^', include('signup.urls.api.tokens')),
-    url(r'^', include('signup.urls.api.auth')), # Prefix to previous urls
+    re_path(r'^', include('signup.urls.api.contacts')),
+    re_path(r'^', include('signup.urls.api.keys')),
+    re_path(r'^', include('signup.urls.api.activate')),
+    re_path(r'^', include('signup.urls.api.users')),
+    re_path(r'^', include('signup.urls.api.tokens')),
+    re_path(r'^', include('signup.urls.api.auth')), # Prefix to previous urls
 ]
