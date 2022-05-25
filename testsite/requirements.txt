@@ -17,7 +17,7 @@ social-auth-core==4.2.0
 # testsite-only
 coverage==5.1
 django-extensions==2.2.9
-djaodjin-rules==0.2.8
+djaodjin-rules==0.2.9
 gunicorn==20.0.4
 whitenoise==5.1.0
 

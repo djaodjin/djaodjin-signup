@@ -123,15 +123,19 @@ class AuthTemplateResponseMixin(UrlsMixin, TemplateResponseMixin):
                 #    all pattern that might forward the HTTP request.
                 # 2. 'login/(?P<extra>.*)' will through a missing argument
                 #    exception in `reverse` calls.
-                pat = (r'(?P<expected_path>%s)(?P<extra>.*)' %
-                    request.resolver_match.route)
-                look = re.match(pat, request.path.lstrip('/'))
-                if look:
-                    expected_path = '/' + look.group('expected_path')
-                    extra =  look.group('extra')
-                    if extra:
-                        return HttpResponseRedirect(
-                            self.request.build_absolute_uri(expected_path))
+                try:
+                    pat = (r'(?P<expected_path>%s)(?P<extra>.*)' %
+                        request.resolver_match.route)
+                    look = re.match(pat, request.path.lstrip('/'))
+                    if look:
+                        expected_path = '/' + look.group('expected_path')
+                        extra =  look.group('extra')
+                        if extra:
+                            return HttpResponseRedirect(
+                                self.request.build_absolute_uri(expected_path))
+                except AttributeError:
+                    pass # Django<=1.11 ResolverMatch does not have
+                         # a route attribute.
             if get_disabled_authentication(request):
                 context = {'disabled_authentication': True}
                 response_kwargs = {}
