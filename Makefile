@@ -15,11 +15,16 @@ NPM           ?= npm
 PYTHON        := $(binDir)/python
 SQLITE        := sqlite3
 
+RUN_DIR       ?= $(srcDir)
+DB_NAME       ?= $(RUN_DIR)/db.sqlite
+
+MANAGE        := TESTSITE_SETTINGS_LOCATION=$(CONFIG_DIR) RUN_DIR=$(RUN_DIR) $(PYTHON) manage.py
+
 # Django 1.7,1.8 sync tables without migrations by default while Django 1.9
 # requires a --run-syncdb argument.
 # Implementation Note: We have to wait for the config files to be installed
 # before running the manage.py command (else missing SECRECT_KEY).
-RUNSYNCDB     = $(if $(findstring --run-syncdb,$(shell cd $(srcDir) && $(PYTHON) manage.py migrate --help 2>/dev/null)),--run-syncdb,)
+RUNSYNCDB     = $(if $(findstring --run-syncdb,$(shell cd $(srcDir) && $(MANAGE) migrate --help 2>/dev/null)),--run-syncdb,)
 
 install::
 	cd $(srcDir) && $(PYTHON) ./setup.py --quiet \
@@ -47,10 +52,10 @@ $(DESTDIR)$(CONFIG_DIR)/gunicorn.conf: $(srcDir)/testsite/etc/gunicorn.conf
 
 initdb: install-conf
 	-rm -f $(srcDir)/db.sqlite $(srcDir)/testsite-app.log
-	cd $(srcDir) && $(PYTHON) ./manage.py migrate $(RUNSYNCDB) --noinput
-	cat $(srcDir)/testsite/migrations/adjustments1-sqlite3.sql | $(SQLITE) $(srcDir)/db.sqlite
-	cat $(srcDir)/testsite/migrations/adjustments2-sqlite3.sql | $(SQLITE) $(srcDir)/db.sqlite
-	cd $(srcDir) && $(PYTHON) ./manage.py loaddata testsite/fixtures/default-db.json
+	cd $(srcDir) && $(MANAGE) migrate $(RUNSYNCDB) --noinput
+	cat $(srcDir)/testsite/migrations/adjustments1-sqlite3.sql | $(SQLITE) $(DB_NAME)
+	cat $(srcDir)/testsite/migrations/adjustments2-sqlite3.sql | $(SQLITE) $(DB_NAME)
+	cd $(srcDir) && $(MANAGE) loaddata testsite/fixtures/default-db.json
 
 
 doc:
