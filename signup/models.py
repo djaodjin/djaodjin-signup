@@ -700,6 +700,9 @@ class DelegateAuth(models.Model):
     created_at = models.DateTimeField(auto_now_add=True,
         help_text=_("Date/time of creation (in ISO format)"))
 
+    def __str__(self):
+        return "%s/%s" % (self.provider, self.domain)
+
 
 def get_user_contact(user):
     if isinstance(settings.USER_CONTACT_CALLABLE, six.string_types):
