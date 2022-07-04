@@ -70,8 +70,9 @@ run the testsite webapp.
 Release Notes
 =============
 
-0.5.3
+0.6.0
 
-  * fixes regression on activate API
+  * adds mandatory use of SSO provider for specific e-mail addresses
+  * adds initial compatibility with Django 4.0
 
 [previous release notes](changelog)
