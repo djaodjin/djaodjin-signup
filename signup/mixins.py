@@ -455,12 +455,14 @@ class UserMixin(UrlsMixin):
         context = super(UserMixin, self).get_context_data(**kwargs)
         # URLs for user
         if is_authenticated(self.request):
-            self.update_context_urls(context, {'user': {
-                'notifications': reverse(
-                    'users_notifications', args=(self.user,)),
-                'profile': reverse('users_profile', args=(self.user,)),
-                'profile_redirect': reverse('accounts_profile')
-            }})
+            self.update_context_urls(context, {
+                'profile_redirect': reverse('accounts_profile'),
+                'user': {
+                    'notifications': reverse(
+                        'users_notifications', args=(self.user,)),
+                    'profile': reverse('users_profile', args=(self.user,)),
+                }
+            })
         return context
 
     def get_object(self):

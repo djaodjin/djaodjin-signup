@@ -275,7 +275,7 @@ signupControllers.controller("userProfileCtrl",
             // to a logout. When we delete a different profile, a reload
             // of the page leads to a 404. In either cases, moving on
             // to the redirect_to_profile page is a safe bet. */
-            window.location = settings.urls.user.profile_redirect;
+            window.location = settings.urls.profile_redirect;
         }, function(resp) { // error
             showErrorMessages(resp);
         });

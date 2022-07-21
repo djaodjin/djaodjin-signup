@@ -136,7 +136,7 @@ Vue.component('user-update', {
         return {
             url: this.$urls.user.api_profile,
             picture_url: this.$urls.user.api_user_picture,
-            redirect_url: this.$urls.user.profile_redirect,
+            redirect_url: this.$urls.profile_redirect,
             api_activate_url: this.$urls.user.api_activate,
             api_generate_keys_url: this.$urls.user.api_generate_keys,
             formFields: {},
