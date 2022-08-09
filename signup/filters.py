@@ -31,24 +31,20 @@ from rest_framework.compat import distinct
 from rest_framework.filters import (OrderingFilter as BaseOrderingFilter,
     SearchFilter as BaseSearchFilter)
 
+from . import settings
 from .compat import force_str, six
 
 
 class SearchFilter(BaseSearchFilter):
 
-    @staticmethod
-    def get_valid_fields(queryset, view, context=None):
-        #pylint:disable=protected-access,unused-argument
-        model_fields = {
-            field.name for field in queryset.model._meta.get_fields()}
-        base_fields = getattr(view, 'search_fields', [])
-        valid_fields = tuple([
-            field for field in base_fields if field in model_fields])
-        return valid_fields
+    search_field_param = settings.SEARCH_FIELDS_PARAM
+
 
     def filter_queryset(self, request, queryset, view):
-        search_fields = self.get_valid_fields(queryset, view)
+        search_fields = self.get_valid_fields(request, queryset, view)
         search_terms = self.get_search_terms(request)
+        LOGGER.debug("[SearchFilter.filter_queryset] search_terms=%s, "\
+            "search_fields=%s", search_terms, search_fields)
 
         if not search_fields or not search_terms:
             return queryset
@@ -66,7 +62,7 @@ class SearchFilter(BaseSearchFilter):
                 for orm_lookup in orm_lookups
             ]
             conditions.append(reduce(operator.or_, queries))
-        queryset = queryset.filter(reduce(operator.and_, conditions))
+        queryset = queryset.filter(reduce(operator.or_, conditions))
 
         if self.must_call_distinct(queryset, search_fields):
             # Filtering against a many-to-many field requires us to
@@ -76,13 +72,115 @@ class SearchFilter(BaseSearchFilter):
             queryset = distinct(queryset, base)
         return queryset
 
+
+    @staticmethod
+    def filter_valid_fields(queryset, fields, view):
+        #pylint:disable=protected-access
+        model_fields = set([
+            field.name for field in queryset.model._meta.get_fields()])
+        # We add all the fields that could be aliases then filter out the ones
+        # which are not present in the model.
+        alternate_fields = getattr(view, 'alternate_fields', {})
+        for field in fields:
+            alternate_field = alternate_fields.get(field, None)
+            if alternate_field:
+                if isinstance(alternate_field, (list, tuple)):
+                    fields += tuple(alternate_field)
+                else:
+                    fields += tuple([alternate_field])
+
+        valid_fields = []
+        for field in fields:
+            if '__' in field:
+                relation, rel_field = field.split('__')
+                try:
+                    # check if the field is a relation
+                    rel = queryset.model._meta.get_field(relation).remote_field
+                    if rel:
+                        # if the field doesn't exist the
+                        # call will throw an exception
+                        rel.model._meta.get_field(rel_field)
+                        valid_fields.append(field)
+                except FieldDoesNotExist:
+                    pass
+            elif field in model_fields:
+                valid_fields.append(field)
+
+        return tuple(valid_fields)
+
+
+    def get_query_fields(self, request):
+        return request.query_params.getlist(self.search_field_param)
+
+
+    def get_search_terms(self, request):
+        """
+        Search terms are set by a ?search=... query parameter,
+        and may be comma and/or whitespace delimited.
+        """
+        params = request.query_params.get(self.search_param, '')
+        params = params.replace('\x00', '')  # strip null characters
+        params = params.replace(',', ' ')
+        results = []
+        inside = False
+        first = 0
+        for last, letter in enumerate(params):
+            if inside:
+                if letter == '"':
+                    if first < last:
+                        results += [params[first:last]]
+                    first = last + 1
+                    inside = False
+            else:
+                if letter in (' ', '\t'):
+                    if first < last:
+                        results += [params[first:last]]
+                    first = last + 1
+                elif letter == '"':
+                    inside = True
+                    first = last + 1
+        if first < len(params):
+            results += [params[first:len(params)]]
+        return results
+
+
+    def get_valid_fields(self, request, queryset, view, context=None):
+        #pylint:disable=protected-access,unused-argument
+        if context is None:
+            context = {}
+
+        fields = self.get_query_fields(request)
+        # client-supplied fields take precedence
+        if fields:
+            fields = self.filter_valid_fields(queryset, fields, view)
+        # if there are no fields (due to empty query params or wrong
+        # fields we fallback to fields specified in the view
+        if not fields:
+            fields = getattr(view, 'search_fields', [])
+            fields = self.filter_valid_fields(queryset, fields, view)
+        return fields
+
+
     def get_schema_operation_parameters(self, view):
         search_fields = getattr(view, 'search_fields', [])
-        search_fields_description = "search for matching text in %s"  % (
-            ', '.join(search_fields))
+        search_fields_description = (
+            "restrict searches to one or more fields in: %s."\
+            " searches all fields when unspecified."  % (
+            ', '.join(search_fields)))
         return [
             {
                 'name': self.search_param,
+                'required': False,
+                'in': 'query',
+                'description': force_str(
+                    "value to search for in the fields specified by %s" %
+                    self.search_field_param),
+                'schema': {
+                    'type': 'string',
+                },
+            },
+            {
+                'name': self.search_field_param,
                 'required': False,
                 'in': 'query',
                 'description': force_str(search_fields_description),
