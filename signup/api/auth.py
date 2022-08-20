@@ -125,7 +125,7 @@ class JWTActivate(ActivateMixin, JWTBase):
 
     .. code-block:: http
 
-        GET /api/auth/activate/16793aa72a4c7ae94b50b20c2eca52df5b0fe2c6/\
+        GET /api/auth/activate/16793aa72a4c7ae94b50b20c2eca52df5b0fe2c6\
  HTTP/1.1
 
     responds
@@ -173,7 +173,7 @@ class JWTActivate(ActivateMixin, JWTBase):
 
         .. code-block:: http
 
-            POST /api/auth/activate/16793aa72a4c7ae94b50b20c2eca52df5b0fe2c6/\
+            POST /api/auth/activate/16793aa72a4c7ae94b50b20c2eca52df5b0fe2c6\
  HTTP/1.1
 
         .. code-block:: json
@@ -227,7 +227,7 @@ class JWTLogin(LoginMixin, JWTBase):
 
     .. code-block:: http
 
-        POST /api/auth/ HTTP/1.1
+        POST /api/auth HTTP/1.1
 
     .. code-block:: json
 
@@ -288,7 +288,7 @@ class JWTPasswordResetConfirm(JWTBase):
 
     .. code-block:: http
 
-        POST /api/auth/reset/0123456789abcef0123456789abcef/abc123/ HTTP/1.1
+        POST /api/auth/reset/0123456789abcef0123456789abcef/abc123 HTTP/1.1
 
     .. code-block:: json
 
@@ -360,7 +360,7 @@ class JWTRegister(RegisterMixin, JWTBase):
 
     .. code-block:: http
 
-        POST /api/auth/register/ HTTP/1.1
+        POST /api/auth/register HTTP/1.1
 
     .. code-block:: json
 
@@ -420,7 +420,7 @@ class JWTLogout(JWTBase):
 
     .. code-block:: http
 
-        POST /api/auth/logout/  HTTP/1.1
+        POST /api/auth/logout  HTTP/1.1
     """
     @swagger_auto_schema(request_body=no_body, responses={
         200: OpenAPIResponse("success", no_body)})
@@ -451,7 +451,7 @@ class PasswordResetAPIView(RecoverMixin, CreateAPIView):
 
     .. code-block:: http
 
-         POST /api/auth/recover/ HTTP/1.1
+         POST /api/auth/recover HTTP/1.1
 
     .. code-block:: json
 

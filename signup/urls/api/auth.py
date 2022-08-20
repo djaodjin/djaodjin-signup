@@ -23,18 +23,18 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from ... import settings
-from ...compat import include, re_path
+from ...compat import include, path, re_path
 from ...api.auth import (JWTActivate, JWTLogin, JWTPasswordResetConfirm,
     JWTRegister, PasswordResetAPIView)
 
 
 urlpatterns = [
-    re_path(r'^auth/activate/(?P<verification_key>%s)/?$'
+    re_path(r'^auth/activate/(?P<verification_key>%s)$'
         % settings.EMAIL_VERIFICATION_PAT,
         JWTActivate.as_view(), name='api_activate'),
-    re_path(r'^auth/register/', JWTRegister.as_view(), name='api_register'),
-    re_path(r'^auth/recover/', PasswordResetAPIView.as_view(), name='api_recover'),
-    re_path(r'^auth/reset/(?P<uidb64>[0-9A-Za-z_\-]+)/(?P<token>[0-9A-Za-z]{1,13}-[0-9A-Za-z]{1,20})/$', #pylint: disable=line-too-long
+    path('auth/register', JWTRegister.as_view(), name='api_register'),
+    path('auth/recover', PasswordResetAPIView.as_view(), name='api_recover'),
+    re_path(r'^auth/reset/(?P<uidb64>[0-9A-Za-z_\-]+)/(?P<token>[0-9A-Za-z]{1,13}-[0-9A-Za-z]{1,20})$', #pylint: disable=line-too-long
         JWTPasswordResetConfirm.as_view(), name='api_password_reset_confirm'),
-    re_path(r'^auth/', JWTLogin.as_view(), name='api_login'),
+    path('auth', JWTLogin.as_view(), name='api_login'),
 ]

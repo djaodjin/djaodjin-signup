@@ -50,7 +50,7 @@ class JWTVerify(JWTBase):
 
     .. code-block:: http
 
-        POST /api/auth/tokens/verify/ HTTP/1.1
+        POST /api/auth/tokens/verify HTTP/1.1
 
     .. code-block:: json
 
@@ -106,7 +106,7 @@ class JWTRefresh(JWTVerify):
 
     .. code-block:: http
 
-        POST /api/auth/tokens/ HTTP/1.1
+        POST /api/auth/tokens HTTP/1.1
 
     .. code-block:: json
 

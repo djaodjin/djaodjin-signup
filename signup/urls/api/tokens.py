@@ -23,11 +23,11 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from ...api.auth import JWTLogout
-from ...compat import re_path
+from ...compat import path
 from ...api.tokens import JWTRefresh, JWTVerify
 
 urlpatterns = [
-    re_path(r'^auth/tokens/verify/', JWTVerify.as_view()),
-    re_path(r'^auth/tokens/', JWTRefresh.as_view()),
-    re_path(r'^auth/logout/', JWTLogout.as_view(), name='api_logout'),
+    path('auth/tokens/verify', JWTVerify.as_view()),
+    path('auth/tokens', JWTRefresh.as_view()),
+    path('auth/logout', JWTLogout.as_view(), name='api_logout'),
 ]

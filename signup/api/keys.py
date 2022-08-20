@@ -69,7 +69,7 @@ class ResetAPIKeysAPIView(UserMixin, GenericAPIView):
 
         .. code-block:: http
 
-            POST /api/users/xia/api-keys/  HTTP/1.1
+            POST /api/users/xia/api-keys  HTTP/1.1
 
         .. code-block:: json
 
@@ -130,7 +130,7 @@ class PublicKeyAPIView(UserMixin, GenericAPIView):
 
         .. code-block:: http
 
-            PUT /api/users/xia/ssh-keys/  HTTP/1.1
+            PUT /api/users/xia/ssh-keys  HTTP/1.1
 
         .. code-block:: json
 

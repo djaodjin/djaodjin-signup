@@ -51,7 +51,7 @@ class ActivityListCreateAPIView(ContactMixin, ListCreateAPIView):
 
     .. code-block:: http
 
-        GET /api/contacts/xia/activities/ HTTP/1.1
+        GET /api/contacts/xia/activities HTTP/1.1
 
     responds
 
@@ -101,7 +101,7 @@ class ActivityListCreateAPIView(ContactMixin, ListCreateAPIView):
 
         .. code-block:: http
 
-            POST /api/contacts/xia/activities/ HTTP/1.1
+            POST /api/contacts/xia/activities HTTP/1.1
 
         .. code-block:: json
 
@@ -146,7 +146,7 @@ class ContactPictureAPIView(UserPictureAPIView):
 
         .. code-block:: http
 
-            POST /api/contacts/xia/picture/ HTTP/1.1
+            POST /api/contacts/xia/picture HTTP/1.1
 
         responds
 

@@ -38,10 +38,14 @@ except ModuleNotFoundError: #pylint:disable=undefined-variable,bad-except-order
     from django.core.urlresolvers import NoReverseMatch, reverse, reverse_lazy
 
 try:
-    from django.urls import include, re_path
+    from django.urls import include, path, re_path
 except ImportError: # <= Django 2.0, Python<3.6
     from django.conf.urls import include, url as re_path
 
+    def path(route, view, kwargs=None, name=None):
+        re_route = re.sub(
+            '<slug:([a-z\_]+)>', r'(?P<\1>[a-zA-Z0-9_\-\+\.]+)', route)
+        return re_path(re_route, view, kwargs=kwargs, name=name)
 
 try:
     from django.utils.decorators import available_attrs

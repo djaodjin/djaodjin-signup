@@ -22,12 +22,11 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from ...settings import USERNAME_PAT
-from ...compat import re_path
+from ...compat import path
 from ...api.users import UserActivateAPIView
 
 
 urlpatterns = [
-    re_path(r'^users/(?P<user>%s)/activate/' % USERNAME_PAT,
+    path('users/<slug:user>/activate',
         UserActivateAPIView.as_view(), name='api_user_activate'),
 ]

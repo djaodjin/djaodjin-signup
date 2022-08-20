@@ -22,17 +22,16 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from ... import settings
-from ...compat import re_path
+from ...compat import path
 from ...api.contacts import (ActivityListCreateAPIView, ContactDetailAPIView,
     ContactListAPIView, ContactPictureAPIView)
 
 urlpatterns = [
-    re_path(r'^contacts/(?P<user>%s)/activities/' % settings.USERNAME_PAT,
+    path('contacts/<slug:user>/activities',
         ActivityListCreateAPIView.as_view(), name='api_activities'),
-    re_path(r'^contacts/(?P<user>%s)/picture/' % settings.USERNAME_PAT,
+    path('contacts/<slug:user>/picture',
         ContactPictureAPIView.as_view(), name='api_contact_picture'),
-    re_path(r'^contacts/(?P<user>%s)/?' % settings.USERNAME_PAT,
+    path('contacts/<slug:user>',
         ContactDetailAPIView.as_view(), name='api_contact'),
-    re_path(r'^contacts/?', ContactListAPIView.as_view(), name='api_contacts'),
+    path('contacts', ContactListAPIView.as_view(), name='api_contacts'),
 ]

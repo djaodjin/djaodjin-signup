@@ -22,20 +22,19 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from ...settings import USERNAME_PAT
-from ...compat import re_path
+from ...compat import path
 from ...api.users import (PasswordChangeAPIView, UserDetailAPIView,
     UserListCreateAPIView, UserNotificationsAPIView, UserPictureAPIView)
 
 urlpatterns = [
-    re_path(r'^users/(?P<user>%s)/notifications/' % USERNAME_PAT,
+    path('users/<slug:user>/notifications',
         UserNotificationsAPIView.as_view(), name='api_user_notifications'),
-    re_path(r'^users/(?P<user>%s)/picture/' % USERNAME_PAT,
+    path('users/<slug:user>/picture',
         UserPictureAPIView.as_view(), name='api_user_picture'),
-    re_path(r'^users/(?P<user>%s)/password/' % USERNAME_PAT,
+    path('users/<slug:user>/password',
         PasswordChangeAPIView.as_view(), name='api_user_password_change'),
-    re_path(r'^users/(?P<user>%s)/' % USERNAME_PAT,
+    path('users/<slug:user>',
         UserDetailAPIView.as_view(), name='api_user_profile'),
-    re_path(r'^users/?',
+    path(r'users',
         UserListCreateAPIView.as_view(), name='saas_api_users'),
 ]

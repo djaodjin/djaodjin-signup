@@ -22,13 +22,12 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from ... import settings
-from ...compat import re_path
+from ...compat import path
 from ...api.keys import ResetAPIKeysAPIView, PublicKeyAPIView
 
 urlpatterns = [
-    re_path(r'^users/(?P<user>%s)/ssh-keys/' % settings.USERNAME_PAT,
+    path('users/<slug:user>/ssh-keys',
         PublicKeyAPIView.as_view(), name='api_pubkey'),
-    re_path(r'^users/(?P<user>%s)/api-keys/' % settings.USERNAME_PAT,
+    path('users/<slug:user>/api-keys',
         ResetAPIKeysAPIView.as_view(), name='api_generate_keys')
 ]

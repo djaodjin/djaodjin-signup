@@ -41,6 +41,16 @@ install-conf:: $(DESTDIR)$(CONFIG_DIR)/credentials \
 build-assets: vendor-assets-prerequisites
 
 
+clean: clean-dbs
+	[ ! -f $(srcDir)/package-lock.json ] || rm $(srcDir)/package-lock.json
+	find $(srcDir) -name '__pycache__' -exec rm -rf {} +
+	find $(srcDir) -name '*~' -exec rm -rf {} +
+
+clean-dbs:
+	[ ! -f $(DB_NAME) ] || rm $(DB_NAME)
+	[ ! -f $(srcDir)/testsite-app.log ] || rm $(srcDir)/testsite-app.log
+
+
 vendor-assets-prerequisites: $(srcDir)/testsite/package.json
 
 
@@ -56,8 +66,7 @@ $(DESTDIR)$(CONFIG_DIR)/gunicorn.conf: $(srcDir)/testsite/etc/gunicorn.conf
 		-e 's,%(LOCALSTATEDIR)s,$(LOCALSTATEDIR),' $< > $@
 
 
-initdb: install-conf
-	-rm -f $(srcDir)/db.sqlite $(srcDir)/testsite-app.log
+initdb: clean-dbs install-conf
 	cd $(srcDir) && $(MANAGE) migrate $(RUNSYNCDB) --noinput
 	cat $(srcDir)/testsite/migrations/adjustments1-sqlite3.sql | $(SQLITE) $(DB_NAME)
 	cat $(srcDir)/testsite/migrations/adjustments2-sqlite3.sql | $(SQLITE) $(DB_NAME)

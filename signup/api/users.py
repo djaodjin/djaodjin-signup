@@ -94,7 +94,7 @@ class UserActivateAPIView(ContactMixin, GenericAPIView):
 
     .. code-block:: http
 
-        POST /api/users/donny/activate/ HTTP/1.1
+        POST /api/users/donny/activate HTTP/1.1
 
     responds
 
@@ -145,7 +145,7 @@ class UserDetailAPIView(UserMixin, RetrieveUpdateDestroyAPIView):
 
     .. code-block:: http
 
-        GET /api/users/xia/ HTTP/1.1
+        GET /api/users/xia HTTP/1.1
 
     responds
 
@@ -190,7 +190,7 @@ class UserDetailAPIView(UserMixin, RetrieveUpdateDestroyAPIView):
 
         .. code-block:: http
 
-            PUT /api/users/xia/ HTTP/1.1
+            PUT /api/users/xia HTTP/1.1
 
         .. code-block:: json
 
@@ -230,7 +230,7 @@ class UserDetailAPIView(UserMixin, RetrieveUpdateDestroyAPIView):
 
         .. code-block:: http
 
-            PATCH /api/users/xia/ HTTP/1.1
+            PATCH /api/users/xia HTTP/1.1
 
         .. code-block:: json
 
@@ -270,7 +270,7 @@ class UserDetailAPIView(UserMixin, RetrieveUpdateDestroyAPIView):
 
         .. code-block:: http
 
-            DELETE /api/users/xia/ HTTP/1.1
+            DELETE /api/users/xia HTTP/1.1
         """
         return self.destroy(request, *args, **kwargs)
 
@@ -373,7 +373,7 @@ class UserListCreateAPIView(ListCreateAPIView):
 
     .. code-block:: http
 
-        GET /api/users/?q=xia HTTP/1.1
+        GET /api/users?q=xia HTTP/1.1
 
     responds
 
@@ -441,7 +441,7 @@ class UserListCreateAPIView(ListCreateAPIView):
 
         .. code-block:: http
 
-            POST /api/users/ HTTP/1.1
+            POST /api/users HTTP/1.1
 
         .. code-block:: json
 
@@ -618,7 +618,7 @@ class PasswordChangeAPIView(GenericAPIView):
 
         .. code-block:: http
 
-            PUT /api/users/xia/password/ HTTP/1.1
+            PUT /api/users/xia/password HTTP/1.1
 
         .. code-block:: json
 
@@ -670,7 +670,7 @@ class UserNotificationsAPIView(UserMixin, RetrieveUpdateAPIView):
 
     .. code-block:: http
 
-        GET /api/users/xia/notifications/ HTTP/1.1
+        GET /api/users/xia/notifications HTTP/1.1
 
     responds
 
@@ -699,7 +699,7 @@ class UserNotificationsAPIView(UserMixin, RetrieveUpdateAPIView):
 
         .. code-block:: http
 
-            PUT /api/users/xia/notifications/ HTTP/1.1
+            PUT /api/users/xia/notifications HTTP/1.1
 
         .. code-block:: json
 
@@ -774,7 +774,7 @@ class UserPictureAPIView(ContactMixin, CreateAPIView):
 
     .. code-block:: http
 
-    POST /api/users/xia/picture/ HTTP/1.1
+    POST /api/users/xia/picture HTTP/1.1
 
     responds
 
