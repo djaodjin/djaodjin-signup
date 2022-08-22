@@ -33,9 +33,9 @@ install::
 
 install-conf:: $(DESTDIR)$(CONFIG_DIR)/credentials \
                 $(DESTDIR)$(CONFIG_DIR)/gunicorn.conf
-	install -d $(DESTDIR)$(LOCALSTATEDIR)/db
-	install -d $(DESTDIR)$(LOCALSTATEDIR)/run
-	install -d $(DESTDIR)$(LOCALSTATEDIR)/log/gunicorn
+	$(installDirs) $(DESTDIR)$(LOCALSTATEDIR)/db
+	$(installDirs) $(DESTDIR)$(LOCALSTATEDIR)/run
+	$(installDirs) $(DESTDIR)$(LOCALSTATEDIR)/log/gunicorn
 
 
 build-assets: vendor-assets-prerequisites
@@ -55,18 +55,19 @@ vendor-assets-prerequisites: $(srcDir)/testsite/package.json
 
 
 $(DESTDIR)$(CONFIG_DIR)/credentials: $(srcDir)/testsite/etc/credentials
-	install -d $(dir $@)
+	$(installDirs) $(dir $@)
 	[ -f $@ ] || \
 		sed -e "s,\%(SECRET_KEY)s,`$(PYTHON) -c 'import sys ; from random import choice ; sys.stdout.write("".join([choice("abcdefghijklmnopqrstuvwxyz0123456789!@#$%^*-_=+") for i in range(50)]))'`," $< > $@
 
 
 $(DESTDIR)$(CONFIG_DIR)/gunicorn.conf: $(srcDir)/testsite/etc/gunicorn.conf
-	install -d $(dir $@)
+	$(installDirs) $(dir $@)
 	[ -f $@ ] || sed \
 		-e 's,%(LOCALSTATEDIR)s,$(LOCALSTATEDIR),' $< > $@
 
 
 initdb: clean-dbs install-conf
+	$(installDirs) $(dir $(DB_NAME))
 	cd $(srcDir) && $(MANAGE) migrate $(RUNSYNCDB) --noinput
 	cat $(srcDir)/testsite/migrations/adjustments1-sqlite3.sql | $(SQLITE) $(DB_NAME)
 	cat $(srcDir)/testsite/migrations/adjustments2-sqlite3.sql | $(SQLITE) $(DB_NAME)
