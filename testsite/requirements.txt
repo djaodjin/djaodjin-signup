@@ -1,25 +1,25 @@
 boto3==1.17.12
-Django==2.2.28
-django-phonenumber-field==5.1.0
-django-recaptcha==2.0.6
-django-storages==1.9.1
+Django==3.2.15
+django-phonenumber-field==5.2.0
+django-recaptcha==2.0.6              # 3.0.0 available
+django-storages==1.13.1
 djangorestframework==3.12.4
 docutils==0.16
-phonenumbers==8.12.6
-PyJWT==2.0.1
-python-dateutil==2.8.1
+phonenumbers==8.12.53
+PyJWT==2.4.0
+python-dateutil==2.8.2
 python-ldap==3.2.0
-pytz==2021.1
+pytz==2022.1
 six==1.12.0
 social-auth-app-django==5.0.0
 social-auth-core==4.2.0
 
 # testsite-only
-coverage==5.1
-django-extensions==2.2.9
+coverage==6.3.2
+django-extensions==3.2.0
 djaodjin-rules==0.2.9
 gunicorn==20.0.4
-whitenoise==5.1.0
+whitenoise==5.3.0
 
 # development
 Sphinx==3.0.3
