@@ -26,7 +26,6 @@
 Forms for the signup Django app
 """
 
-from captcha.fields import ReCaptchaField
 from django import forms
 from django.conf import locale
 from django.core import validators
@@ -40,6 +39,7 @@ from . import settings, validators
 from .compat import gettext_lazy as _, six
 from .helpers import full_name_natural_split
 from .models import Contact
+from .utils import get_recaptcha_form_field
 
 
 class EmailField(forms.EmailField):
@@ -107,7 +107,7 @@ class FrictionlessSignupForm(forms.Form):
     def __init__(self, *args, **kwargs):
         super(FrictionlessSignupForm, self).__init__(*args, **kwargs)
         if settings.REQUIRES_RECAPTCHA:
-            self.fields['captcha'] = ReCaptchaField()
+            self.fields['captcha'] = get_recaptcha_form_field()
 
     def clean_email(self):
         # If we don't convert `''` to `None`, the database will later complain
@@ -298,7 +298,7 @@ class ActivationForm(PasswordConfirmMixin, forms.Form):
         self.user = kwargs.pop('instance')
         super(ActivationForm, self).__init__(*args, **kwargs)
         if settings.REQUIRES_RECAPTCHA:
-            self.fields['captcha'] = ReCaptchaField()
+            self.fields['captcha'] = get_recaptcha_form_field()
 
 
 class UserActivateForm(forms.Form):

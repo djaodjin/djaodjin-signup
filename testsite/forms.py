@@ -1,4 +1,4 @@
-# Copyright (c) 2021, Djaodjin Inc.
+# Copyright (c) 2022, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,8 +22,6 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from captcha.fields import ReCaptchaField
-from captcha.widgets import ReCaptchaV2Checkbox
 from django import forms
 from signup.forms import FrictionlessSignupForm
 
@@ -36,5 +34,6 @@ class SignupWithCaptchaForm(FrictionlessSignupForm):
     new_password2 = forms.CharField(widget=forms.PasswordInput(
         attrs={'placeholder': 'Type Password Again'}),
         label="Password confirmation")
-    captcha = ReCaptchaField(widget=ReCaptchaV2Checkbox(
-        attrs={'data-size': 'compact'}))
+    # Implementation Note: make sure REQUIRES_RECAPTCHA is set in settings.py
+    # otherwise no capcha field is created. We currently running tests with
+    # `REQUIRES_RECAPTCHA = False` until django-recaptcha supports Django4.0.
