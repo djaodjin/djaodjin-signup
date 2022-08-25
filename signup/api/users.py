@@ -110,11 +110,11 @@ class UserActivateAPIView(ContactMixin, GenericAPIView):
             "created_at": "2018-01-01T00:00:00Z"
         }
     """
-    serializer_class = UserSerializer
+    serializer_class = UserDetailSerializer
     queryset = Contact.objects.all().select_related('user')
 
     @swagger_auto_schema(request_body=no_body, responses={
-        201: OpenAPIResponse("success", UserSerializer),
+        201: OpenAPIResponse("success", UserDetailSerializer),
         400: OpenAPIResponse("parameters error", ValidationErrorSerializer)})
     def post(self, request, *args, **kwargs):#pylint:disable=unused-argument
         instance = self.get_object()
@@ -318,7 +318,19 @@ class UserDetailAPIView(UserMixin, RetrieveUpdateDestroyAPIView):
             serializer.validated_data.get('get_full_name'))
         if full_name:
             update_fields.update({'full_name': full_name})
-        for key in ('nick_name', 'email', 'phone', 'lang'):
+        nick_name = serializer.validated_data.get('nick_name',
+            serializer.validated_data.get('get_nick_name'))
+        if nick_name:
+            update_fields.update({'nick_name': nick_name})
+        phone = serializer.validated_data.get('phone',
+            serializer.validated_data.get('get_phone'))
+        if phone:
+            update_fields.update({'phone': phone})
+        lang = serializer.validated_data.get('lang',
+            serializer.validated_data.get('get_lang'))
+        if lang:
+            update_fields.update({'lang': lang})
+        for key in ('email',):
             value = serializer.validated_data.get(key)
             if value:
                 update_fields.update({key: value})
@@ -326,6 +338,7 @@ class UserDetailAPIView(UserMixin, RetrieveUpdateDestroyAPIView):
             user = self.get_object()
             try:
                 if user.pk:
+                    update_fields.update({'user': user})
                     if slug:
                         user.username = slug
                     if full_name:
@@ -386,22 +399,7 @@ class UserListCreateAPIView(ListCreateAPIView):
             "results": [{
               "slug": "xia",
               "username": "xia",
-              "created_at": "2018-01-01T00:00:00Z",
-              "printable_name": "Xia",
-              "email": "xia@locahost.localdomain",
-              "full_name": "Xia Lee",
-              "nick_name": "Xia",
-              "activities": [{
-                "created_at": "2018-01-01T00:00:00Z",
-                "created_by": "alice",
-                "text": "Phone call",
-                "account": null
-              },{
-                "created_at": "2018-01-02T00:00:00Z",
-                "created_by": "alice",
-                "text": "Follow up e-mail",
-                "account": "cowork"
-              }]
+              "printable_name": "Xia"
             }]
         }
     """
@@ -567,6 +565,10 @@ class UserListCreateAPIView(ListCreateAPIView):
         if not nick_name:
             nick_name, unused1, unused2 = full_name_natural_split(
                 full_name, middle_initials=False)
+        phone = serializer.validated_data.get('phone',
+            serializer.validated_data.get('get_phone'))
+        lang = serializer.validated_data.get('lang',
+            serializer.validated_data.get('get_lang'))
         with transaction.atomic():
             try:
                 user = user_model.objects.get(
@@ -578,9 +580,9 @@ class UserListCreateAPIView(ListCreateAPIView):
                     slug=slug,
                     full_name=full_name,
                     nick_name=nick_name,
-                    phone=serializer.validated_data.get('phone'),
                     email=serializer.validated_data.get('email'),
-                    lang=serializer.validated_data.get('lang'),
+                    phone=phone,
+                    lang=lang,
                     user=user)
                 if not user:
                     user = self.as_user(contact)

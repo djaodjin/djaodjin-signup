@@ -715,8 +715,47 @@ def get_user_contact(user):
     return None
 
 
+def get_nick_name(obj):
+    if hasattr(obj, 'nick_name'):
+        return obj.nick_name
+    opk = obj.pk if hasattr(obj, 'pk') else None
+    if opk:
+        contact = obj.contacts.filter(nick_name__isnull=False).order_by(
+            'created_at').first()
+        if contact:
+            return contact.nick_name
+    return obj.first_name
+
+
+def get_phone(obj):
+    if hasattr(obj, 'phone'):
+        return obj.phone
+    opk = obj.pk if hasattr(obj, 'pk') else None
+    if opk:
+        contact = obj.contacts.filter(phone__isnull=False).order_by(
+            'created_at').first()
+        if contact:
+            return contact.phone
+    return None
+
+
+def get_lang(obj):
+    if hasattr(obj, 'lang'):
+        return obj.lang
+    opk = obj.pk if hasattr(obj, 'pk') else None
+    if opk:
+        contact = obj.contacts.filter(lang__isnull=False).order_by(
+            'created_at').first()
+        if contact:
+            return contact.lang
+    return settings.LANGUAGE_CODE
+
+
 # Hack to install our create_user method.
 User = get_user_model() #pylint:disable=invalid-name
+User.get_nick_name = get_nick_name
+User.get_phone = get_phone
+User.get_lang = get_lang
 User.objects = ActivatedUserManager()
 User.objects.model = User
 User.objects.contribute_to_class(User, 'objects')

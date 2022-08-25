@@ -260,16 +260,20 @@ class RegisterMixin(ChecksMixin):
     registration_fields = (
         'country',
         'email',
-        'first_name',
         'full_name',
-        'lang',
+        'first_name',
         'last_name',
+        'nick_name',
+        'get_nick_name',
+        'lang',
+        'get_lang',
         'locality',
         'postal_code',
         'new_password',
         'new_password2',
         'password',
         'phone',
+        'get_phone',
         'region',
         'street_address',
         'username',
@@ -315,7 +319,7 @@ class RegisterMixin(ChecksMixin):
                 # cases.
                 pass
 
-        phone = cleaned_data.get('phone', None)
+        phone = cleaned_data.get('phone', cleaned_data.get('get_phone'))
         if phone:
             try:
                 user = self.model.objects.find_user(phone)
@@ -345,8 +349,8 @@ class RegisterMixin(ChecksMixin):
         username = cleaned_data.get('username', None)
         password = cleaned_data.get('new_password',
             cleaned_data.get('password', None))
-        lang = cleaned_data.get('lang',
-            translation.get_language_from_request(self.request))
+        lang = cleaned_data.get('lang', cleaned_data.get('get_lang',
+            translation.get_language_from_request(self.request)))
         user_extra = {}
         for field_name, field_value in six.iteritems(cleaned_data):
             if field_name not in self.registration_fields:

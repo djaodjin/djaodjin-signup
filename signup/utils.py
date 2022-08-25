@@ -83,6 +83,13 @@ def get_account_model():
 " that has not been installed" % settings.ACCOUNT_MODEL)
 
 
+def get_account_serializer():
+    """
+    Returns the serializer for the account model that is active in this project.
+    """
+    return import_string(settings.ACCOUNT_SERIALIZER)
+
+
 def get_recaptcha_form_field():
     # The imports are here so catcha is only loaded when
     # `settings.REQUIRE_RECAPTCHA` is True. This is a workaround
@@ -91,6 +98,13 @@ def get_recaptcha_form_field():
     from captcha.widgets import ReCaptchaV2Checkbox
     return ReCaptchaField(widget=ReCaptchaV2Checkbox(
         attrs={'data-size': 'compact'}))
+
+
+def get_user_serializer():
+    """
+    Returns the serializer for the user model that is active in this project.
+    """
+    return import_string(settings.USER_SERIALIZER)
 
 
 def has_invalid_password(user):

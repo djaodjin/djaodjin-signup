@@ -47,6 +47,7 @@ from django.conf import settings
 _SETTINGS = {
     'ACCOUNT_ACTIVATION_DAYS': getattr(settings, 'ACCOUNT_ACTIVATION_DAYS', 2),
     'ACCOUNT_MODEL': getattr(settings, 'AUTH_USER_MODEL', None),
+    'ACCOUNT_SERIALIZER': 'signup.serializers_overrides.UserSerializer',
     'AUTH_USER_MODEL': getattr(settings, 'AUTH_USER_MODEL'),
     'AWS_ACCOUNT_ID': None,
     'AWS_EXTERNAL_ID': "",
@@ -81,10 +82,12 @@ _SETTINGS = {
         'google-oauth2': {'name': 'Google'},
     },
     'USER_CONTACT_CALLABLE': None,
+    'USER_SERIALIZER': 'signup.serializers_overrides.UserSerializer',
 }
 _SETTINGS.update(getattr(settings, 'SIGNUP', {}))
 
 ACCOUNT_MODEL = _SETTINGS.get('ACCOUNT_MODEL')
+ACCOUNT_SERIALIZER = _SETTINGS.get('ACCOUNT_SERIALIZER')
 AUTH_USER_MODEL = _SETTINGS.get('AUTH_USER_MODEL')
 AWS_REGION = _SETTINGS.get('AWS_REGION')
 AWS_UPLOAD_ROLE = _SETTINGS.get('AWS_UPLOAD_ROLE')
@@ -115,6 +118,7 @@ REQUIRES_RECAPTCHA = _SETTINGS.get('REQUIRES_RECAPTCHA')
 SEARCH_FIELDS_PARAM = _SETTINGS.get('SEARCH_FIELDS_PARAM')
 SSO_PROVIDERS = _SETTINGS.get('SSO_PROVIDERS')
 USER_CONTACT_CALLABLE = _SETTINGS.get('USER_CONTACT_CALLABLE')
+USER_SERIALIZER = _SETTINGS.get('USER_SERIALIZER')
 
 LANGUAGE_CODE = getattr(settings, 'LANGUAGE_CODE')
 LOGIN_URL = getattr(settings, 'LOGIN_URL')

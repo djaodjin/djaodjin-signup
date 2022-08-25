@@ -17,7 +17,6 @@ from signup.compat import reverse_lazy
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 RUN_DIR = os.getenv('RUN_DIR', os.getcwd())
 DB_NAME = os.path.join(RUN_DIR, 'db.sqlite')
-LOG_FILE = os.path.join(RUN_DIR, 'testsite-app.log')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -57,6 +56,8 @@ def load_config(confpath):
 
 load_config(os.path.join(
     os.getenv('TESTSITE_SETTINGS_LOCATION', RUN_DIR), 'credentials'))
+load_config(os.path.join(
+    os.getenv('TESTSITE_SETTINGS_LOCATION', RUN_DIR), 'site.conf'))
 
 if not hasattr(sys.modules[__name__], "SECRET_KEY"):
     from random import choice
@@ -179,7 +180,9 @@ LOGGING = {
         },
     },
 }
-if logging.getLogger('gunicorn.error').handlers:
+if hasattr(sys.modules[__name__], 'LOG_FILE') and LOG_FILE:
+    if DEBUG:
+        sys.stderr.write("writing log into %s ...\n" % LOG_FILE)
     LOGGING['handlers']['log'].update({
         'class':'logging.handlers.WatchedFileHandler',
         'filename': LOG_FILE
@@ -293,7 +296,8 @@ SIGNUP = {
     'BYPASS_VERIFICATION_KEY_EXPIRED_CHECK':
         BYPASS_VERIFICATION_KEY_EXPIRED_CHECK,
     'RANDOM_SEQUENCE': getattr(
-        sys.modules[__name__], 'SIGNUP_RANDOM_SEQUENCE', [])
+        sys.modules[__name__], 'SIGNUP_RANDOM_SEQUENCE', []),
+#    'REQUIRES_RECAPTCHA': True
 }
 
 INTERNAL_IPS = ('127.0.0.1', '::1')

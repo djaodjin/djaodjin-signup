@@ -41,10 +41,10 @@ from ..helpers import as_timestamp, datetime_or_now
 from ..mixins import (ActivateMixin, LoginMixin, RecoverMixin, RegisterMixin,
     SSORequired)
 from ..models import Contact
-from ..serializers import (ActivateUserSerializer, CredentialsSerializer,
+from ..serializers import (ActivateSerializer, CredentialsSerializer,
     UserCreateSerializer, UserDetailSerializer,
     PasswordResetSerializer, PasswordResetConfirmSerializer,
-    TokenSerializer, UserSerializer, ValidationErrorSerializer)
+    TokenSerializer, UserDetailSerializer, ValidationErrorSerializer)
 from ..utils import get_disabled_authentication, get_disabled_registration
 
 
@@ -82,7 +82,7 @@ class JWTBase(GenericAPIView):
                 + self.request.session.get_expiry_age())
         else:
             exp = as_timestamp(expires_at)
-        payload = UserSerializer().to_representation(user)
+        payload = UserDetailSerializer().to_representation(user)
         payload.update({'exp': exp})
         token = jwt.encode(payload, settings.JWT_SECRET_KEY,
             settings.JWT_ALGORITHM)
@@ -142,7 +142,7 @@ class JWTActivate(ActivateMixin, JWTBase):
         }
     """
     model = get_user_model()
-    serializer_class = ActivateUserSerializer
+    serializer_class = ActivateSerializer
 
     def get_serializer_class(self):
         if self.request.method.lower() == 'get':

@@ -32,7 +32,7 @@ from .users import UserDetailAPIView, UserListCreateAPIView, UserPictureAPIView
 from .. import filters
 from ..mixins import ContactMixin
 from ..models import Activity
-from ..serializers import ActivitySerializer
+from ..serializers import ActivitySerializer, ActivityCreateSerializer
 
 
 LOGGER = logging.getLogger(__name__)
@@ -63,14 +63,30 @@ class ActivityListCreateAPIView(ContactMixin, ListCreateAPIView):
             "previous": null,
             "results": [{
               "created_at": "2018-01-01T00:00:00Z",
-              "created_by": "alice",
               "text": "Phone call",
+              "created_by": {
+                "username": "alice",
+                "printable_name": "Alice",
+                "picture": null,
+                "slug": "alice"
+              },
               "account": null
-            },{
+            }, {
               "created_at": "2018-01-02T00:00:00Z",
-              "created_by": "alice",
               "text": "Follow up e-mail",
-              "account": "cowork"
+              "created_by": {
+                "username": "alice",
+                "printable_name": "Alice",
+                "picture": null,
+                "slug": "alice"
+              },
+              "account": {
+                "slug": "cowork",
+                "printable_name": "Coworking Space",
+                "picture": null,
+                "type": "organization",
+                "credentials": false
+              }
             }]
         }
     """
@@ -87,6 +103,11 @@ class ActivityListCreateAPIView(ContactMixin, ListCreateAPIView):
 
     def get_queryset(self):
         return Activity.objects.filter(contact=self.contact)
+
+    def get_serializer_class(self):
+        if self.request.method.lower() == 'post':
+            return ActivityCreateSerializer
+        return super(ActivityListCreateAPIView, self).get_serializer_class()
 
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user, contact=self.contact)
@@ -107,7 +128,7 @@ class ActivityListCreateAPIView(ContactMixin, ListCreateAPIView):
 
             {
               "text": "Phone call",
-              "account": null
+              "account": "cowork"
             }
 
         responds
@@ -116,7 +137,7 @@ class ActivityListCreateAPIView(ContactMixin, ListCreateAPIView):
 
             {
               "text": "Phone call",
-              "account": null
+              "account": "cowork"
             }
         """
         return self.create(request, *args, **kwargs)
