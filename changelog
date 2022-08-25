@@ -1,3 +1,10 @@
+0.7.0
+
+  * removes trailing '/' on URL API endpoint
+  * updates search filters
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Mon,  22 Aug 2022 15:35:00 -0700
+
 0.6.0
 
   * adds mandatory use of SSO provider for specific e-mail addresses

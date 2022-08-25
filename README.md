@@ -13,8 +13,8 @@ you should decorate the view with an *active_required* decorator.
 
 Tested with
 
-- **Python:** 3.6, **Django:** 2.2 ([LTS](https://www.djangoproject.com/download/)), **Django Rest Framework:** 3.12
-- **Python:** 3.6, **Django:** 3.2 (latest), **Django Rest Framework:** 3.12
+- **Python:** 3.7, **Django:** 3.2 ([LTS](https://www.djangoproject.com/download/)), **Django Rest Framework:** 3.12
+- **Python:** 3.10, **Django:** 4.0 (latest), **Django Rest Framework:** 3.12 - see [#55](https://github.com/djaodjin/djaodjin-signup/issues/55)
 - **Python:** 2.7, **Django:** 1.11 (legacy), **Django Rest Framework:** 3.9.4
 
 This project contains bare bone templates which are compatible with Django
@@ -70,9 +70,9 @@ run the testsite webapp.
 Release Notes
 =============
 
-0.6.0
+0.7.0
 
-  * adds mandatory use of SSO provider for specific e-mail addresses
-  * adds initial compatibility with Django 4.0
+  * removes trailing '/' on URL API endpoint
+  * updates search filters
 
 [previous release notes](changelog)
