@@ -44,7 +44,7 @@ from ..models import Contact
 from ..serializers import (ActivateSerializer, CredentialsSerializer,
     UserCreateSerializer, UserDetailSerializer,
     PasswordResetSerializer, PasswordResetConfirmSerializer,
-    TokenSerializer, UserDetailSerializer, ValidationErrorSerializer)
+    TokenSerializer, ValidationErrorSerializer)
 from ..utils import get_disabled_authentication, get_disabled_registration
 
 
@@ -116,7 +116,7 @@ class JWTActivate(ActivateMixin, JWTBase):
     when a user was invited to the site by another user.
 
     The response is usually presented in an HTML
-    `activate page </docs/themes/#workflow_activate>`_
+    `activate page </docs/guides/themes/#workflow_activate>`_
     as present in the default theme.
 
     **Tags: auth, visitor, usermodel
@@ -218,7 +218,7 @@ class JWTLogin(LoginMixin, JWTBase):
     authentication.
 
     The API is typically used within an HTML
-    `login page </docs/themes/#workflow_login>`_
+    `login page </docs/guides/themes/#workflow_login>`_
     as present in the default theme.
 
     **Tags: auth, visitor, usermodel
@@ -279,7 +279,7 @@ class JWTPasswordResetConfirm(JWTBase):
     be used to authenticate the new user in HTTP requests.
 
     The API is typically used within an HTML
-    `reset password page </docs/themes/#workflow_reset>`_
+    `reset password page </docs/guides/themes/#workflow_reset>`_
     as present in the default theme.
 
     **Tags: auth, visitor, usermodel
@@ -293,8 +293,7 @@ class JWTPasswordResetConfirm(JWTBase):
     .. code-block:: json
 
         {
-          "new_password": "yoyo",
-          "new_password2": "yoyo"
+          "new_password": "yoyo"
         }
 
     responds
@@ -351,7 +350,7 @@ class JWTRegister(RegisterMixin, JWTBase):
     be used to authenticate the new user in HTTP requests.
 
     The API is typically used within an HTML
-    `register page </docs/themes/#workflow_register>`_
+    `register page </docs/guides/themes/#workflow_register>`_
     as present in the default theme.
 
     **Tags: auth, visitor, usermodel
@@ -442,7 +441,7 @@ class PasswordResetAPIView(RecoverMixin, CreateAPIView):
     The user is uniquely identified by her email address.
 
     The API is typically used within an HTML
-    `recover credentials page </docs/themes/#workflow_recover>`_
+    `recover credentials page </docs/guides/themes/#workflow_recover>`_
     as present in the default theme.
 
     **Tags: auth, visitor, usermodel

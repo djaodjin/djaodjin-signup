@@ -43,7 +43,7 @@ from ..decorators import check_has_credentials
 from ..docs import OpenAPIResponse, no_body, swagger_auto_schema
 from ..helpers import full_name_natural_split
 from ..mixins import ContactMixin, UserMixin
-from ..models import Contact, Notification
+from ..models import Contact, Credentials, Notification
 from ..serializers import (UserSerializer, UserCreateSerializer,
     UserDetailSerializer, PasswordChangeSerializer, NotificationsSerializer,
     UploadBlobSerializer, ValidationErrorSerializer)
@@ -136,7 +136,7 @@ class UserDetailAPIView(UserMixin, RetrieveUpdateDestroyAPIView):
     Retrieves details on one single user account with slug ``{user}``.
 
     The API is typically used within an HTML
-    `contact information page </docs/themes/#dashboard_profile>`_
+    `contact information page </docs/guides/themes/#dashboard_profile>`_
     as present in the default theme.
 
     **Tags: profile, user, usermodel
@@ -181,7 +181,7 @@ class UserDetailAPIView(UserMixin, RetrieveUpdateDestroyAPIView):
         Updates a user account
 
         The API is typically used within an HTML
-        `contact information page </docs/themes/#dashboard_profile>`_
+        `contact information page </docs/guides/themes/#dashboard_profile>`_
         as present in the default theme.
 
         **Tags: profile, user, usermodel
@@ -221,7 +221,7 @@ class UserDetailAPIView(UserMixin, RetrieveUpdateDestroyAPIView):
         Updates a user account
 
         The API is typically used within an HTML
-        `contact information page </docs/themes/#dashboard_profile>`_
+        `contact information page </docs/guides/themes/#dashboard_profile>`_
         as present in the default theme.
 
         **Tags: profile, user, usermodel
@@ -261,7 +261,7 @@ class UserDetailAPIView(UserMixin, RetrieveUpdateDestroyAPIView):
         Deletes a user account
 
         The API is typically used within an HTML
-        `contact information page </docs/themes/#dashboard_profile>`_
+        `contact information page </docs/guides/themes/#dashboard_profile>`_
         as present in the default theme.
 
         **Tags: profile, user, usermodel
@@ -294,11 +294,30 @@ class UserDetailAPIView(UserMixin, RetrieveUpdateDestroyAPIView):
             email = '%s%s' % (slug, look.group(1))
 
         with transaction.atomic():
-            if not user.pk:
-                Contact.objects.filter(
-                    slug=self.kwargs.get(self.lookup_url_kwarg)).delete()
-            else:
-                user.contacts.all().delete()
+            contacts = list((user.contacts.all() if user.pk
+                else Contact.objects.filter(
+                        slug=self.kwargs.get(self.lookup_url_kwarg))))
+            if contacts:
+                for contact in contacts:
+                    contact.email = None
+                    contact.phone = None
+                    contact.full_name = ""
+                    contact.nick_name = ""
+                    contact.picture = ""
+                    contact.email_verification_key = None
+                    contact.email_verification_at = None
+                    contact.email_verified_at = None
+                    contact.phone_verification_key = None
+                    contact.phone_verification_at = None
+                    contact.phone_verified_at = None
+                    contact.mfa_priv_key = None
+                Contact.objects.bulk_update(contacts, [
+                    'email', 'phone', 'full_name', 'nick_name', 'picture',
+                    'email_verification_key', 'email_verification_at',
+                    'email_verified_at', 'phone_verification_key',
+                    'phone_verification_at', 'mfa_priv_key'])
+            if user.pk:
+                self.delete_records(user)
                 requires_logout = (self.request.user == user)
                 user.username = slug
                 user.email = email
@@ -307,6 +326,12 @@ class UserDetailAPIView(UserMixin, RetrieveUpdateDestroyAPIView):
                 user.save()
                 if requires_logout:
                     auth_logout(self.request)
+
+    def delete_records(self, user):
+        user.notifications.all().delete()
+        if Credentials.objects.filter(user=user).exists():
+            user.credentials.delete()
+
 
     def perform_update(self, serializer):
         update_fields = {}
@@ -611,7 +636,7 @@ class PasswordChangeAPIView(GenericAPIView):
         Updates a user password
 
         The API is typically used within an HTML
-        `update password page </docs/themes/#dashboard_users_password>`_
+        `update password page </docs/guides/themes/#dashboard_users_password>`_
         as present in the default theme.
 
         **Tags: auth, user, usermodel
@@ -663,7 +688,7 @@ class UserNotificationsAPIView(UserMixin, RetrieveUpdateAPIView):
     Lists a user notifications preferences
 
     The API is typically used within an HTML
-    `notifications page </docs/themes/#dashboard_users_notifications>`_
+    `notifications page </docs/guides/themes/#dashboard_users_notifications>`_
     as present in the default theme.
 
     **Tags: profile, user, usermodel
@@ -692,7 +717,7 @@ class UserNotificationsAPIView(UserMixin, RetrieveUpdateAPIView):
         Updates a user notifications preferences
 
         The API is typically used within an HTML
-        `notifications page </docs/themes/#dashboard_users_notifications>`_
+        `notifications page </docs/guides/themes/#dashboard_users_notifications>`_
         as present in the default theme.
 
         **Tags: profile, user, usermodel
@@ -769,7 +794,7 @@ class UserPictureAPIView(ContactMixin, CreateAPIView):
     Uploads a picture for a user account
 
     The API is typically used within an HTML
-    `contact information page </docs/themes/#dashboard_profile>`_
+    `contact information page </docs/guides/themes/#dashboard_profile>`_
     as present in the default theme.
 
     **Examples
