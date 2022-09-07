@@ -360,19 +360,24 @@ class UserForm(forms.ModelForm):
             # define other fields dynamically
             self.fields['phone'] = PhoneField(required=False)
             lang_code = settings.LANGUAGE_CODE
-            if lang_code not in locale.LANG_INFO:
-                lang_code = lang_code.split('-')[0]
-            self.fields['lang'] = forms.CharField(
-                initial=lang_code,
-                widget=forms.Select(choices=[(lang['code'], lang['name_local'])
-                    for lang in six.itervalues(locale.LANG_INFO)
-                    if 'code' in lang]))
             contact = instance.contacts.order_by('pk').first()
-            self.fields['nick_name'].initial = (contact.nick_name
-                if contact else instance.first_name)
             if contact:
+                self.fields['nick_name'].initial = contact.nick_name
                 self.fields['phone'].initial = contact.phone
-                self.fields['lang'].initial = contact.lang
+                lang_code = contact.lang
+            else:
+                self.fields['nick_name'].initial = instance.first_name
+            lang_choices = [(lang['code'], lang['name_local'])
+                for lang in six.itervalues(locale.LANG_INFO) if 'code' in lang]
+            lang_codes = dict(lang_choices)
+            if lang_code not in lang_codes:
+                lang_code = lang_code.split('-')[0]
+            if lang_code not in lang_codes:
+                # At this point, buggy data was loaded from the database,
+                # default to the application language code.
+                lang_code = settings.LANGUAGE_CODE
+            self.fields['lang'] = forms.CharField(
+                initial=lang_code, widget=forms.Select(choices=lang_choices))
 
     def clean_full_name(self):
         if self.cleaned_data.get('full_name'):

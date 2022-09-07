@@ -506,7 +506,7 @@ class Contact(models.Model):
     phone_verified_at = models.DateTimeField(null=True,
         help_text=_("Date/time when the phone number was last verified"))
     lang = models.CharField(_("Preferred communication language"),
-         default=settings.LANGUAGE_CODE, max_length=5,
+         default=settings.LANGUAGE_CODE, max_length=8,
         help_text=_("Two-letter ISO 639 code for the preferred"\
         " communication language (ex: en)"))
     mfa_backend = models.PositiveSmallIntegerField(
