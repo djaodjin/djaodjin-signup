@@ -1,3 +1,10 @@
+0.7.1
+
+  * fixes language shown in profile page
+  * clears contact fields instead of deleting record
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Fri,  9 Sep 2022 13:50:00 -0700
+
 0.7.0
 
   * removes trailing '/' on URL API endpoint

@@ -70,9 +70,9 @@ run the testsite webapp.
 Release Notes
 =============
 
-0.7.0
+0.7.1
 
-  * removes trailing '/' on URL API endpoint
-  * updates search filters
+  * fixes language shown in profile page
+  * clears contact fields instead of deleting record
 
 [previous release notes](changelog)
