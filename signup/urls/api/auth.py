@@ -23,7 +23,7 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from ... import settings
-from ...compat import include, path, re_path
+from ...compat import path, re_path
 from ...api.auth import (JWTActivate, JWTLogin, JWTPasswordResetConfirm,
     JWTRegister, PasswordResetAPIView)
 

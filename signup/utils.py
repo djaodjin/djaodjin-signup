@@ -107,10 +107,6 @@ def get_user_serializer():
     return import_string(settings.USER_SERIALIZER)
 
 
-def has_invalid_password(user):
-    return not user.password or user.password.startswith('!')
-
-
 def printable_name(user):
     full_name = user.get_full_name()
     if full_name:

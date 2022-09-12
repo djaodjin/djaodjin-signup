@@ -38,8 +38,9 @@ from . import settings, signals
 from .auth import validate_redirect
 from .compat import (available_attrs, gettext_lazy as _, is_authenticated,
     reverse, six)
+from .helpers import has_invalid_password
 from .models import Contact
-from .utils import has_invalid_password, get_accept_list
+from .utils import get_accept_list
 
 
 def _insert_url(request, redirect_field_name=REDIRECT_FIELD_NAME,

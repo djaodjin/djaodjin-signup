@@ -46,12 +46,12 @@ from ..auth import validate_redirect
 from ..compat import gettext_lazy as _, is_authenticated, reverse, six
 from ..forms import (ActivationForm, AuthenticationForm, FrictionlessSignupForm,
     MFACodeForm, PasswordResetForm, PasswordResetConfirmForm, UserActivateForm)
+from ..helpers import has_invalid_password
 from ..mixins import (ActivateMixin, LoginMixin, RecoverMixin, RegisterMixin,
     SSORequired, UrlsMixin)
 from ..models import Contact
 from ..utils import (fill_form_errors, get_disabled_authentication,
-    get_disabled_registration, get_password_reset_throttle,
-    has_invalid_password)
+    get_disabled_registration, get_password_reset_throttle)
 from ..validators import as_email_or_phone
 
 

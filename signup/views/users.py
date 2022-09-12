@@ -41,9 +41,10 @@ from .. import settings
 from ..compat import gettext_lazy as _, is_authenticated, reverse, six
 from ..forms import (PasswordChangeForm, PublicKeyForm, UserForm,
     UserNotificationsForm)
+from ..helpers import has_invalid_password
 from ..mixins import UserMixin
 from ..models import Notification
-from ..utils import has_invalid_password, update_db_row
+from ..utils import update_db_row
 
 
 LOGGER = logging.getLogger(__name__)

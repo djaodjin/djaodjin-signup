@@ -41,10 +41,10 @@ from ..helpers import as_timestamp, datetime_or_now
 from ..mixins import (ActivateMixin, LoginMixin, RecoverMixin, RegisterMixin,
     SSORequired)
 from ..models import Contact
+from ..serializers_overrides import UserDetailSerializer
 from ..serializers import (ActivateSerializer, CredentialsSerializer,
-    UserCreateSerializer, UserDetailSerializer,
     PasswordResetSerializer, PasswordResetConfirmSerializer,
-    TokenSerializer, ValidationErrorSerializer)
+    TokenSerializer, UserCreateSerializer, ValidationErrorSerializer)
 from ..utils import get_disabled_authentication, get_disabled_registration
 
 

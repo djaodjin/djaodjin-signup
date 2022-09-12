@@ -25,6 +25,7 @@ from __future__ import unicode_literals
 
 import operator
 from functools import reduce
+import logging
 
 from django.db import models
 from rest_framework.compat import distinct
@@ -33,6 +34,9 @@ from rest_framework.filters import (OrderingFilter as BaseOrderingFilter,
 
 from . import settings
 from .compat import force_str, six
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 class SearchFilter(BaseSearchFilter):
@@ -251,6 +255,9 @@ class OrderingFilter(BaseOrderingFilter):
 
 class SortableSearchableFilterBackend(object):
 
+    search_param = 'q'
+    ordering_param = 'o'
+
     def __init__(self, sort_fields, search_fields):
         self.sort_fields = sort_fields
         self.search_fields = search_fields
@@ -259,7 +266,7 @@ class SortableSearchableFilterBackend(object):
         return self
 
     def filter_queryset(self, request, queryset, view):
-        #pylint:disable=no-self-use,unused-argument
+        #pylint:disable=unused-argument
         return queryset
 
     def get_schema_operation_parameters(self, view):

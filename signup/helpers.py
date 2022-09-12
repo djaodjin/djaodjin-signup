@@ -72,3 +72,7 @@ def full_name_natural_split(full_name, middle_initials=True):
     else:
         mid_name = " ".join(parts)
     return first_name, mid_name, last_name
+
+
+def has_invalid_password(user):
+    return not user.password or user.password.startswith('!')

@@ -44,9 +44,9 @@ from ..docs import OpenAPIResponse, no_body, swagger_auto_schema
 from ..helpers import full_name_natural_split
 from ..mixins import ContactMixin, UserMixin
 from ..models import Contact, Credentials, Notification
-from ..serializers import (UserSerializer, UserCreateSerializer,
-    UserDetailSerializer, PasswordChangeSerializer, NotificationsSerializer,
-    UploadBlobSerializer, ValidationErrorSerializer)
+from ..serializers_overrides import UserSerializer, UserDetailSerializer
+from ..serializers import (PasswordChangeSerializer, NotificationsSerializer,
+    UploadBlobSerializer, UserCreateSerializer, ValidationErrorSerializer)
 from ..utils import generate_random_code, get_picture_storage, handle_uniq_error
 
 

@@ -24,12 +24,10 @@
 
 from django.utils.deconstruct import deconstructible
 from django.core.exceptions import ValidationError
-from django.core.validators import validate_slug
+from django.core.validators import (EmailValidator as EmailValidatorBase,
+    RegexValidator, validate_email as validate_email_base, validate_slug)
 from django.utils.translation import gettext_lazy as _
 from phonenumber_field import phonenumber
-#pylint:disable=unused-import
-from django.core.validators import (EmailValidator as EmailValidatorBase,
-    RegexValidator, validate_email as validate_email_base)
 
 from .utils import get_email_dynamic_validator
 

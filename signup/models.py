@@ -45,8 +45,9 @@ from . import settings, signals
 from .backends.mfa import EmailMFABackend
 from .compat import (gettext_lazy as _, import_string,
     python_2_unicode_compatible, six)
-from .helpers import datetime_or_now, full_name_natural_split
-from .utils import generate_random_slug, handle_uniq_error, has_invalid_password
+from .helpers import (datetime_or_now, full_name_natural_split,
+    has_invalid_password)
+from .utils import generate_random_slug, handle_uniq_error
 from .validators import validate_phone
 
 
@@ -531,10 +532,7 @@ class Contact(models.Model):
         if self.nick_name:
             return self.nick_name
         if self.full_name:
-            # pylint:disable=unused-variable
-            first_name, mid_name, last_name = full_name_natural_split(
-                self.full_name)
-            return first_name
+            return self.full_name
         return self.username
 
     def get_mfa_backend(self):
