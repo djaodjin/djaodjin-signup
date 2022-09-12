@@ -130,7 +130,7 @@ class UserSerializer(serializers.ModelSerializer):
                 printable_name = contact.nick_name
         if printable_name:
             return printable_name
-        printable_name = obj.first_name
+        printable_name = obj.get_full_name()
         if printable_name:
             return printable_name
         return obj.username
