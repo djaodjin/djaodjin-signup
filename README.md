@@ -70,9 +70,8 @@ run the testsite webapp.
 Release Notes
 =============
 
-0.7.1
+0.7.2
 
-  * fixes language shown in profile page
-  * clears contact fields instead of deleting record
+  * enables UserDetailSerializer to be used in get_user_serializer
 
 [previous release notes](changelog)

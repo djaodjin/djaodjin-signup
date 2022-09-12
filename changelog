@@ -1,3 +1,9 @@
+0.7.2
+
+  * enables UserDetailSerializer to be used in get_user_serializer
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Sun, 11 Sep 2022 21:50:00 -0700
+
 0.7.1
 
   * fixes language shown in profile page
