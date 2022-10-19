@@ -6,6 +6,7 @@ djangorestframework>=3.9
 phonenumbers>=8.12.6
 PyJWT>=1.6.1
 python-dateutil>=2.2
+python3-saml>=1.2.1
 social-auth-app-django>=4.0.0 # v1.2.0 does not support Django>=2.1
 social-auth-core>=4.2.0 # before 4.2.0 `AzureADOAuth2` is not picking up
                         # email correctly.

@@ -22,24 +22,19 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""
-URLconf for frictionless signup.
+from django.http import HttpResponse
+from social_django.utils import load_strategy, load_backend
 
-If the default behavior of these views is acceptable to you, simply
-use a line like this in your root URLconf to set up the default URLs
-for registration:
+from ..compat import reverse
 
-    (r'^accounts/', include('signup.urls.views.accounts')),
 
-Optionally add URLs for User profiles:
-
-    (r'^users/', include('signup.urls.views.users')),
-"""
-
-from ...compat import include, path
-
-urlpatterns = [
-    path('contacts/', include('signup.urls.views.contacts')),
-    path('users/', include('signup.urls.views.users')),
-    path('', include('signup.urls.views.accounts')),
-]
+def saml_metadata_view(request):
+    complete_url = reverse('social:complete', args=("saml", ))
+    saml_backend = load_backend(
+        load_strategy(request),
+        "saml",
+        redirect_uri=complete_url,
+    )
+    metadata, errors = saml_backend.generate_metadata_xml()
+    if not errors:
+        return HttpResponse(content=metadata, content_type='text/xml')

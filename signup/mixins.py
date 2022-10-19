@@ -29,7 +29,7 @@ from django.contrib.auth import (REDIRECT_FIELD_NAME, authenticate,
     get_user_model)
 from django.utils import translation
 from django.utils.encoding import force_bytes
-from django.utils.http import urlsafe_base64_encode
+from django.utils.http import urlencode, urlsafe_base64_encode
 from django.utils.safestring import mark_safe
 from rest_framework import exceptions, serializers
 from rest_framework.generics import get_object_or_404
@@ -51,22 +51,29 @@ class SSORequired(exceptions.AuthenticationFailed):
 
     sso_providers = settings.SSO_PROVIDERS
 
-    def __init__(self, provider, detail=None, code=None):
-        self.provider = provider
+    def __init__(self, delegate_auth, detail=None, code=None):
+        self.delegate_auth = delegate_auth
         super(SSORequired, self).__init__(detail=detail, code=code)
 
     @property
     def url(self):
-        return reverse('social:begin', args=(self.provider,))
+        back_url = reverse('social:begin', args=(self.delegate_auth.provider,))
+        if self.delegate_auth.provider == 'saml':
+            back_url += "?" + urlencode({
+                'next': settings.LOGIN_REDIRECT_URL,
+                'idp': self.delegate_auth.domain
+            })
+        return back_url
 
     @property
     def provider_info(self):
-        return self.sso_providers.get(
-            self.provider, {'name': str(self.provider)})
+        return self.sso_providers.get(self.delegate_auth.provider, {
+            'name': str(self.delegate_auth.provider)
+        })
 
     @property
     def printable_name(self):
-        return self.provider_info.get('name', str(self.provider))
+        return self.provider_info.get('name', str(self.delegate_auth.provider))
 
 
 class ChecksMixin(object):
@@ -76,7 +83,7 @@ class ChecksMixin(object):
         domain = email.split('@')[-1]
         try:
             delegate_auth = DelegateAuth.objects.get(domain=domain)
-            raise SSORequired(delegate_auth.provider)
+            raise SSORequired(delegate_auth)
         except DelegateAuth.DoesNotExist:
             pass
 

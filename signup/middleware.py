@@ -29,6 +29,7 @@ import logging
 
 from django.contrib.auth.middleware import (
     AuthenticationMiddleware as BaseAuthenticationMiddleware)
+from django.http import HttpResponseNotFound
 from django.utils import translation
 from rest_framework import exceptions
 from rest_framework.settings import api_settings
@@ -94,3 +95,12 @@ class AuthenticationMiddleware(BaseAuthenticationMiddleware):
                     LOGGER.debug("no Accept-Language HTTP header,"\
                         " defaults to language '%s' in contact.", contact.lang)
                     translation.activate(contact.lang)
+
+
+    def process_exception(self, request, exception):
+        # It is better to return a 404 instead of a 500 when the iDP does
+        # not exist in `SOCIAL_AUTH_SAML_ENABLED_IDPS`, especially that it is
+        # a URL query parameter.
+        if isinstance(exception, KeyError):
+            return HttpResponseNotFound("couldn't find %s" % str(exception))
+        return None

@@ -25,6 +25,8 @@ JS_FRAMEWORK = 'vuejs'
 
 ALLOWED_HOSTS = []
 
+SOCIAL_AUTH_SAML_ENABLED_IDPS = {}
+
 
 def load_config(confpath):
     '''
@@ -213,6 +215,7 @@ AUTHENTICATION_BACKENDS = (
     'social_core.backends.azuread.AzureADOAuth2',
     'social_core.backends.google.GoogleOAuth2',
     'social_core.backends.github.GithubOAuth2',
+    'social_core.backends.saml.SAMLAuth',
     'signup.backends.auth.UsernameOrEmailPhoneModelBackend',
     'django.contrib.auth.backends.ModelBackend'
 )
