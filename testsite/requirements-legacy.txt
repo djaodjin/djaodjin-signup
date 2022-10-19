@@ -12,7 +12,7 @@ phonenumbers==8.12.6
 PyJWT==1.7.1
 python-dateutil==2.8.1
 python-ldap==3.2.0
-python-saml==2.2.0
+python-saml==2.4.0
 pytz==2020.1
 six==1.12.0
 social-auth-app-django==3.1.0 # v1.2.0 does not support Django>=2.1
