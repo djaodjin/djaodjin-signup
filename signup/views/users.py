@@ -1,4 +1,4 @@
-# Copyright (c) 2021, Djaodjin Inc.
+# Copyright (c) 2022, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -43,7 +43,7 @@ from ..forms import (PasswordChangeForm, PublicKeyForm, UserForm,
     UserNotificationsForm)
 from ..helpers import has_invalid_password
 from ..mixins import UserMixin
-from ..models import Notification
+from ..models import Contact, Notification
 from ..utils import update_db_row
 
 
@@ -60,9 +60,38 @@ class UserProfileView(UserMixin, UpdateView):
     template_name = 'users/index.html'
 
     def form_valid(self, form):
-        form.save(commit=False)
-        if update_db_row(self.object, form):
-            return self.form_invalid(form)
+        contact = self.object.contacts.filter(email=self.object.email).first()
+        if not contact:
+            contact = self.object.contacts.order_by('pk').first()
+        with transaction.atomic():
+            # `form.save(commit=False)` will copy the form fields values
+            # to the instance without committing to the database.
+            # `update_db_row` will commit to the database.
+            form.save(commit=False)
+            if update_db_row(self.object, form):
+                return self.form_invalid(form)
+            if contact:
+                contact.slug = form.cleaned_data['username']
+                contact.full_name = form.cleaned_data['full_name']
+                contact.nick_name = form.cleaned_data['nick_name']
+                contact.lang = form.cleaned_data['lang']
+                if contact.email != form.cleaned_data['email']:
+                    contact.email = form.cleaned_data['email']
+                    contact.email_verified_at = None
+                if contact.phone != form.cleaned_data['phone']:
+                    contact.phone = form.cleaned_data['phone']
+                    contact.phone_verified_at = None
+                if update_db_row(contact, form):
+                    return self.form_invalid(form)
+            else:
+                contact = Contact.objects.create(
+                    user=self.object,
+                    slug=form.cleaned_data['username'],
+                    full_name=form.cleaned_data['full_name'],
+                    nick_name=form.cleaned_data['nick_name'],
+                    lang=form.cleaned_data['lang'],
+                    email=form.cleaned_data['email'],
+                    phone=form.cleaned_data['phone'])
         return HttpResponseRedirect(self.get_success_url())
 
     def get_initial(self):
