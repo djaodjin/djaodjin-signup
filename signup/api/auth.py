@@ -264,7 +264,7 @@ sbF9uYW1lIjoiRG9ubnkgQ29vcGVyIiwiZXhwIjoxNTI5NjU4NzEwfQ.F2y\
                 raise serializers.ValidationError({'detail': _(
                     "SSO required through %(provider)s") % {
                         'provider': err.printable_name},
-                    'provider': err.provider,
+                    'provider': err.delegate_auth.provider,
                     'url': self.request.build_absolute_uri(err.url)})
 
         raise exceptions.PermissionDenied()
@@ -478,7 +478,7 @@ class PasswordResetAPIView(RecoverMixin, CreateAPIView):
             raise serializers.ValidationError({'detail': _(
                 "SSO required through %(provider)s") % {
                     'provider': err.printable_name},
-                'provider': err.provider,
+                'provider': err.delegate_auth.provider,
                 'url': self.request.build_absolute_uri(err.url)})
 
     def permission_denied(self, request, message=None, code=None):
