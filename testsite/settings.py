@@ -215,7 +215,9 @@ AUTHENTICATION_BACKENDS = (
     'social_core.backends.azuread.AzureADOAuth2',
     'social_core.backends.google.GoogleOAuth2',
     'social_core.backends.github.GithubOAuth2',
-    'social_core.backends.saml.SAMLAuth',
+# SAML is not supported when running on python2.7 because we end up
+# with a "Segmentation fault".
+#    'social_core.backends.saml.SAMLAuth',
     'signup.backends.auth.UsernameOrEmailPhoneModelBackend',
     'django.contrib.auth.backends.ModelBackend'
 )
