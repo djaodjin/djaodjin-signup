@@ -1,3 +1,10 @@
+0.7.3
+
+  * supports SAML logins
+  * fixes to save updated contact fields in HTML form
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Tue, 25 Sep 2022 20:50:00 -0700
+
 0.7.2
 
   * enables UserDetailSerializer to be used in get_user_serializer

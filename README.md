@@ -70,8 +70,9 @@ run the testsite webapp.
 Release Notes
 =============
 
-0.7.2
+0.7.3
 
-  * enables UserDetailSerializer to be used in get_user_serializer
+  * supports SAML logins
+  * fixes to save updated contact fields in HTML form
 
 [previous release notes](changelog)
