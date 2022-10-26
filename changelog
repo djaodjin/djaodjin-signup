@@ -1,3 +1,9 @@
+0.7.4
+
+  * supports override of `form_invalid` making SQL query
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Wed, 26 Sep 2022 07:52:00 -0700
+
 0.7.3
 
   * supports SAML logins
