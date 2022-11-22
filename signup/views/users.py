@@ -72,6 +72,10 @@ class UserProfileView(UserMixin, UpdateView):
             if update_db_row(self.object, form):
                 failed = True
             else:
+                if form.cleaned_data['phone']:
+                    validated_phone = form.cleaned_data['phone']
+                else:
+                    validated_phone = None
                 if contact:
                     contact.slug = form.cleaned_data['username']
                     contact.full_name = form.cleaned_data['full_name']
@@ -80,8 +84,8 @@ class UserProfileView(UserMixin, UpdateView):
                     if contact.email != form.cleaned_data['email']:
                         contact.email = form.cleaned_data['email']
                         contact.email_verified_at = None
-                    if contact.phone != form.cleaned_data['phone']:
-                        contact.phone = form.cleaned_data['phone']
+                    if contact.phone != validated_phone:
+                        contact.phone = validated_phone
                         contact.phone_verified_at = None
                     if update_db_row(contact, form):
                         failed = True
@@ -93,7 +97,7 @@ class UserProfileView(UserMixin, UpdateView):
                         nick_name=form.cleaned_data['nick_name'],
                         lang=form.cleaned_data['lang'],
                         email=form.cleaned_data['email'],
-                        phone=form.cleaned_data['phone'])
+                        phone=validated_phone)
         if failed:
             return self.form_invalid(form)
         return HttpResponseRedirect(self.get_success_url())

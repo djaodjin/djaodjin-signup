@@ -377,7 +377,12 @@ class ActivationBaseView(RedirectFormMixin, ActivateMixin, UpdateView):
                         _("Please enter a correct password.")))
                     return self.form_invalid(form)
 
-        user = self.activate_user(**form.cleaned_data)
+        try:
+            user = self.activate_user(**form.cleaned_data)
+        except serializers.ValidationError as err:
+            fill_form_errors(form, err)
+            return self.form_invalid(form)
+
         if user.last_login:
             messages.info(
                 self.request, _("Thank you. Your account is now active."))
