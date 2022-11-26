@@ -1,3 +1,9 @@
+0.7.5
+
+  * validates terms-of-use and phone
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Fri, 25 Nov 2022 12:23:00 -0700
+
 0.7.4
 
   * supports override of `form_invalid` making SQL query

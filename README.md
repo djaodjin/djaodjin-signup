@@ -70,9 +70,9 @@ run the testsite webapp.
 Release Notes
 =============
 
-0.7.4
+0.7.5
 
   * supports SAML logins
-  * fixes to save updated contact fields in HTML form
+  * fixes to save updated contact fields in HTML form (incl. phone number)
 
 [previous release notes](changelog)
