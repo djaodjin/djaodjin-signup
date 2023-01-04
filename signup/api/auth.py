@@ -258,8 +258,9 @@ sbF9uYW1lIjoiRG9ubnkgQ29vcGVyIiwiZXhwIjoxNTI5NjU4NzEwfQ.F2y\
         if serializer.is_valid():
             try:
                 user = self.login_user(**serializer.validated_data)
-                self.optional_session_cookie(request, user)
-                return self.create_token(user)
+                if user:
+                    self.optional_session_cookie(request, user)
+                    return self.create_token(user)
             except SSORequired as err:
                 raise serializers.ValidationError({'detail': _(
                     "SSO required through %(provider)s") % {
