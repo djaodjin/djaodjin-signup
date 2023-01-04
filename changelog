@@ -1,3 +1,10 @@
+0.7.6
+
+  * fixes issue on login API when using incorrect password
+  * fixes issue when username is changed on activate page
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Wed,  4 Jan 2023 12:05:00 -0700
+
 0.7.5
 
   * validates terms-of-use and phone

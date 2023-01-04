@@ -70,9 +70,9 @@ run the testsite webapp.
 Release Notes
 =============
 
-0.7.5
+0.7.6
 
-  * supports SAML logins
-  * fixes to save updated contact fields in HTML form (incl. phone number)
+  * fixes issue on login API when using incorrect password
+  * fixes issue when username is changed on activate page
 
 [previous release notes](changelog)
