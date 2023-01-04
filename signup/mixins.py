@@ -1,4 +1,4 @@
-# Copyright (c) 2022, Djaodjin Inc.
+# Copyright (c) 2023, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -27,6 +27,7 @@ import logging
 from django.http import Http404
 from django.contrib.auth import (REDIRECT_FIELD_NAME, authenticate,
     get_user_model)
+from django.db import IntegrityError
 from django.utils import translation
 from django.utils.encoding import force_bytes
 from django.utils.http import urlencode, urlsafe_base64_encode
@@ -41,7 +42,8 @@ from .compat import gettext_lazy as _, is_authenticated, reverse, six
 from .decorators import check_has_credentials
 from .helpers import full_name_natural_split
 from .models import Contact, DelegateAuth
-from .utils import get_login_throttle, get_password_reset_throttle
+from .utils import (get_login_throttle, get_password_reset_throttle,
+    handle_uniq_error)
 from .validators import as_email_or_phone
 
 LOGGER = logging.getLogger(__name__)
@@ -101,11 +103,15 @@ class ActivateMixin(ChecksMixin):
             full_name = (first_name + ' ' + last_name).strip()
         # If we don't save the ``User`` model here,
         # we won't be able to authenticate later.
-        user, previously_inactive = Contact.objects.activate_user(
-            verification_key,
-            username=cleaned_data.get('username'),
-            password=cleaned_data.get('new_password'),
-            full_name=full_name)
+        try:
+            user, previously_inactive = Contact.objects.activate_user(
+                verification_key,
+                username=cleaned_data.get('username'),
+                password=cleaned_data.get('new_password'),
+                full_name=full_name)
+        except IntegrityError as err:
+            handle_uniq_error(err)
+
         if user:
             if not user.last_login:
                 # XXX copy/paste from models.ActivatedUserManager.create_user
