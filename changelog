@@ -1,3 +1,9 @@
+0.7.7
+
+  * fixes showing notification summary/description on users notifications page
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Wed, 18 Jan 2023 14:25:00 -0700
+
 0.7.6
 
   * fixes issue on login API when using incorrect password

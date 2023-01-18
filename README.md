@@ -70,9 +70,8 @@ run the testsite webapp.
 Release Notes
 =============
 
-0.7.6
+0.7.7
 
-  * fixes issue on login API when using incorrect password
-  * fixes issue when username is changed on activate page
+  * fixes showing notification summary/description on users notifications page
 
 [previous release notes](changelog)
