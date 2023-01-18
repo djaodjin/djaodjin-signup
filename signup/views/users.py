@@ -154,7 +154,10 @@ class UserNotificationsView(UserMixin, UpdateView):
 
     @staticmethod
     def get_notifications(user=None):#pylint:disable=unused-argument
-        return {}
+        return {obj.slug: {
+            'summary': obj.title,
+            'description': obj.description}
+                for obj in Notification.objects.all()}
 
     def form_valid(self, form):
         with transaction.atomic():

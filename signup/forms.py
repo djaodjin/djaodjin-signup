@@ -406,8 +406,8 @@ class UserNotificationsForm(forms.Form):
         super(UserNotificationsForm, self).__init__(*args, **kwargs)
         for item, initial in six.iteritems(self.initial.get('notifications')):
             self.fields[item] = forms.BooleanField(
-                label=initial[0].get('title', ""),
-                help_text=initial[0].get('descr', ""),
+                label=initial[0].get('summary', ""),
+                help_text=initial[0].get('description', ""),
                 required=False, initial=initial[1])
 
 
