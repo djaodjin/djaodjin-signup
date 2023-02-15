@@ -82,7 +82,7 @@ _SETTINGS = {
         'github': {'name': 'GitHub'},
         'google-oauth2': {'name': 'Google'},
     },
-    'USER_CONTACT_CALLABLE': None,
+    'USER_CONTACT_CALLABLE': None,  # XXX deprecated?
     'USER_SERIALIZER': 'signup.serializers_overrides.UserSerializer',
 }
 _SETTINGS.update(getattr(settings, 'SIGNUP', {}))
@@ -98,9 +98,19 @@ AWS_S3_BUCKET_NAME = _SETTINGS.get('AWS_S3_BUCKET_NAME')
 BYPASS_VERIFICATION_KEY_EXPIRED_CHECK = _SETTINGS.get(
     'BYPASS_VERIFICATION_KEY_EXPIRED_CHECK')
 DEFAULT_FROM_EMAIL = _SETTINGS.get('DEFAULT_FROM_EMAIL')
+
+#: When `True`, authentication on the site is disabled.
+#: This settings can either be a boolean value or a callable function.
 DISABLED_AUTHENTICATION = _SETTINGS.get('DISABLED_AUTHENTICATION')
+
+#: When `True`, registration of new users on the site is disabled.
+#: This settings can either be a boolean value or a callable function.
 DISABLED_REGISTRATION = _SETTINGS.get('DISABLED_REGISTRATION')
+
+#: A callable function which is passed an email address and that returns `False`
+#: when the email suspiciously looks like it belongs to a bot.
 EMAIL_DYNAMIC_VALIDATOR = _SETTINGS.get('EMAIL_DYNAMIC_VALIDATOR')
+
 EXTRA_FIELD = _SETTINGS.get('EXTRA_FIELD')
 EXTRA_MIXIN = _SETTINGS.get('EXTRA_MIXIN')
 JWT_SECRET_KEY = _SETTINGS.get('JWT_SECRET_KEY')
@@ -108,13 +118,26 @@ JWT_ALGORITHM = _SETTINGS.get('JWT_ALGORITHM')
 KEY_EXPIRATION = _SETTINGS.get('ACCOUNT_ACTIVATION_DAYS')
 LDAP_SERVER_URI = _SETTINGS.get('LDAP', {}).get('SERVER_URI', None)
 LDAP_USER_SEARCH_DN = _SETTINGS.get('LDAP', {}).get('USER_SERCH_DN', None)
+
+#: A callable function, which is passed a triplet (request, view, user), and
+#: that throttles the HTTP request when there are too many attempts for that
+#: particular user to login.
 LOGIN_THROTTLE = _SETTINGS.get('LOGIN_THROTTLE')
+
 LOGOUT_CLEAR_COOKIES = _SETTINGS.get('LOGOUT_CLEAR_COOKIES')
 MFA_MAX_ATTEMPTS = _SETTINGS.get('MFA_MAX_ATTEMPTS')
 NOTIFICATION_TYPE = _SETTINGS.get('NOTIFICATION_TYPE')
 NOTIFICATIONS_OPT_OUT = _SETTINGS.get('NOTIFICATIONS_OPT_OUT')
+
+#: A callable function, which is passed a triplet (request, view, user), and
+#: that throttles the HTTP request when there are too many attempts for that
+#: particular user to reset his/her password.
 PASSWORD_RESET_THROTTLE = _SETTINGS.get('PASSWORD_RESET_THROTTLE')
+
+#: A callable function which returns a `Storage` object that will be used
+#: to upload a contact picture
 PICTURE_STORAGE_CALLABLE = _SETTINGS.get('PICTURE_STORAGE_CALLABLE')
+
 RANDOM_SEQUENCE = _SETTINGS.get('RANDOM_SEQUENCE')
 REQUIRES_RECAPTCHA = _SETTINGS.get('REQUIRES_RECAPTCHA')
 SEARCH_FIELDS_PARAM = _SETTINGS.get('SEARCH_FIELDS_PARAM')

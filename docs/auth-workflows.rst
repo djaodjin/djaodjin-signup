@@ -21,7 +21,7 @@ pipeline for a POST HTTP request with custom steps at specific points.
 +=========================+=========================+=========================+
 | Generic HTTP Rate-limiter                                                   |
 |   This rate-limiter is intended to prevent brute-force attempts. It is      |
-|   a generally implemented in the proxy and out-of-scope of this project.    |
+|   generally implemented in the gateway and out-of-scope of this project.    |
 +-------------------------+-------------------------+-------------------------+
 |                         |                         | Check if registration   |
 |                         |                         | or auth is disabled     |

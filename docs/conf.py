@@ -16,17 +16,26 @@
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
 
+import sys, os
+
+import django
+
+# Add root of django app to PYTHONPATH and setup Django.
+sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "testsite.settings")
+django.setup()
+
 
 # -- Project information -----------------------------------------------------
 
 project = 'djaodjin-signup'
-copyright = '2022, The DjaoDjin Team'
+copyright = '2023, DjaoDjin inc'
 author = 'The DjaoDjin Team'
 
 # The short X.Y version
 version = '0.7'
 # The full version, including alpha/beta/rc tags
-release = '0.7.6'
+release = '0.7.8-dev'
 
 
 # -- General configuration ---------------------------------------------------
@@ -39,6 +48,10 @@ release = '0.7.6'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    'sphinx.ext.autodoc',
+    'sphinx.ext.coverage',
+    'sphinx.ext.imgconverter',
+    'sphinxcontrib.httpdomain'
 ]
 
 # Add any paths that contain templates here, relative to this directory.

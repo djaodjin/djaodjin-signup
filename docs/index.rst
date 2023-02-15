@@ -16,6 +16,7 @@ Welcome to djaodjin-signup's documentation!
    profile picture
    mfa
    testcases
+   extensions
 
 
 Indices and tables
