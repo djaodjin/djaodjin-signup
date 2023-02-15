@@ -1,4 +1,4 @@
-# Copyright (c) 2022, Djaodjin Inc.
+# Copyright (c) 2023, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -26,9 +26,9 @@
 URLconf for frictionless signup (API and HTML pages).
 """
 
-from ..compat import include, re_path
+from ..compat import include, path
 
 urlpatterns = [
-    re_path(r'^api/', include('signup.urls.api')),
-    re_path(r'^', include('signup.urls.views')),
+    path('api/', include('signup.urls.api')),
+    path('', include('signup.urls.views')),
 ]

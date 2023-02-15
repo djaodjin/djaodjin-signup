@@ -145,7 +145,7 @@ class LDAPBackend(object):
 
         return user
 
-    def get_user(self, user_id):#pylint:disable=no-self-use
+    def get_user(self, user_id):
         try:
             return LDAPUser(self, db_user=self.model.objects.get(pk=user_id))
         except self.model.DoesNotExist:

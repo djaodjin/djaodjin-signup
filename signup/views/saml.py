@@ -1,4 +1,4 @@
-# Copyright (c) 2022, Djaodjin Inc.
+# Copyright (c) 2023, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,7 +22,7 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseBadRequest
 from social_django.utils import load_strategy, load_backend
 
 from ..compat import reverse
@@ -36,5 +36,6 @@ def saml_metadata_view(request):
         redirect_uri=complete_url,
     )
     metadata, errors = saml_backend.generate_metadata_xml()
-    if not errors:
-        return HttpResponse(content=metadata, content_type='text/xml')
+    if errors:
+        return HttpResponseBadRequest(errors)
+    return HttpResponse(content=metadata, content_type='text/xml')

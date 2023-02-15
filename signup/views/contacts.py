@@ -1,4 +1,4 @@
-# Copyright (c) 2019, Djaodjin Inc.
+# Copyright (c) 2023, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -26,8 +26,10 @@
 
 from django.views.generic import DetailView, TemplateView
 
+from .. import settings
 from ..compat import reverse
-from ..mixins import ContactMixin, UrlsMixin
+from ..helpers import update_context_urls
+from ..mixins import ContactMixin
 from ..models import Contact
 
 
@@ -42,7 +44,7 @@ class ContactDetailView(ContactMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super(ContactDetailView, self).get_context_data(**kwargs)
         context.update({'contact': self.contact})
-        self.update_context_urls(context, {
+        update_context_urls(context, {
             'api_activities': reverse('api_activities', args=(self.contact,)),
             'api_contact': reverse('api_contact', args=(self.contact,)),
             'api_contacts': reverse('api_contacts')
@@ -50,7 +52,13 @@ class ContactDetailView(ContactMixin, DetailView):
         return context
 
 
-class ContactListView(UrlsMixin, TemplateView):
+class ContactListMixin(settings.EXTRA_MIXIN):
+    """
+    Mixin such that EXTRA_MIXIN can defaults to `object`.
+    """
+
+
+class ContactListView(ContactListMixin, TemplateView):
 
     template_name = 'contacts/index.html'
 
@@ -58,6 +66,6 @@ class ContactListView(UrlsMixin, TemplateView):
         context = super(ContactListView, self).get_context_data(**kwargs)
         self.update_context_urls(context, {
             'api_contacts': reverse('api_contacts'),
-            'contacts': reverse('contacts')
+            'contacts': reverse('signup_contacts')
         })
         return context

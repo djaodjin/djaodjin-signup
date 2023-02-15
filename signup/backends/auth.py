@@ -60,7 +60,6 @@ class UsernameOrEmailModelBackend(object):
     Backend to authenticate a user through either her username
     or email address.
     """
-    #pylint: disable=no-self-use
     model = get_user_model()
 
     def find_user(self, username):
@@ -95,7 +94,6 @@ class UsernameOrEmailPhoneModelBackend(object):
     Backend to authenticate a user through either her username,
     email address or phone number.
     """
-    #pylint: disable=no-self-use
     model = get_user_model()
 
     def find_user(self, username):

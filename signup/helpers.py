@@ -76,3 +76,20 @@ def full_name_natural_split(full_name, middle_initials=True):
 
 def has_invalid_password(user):
     return not user.password or user.password.startswith('!')
+
+
+def update_context_urls(context, urls):
+    if 'urls' in context:
+        for key, val in six.iteritems(urls):
+            if key in context['urls']:
+                if isinstance(val, dict):
+                    context['urls'][key].update(val)
+                else:
+                    # Because organization_create url is added in this mixin
+                    # and in ``OrganizationRedirectView``.
+                    context['urls'][key] = val
+            else:
+                context['urls'].update({key: val})
+    else:
+        context.update({'urls': urls})
+    return context

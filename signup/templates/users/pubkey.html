@@ -1,8 +1,35 @@
 {% extends "base.html" %}
 
 {% block content %}
-<user-update-pubkey id="update-pubkey-container" inline-template>
-    <h1>Change SSH Public Key</h1>
+<div>
+
+  <user-rotate-api-keys inline-template id="rotate-api-keys">
+    <div>
+      <form @submit.prevent="generateKey">
+        <input type="hidden" name="csrfmiddlewaretoken" value="{{csrf_token}}">
+        <div>
+          <label>API Key</label>
+          <input type="text"
+                 name="apiKey" placeholder="********" disabled
+                 v-model="apiKey">
+          <div class="help-block" v-show="apiKey">
+              This is the only time the API Key will be displayed. Copy it before you reload this page or browse to another page.
+          </div>
+        </div>
+        <div>
+          <label for="id_password">Password:</label>
+          <input type="password" name="password" required="" id="id_password"
+                 v-model="password">
+          <div v-show="passwordIncorrect">Incorrect password</div>
+        </div>
+        <button id="generate-key-open" type="submit">Reset API Key</button>
+      </form>
+    </div>
+  </user-rotate-api-keys>
+
+  <hr />
+
+  <user-update-pubkey id="update-pubkey-container" inline-template>
     <form @submit.prevent="updatePubkey">
       <input type="hidden" name="csrfmiddlewaretoken" value="{{csrf_token}}">
       <li>
@@ -18,5 +45,7 @@
           <input type="submit" name="submit" value="Submit" id="submit-id-submit">
       </div>
     </form>
-</user-update-pubkey>
+  </user-update-pubkey>
+
+</div>
 {% endblock %}

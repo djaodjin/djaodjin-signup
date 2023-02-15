@@ -46,9 +46,9 @@ from ..auth import validate_redirect
 from ..compat import gettext_lazy as _, is_authenticated, reverse, six
 from ..forms import (ActivationForm, AuthenticationForm, FrictionlessSignupForm,
     MFACodeForm, PasswordResetForm, PasswordResetConfirmForm, UserActivateForm)
-from ..helpers import has_invalid_password
+from ..helpers import has_invalid_password, update_context_urls
 from ..mixins import (ActivateMixin, LoginMixin, RecoverMixin, RegisterMixin,
-    SSORequired, UrlsMixin)
+    SSORequired)
 from ..models import Contact
 from ..utils import (fill_form_errors, get_disabled_authentication,
     get_disabled_registration, get_password_reset_throttle)
@@ -85,7 +85,7 @@ class RedirectFormMixin(FormMixin):
         return context
 
 
-class AuthTemplateResponseMixin(UrlsMixin, TemplateResponseMixin):
+class AuthTemplateResponseMixin(TemplateResponseMixin):
     """
     Returns a *disabled* page regardless when get_disabled_authentication
     is True.
@@ -96,7 +96,7 @@ class AuthTemplateResponseMixin(UrlsMixin, TemplateResponseMixin):
             **kwargs)
         # URLs for user
         disabled_registration = get_disabled_registration(self.request)
-        self.update_context_urls(context, {
+        update_context_urls(context, {
             'api': {
                 'login': reverse('api_login'),
                 'recover': reverse('api_recover'),

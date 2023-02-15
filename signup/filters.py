@@ -27,6 +27,7 @@ import operator
 from functools import reduce
 import logging
 
+from django.core.exceptions import FieldDoesNotExist
 from django.db import models
 from rest_framework.compat import distinct
 from rest_framework.filters import (OrderingFilter as BaseOrderingFilter,

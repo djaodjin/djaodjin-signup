@@ -489,7 +489,7 @@ class Contact(models.Model):
         null=True, blank=True,
         help_text=_("URL location of the profile picture"))
     user = models.ForeignKey(settings.AUTH_USER_MODEL,
-        null=True, on_delete=models.CASCADE, related_name='contacts')
+        null=True, on_delete=models.SET_NULL, related_name='contacts')
     # key must be unique when used in URLs. IF we use a code,
     # then it shouldn't be.
     email_verification_key = models.CharField(_(

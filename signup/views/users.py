@@ -1,4 +1,4 @@
-# Copyright (c) 2022, Djaodjin Inc.
+# Copyright (c) 2023, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -41,7 +41,7 @@ from .. import settings
 from ..compat import gettext_lazy as _, is_authenticated, reverse, six
 from ..forms import (PasswordChangeForm, PublicKeyForm, UserForm,
     UserNotificationsForm)
-from ..helpers import has_invalid_password
+from ..helpers import has_invalid_password, update_context_urls
 from ..mixins import UserMixin
 from ..models import Contact, Notification
 from ..utils import update_db_row
@@ -117,7 +117,7 @@ class UserProfileView(UserMixin, UpdateView):
             setattr(context['user'], 'picture', contact.picture)
         # URLs for user
         if is_authenticated(self.request):
-            self.update_context_urls(context, {'user': {
+            update_context_urls(context, {'user': {
                 'api_generate_keys': reverse(
                     'api_generate_keys', args=(self.object,)),
                 'api_profile': reverse(
@@ -132,9 +132,11 @@ class UserProfileView(UserMixin, UpdateView):
                     'api_pubkey', args=(self.object,)),
                 'password_change': reverse(
                     'password_change', args=(self.object,)),
+                'keys_update': reverse(
+                    'pubkey_update', args=(self.object,)),
             }})
             if has_invalid_password(self.object):
-                self.update_context_urls(context, {'user': {
+                update_context_urls(context, {'user': {
                     'api_activate': reverse(
                         'api_user_activate', args=(self.object,)),
                 }})

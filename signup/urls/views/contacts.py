@@ -1,4 +1,4 @@
-# Copyright (c) 2022, Djaodjin Inc.
+# Copyright (c) 2023, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,13 +22,12 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from ... import settings
-from ...compat import re_path
+from ...compat import path
 from ...views.contacts import ContactListView, ContactDetailView
 
 urlpatterns = [
     # These three URLs must be protected.
-    re_path(r'^(?P<user>%s)/' % settings.USERNAME_PAT,
-        ContactDetailView.as_view(), name='contact'),
-    re_path(r'^', ContactListView.as_view(), name='contacts'),
+    path('<slug:user>/',
+        ContactDetailView.as_view(), name='signup_contact'),
+    path(r'', ContactListView.as_view(), name='contacts'),
 ]

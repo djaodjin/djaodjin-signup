@@ -20,6 +20,9 @@
       <a id="change-password" href="{% url 'password_change' user %}">Change Password</a>
     </div>
     <div>
+      <a id="keys-update" href="{% url 'pubkey_update' user %}">Programmatic Keys</a>
+    </div>
+    <div>
       <a href="{% url 'users_notifications' user %}">Notifications</a>
     </div>
     {% if urls.user.api_activate %}
@@ -28,22 +31,6 @@
       <span>
         Send an activation e-mail to the user.
       </span>
-    </div>
-    {% endif %}
-    {% if urls.user.api_generate_keys %}
-    <div id="generate-key">
-      <h5 id="generate-key-open">Reset API Key</h5>
-      <form method="POST" ng-submit="generateKey($event)"
-            @submit.prevent="generateKey">
-        <input name="key" maxlength="128" type="text" disabled
-               ng-model="api_key"
-               v-model="apiKey" />
-        <input name="password" maxlength="128" type="text"
-               placeholder="Password"
-               ng-model="password"
-               v-model="password" />
-        <button id="regenerate-key" type="submit">Generate</button>
-      </form>
     </div>
     {% endif %}
     <hr />

@@ -1,4 +1,4 @@
-# Copyright (c) 2022, Djaodjin Inc.
+# Copyright (c) 2023, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,20 +22,19 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from ...settings import USERNAME_PAT
-from ...compat import re_path
+from ...compat import path
 from ...views.users import (PasswordChangeView, UserPublicKeyUpdateView,
     UserProfileView, UserNotificationsView, redirect_to_user_profile)
 
 urlpatterns = [
     # These three URLs must be protected.
-    re_path(r'^(?P<user>%s)/password/' % USERNAME_PAT,
+    path('<slug:user>/password/',
         PasswordChangeView.as_view(), name='password_change'),
-    re_path(r'^(?P<user>%s)/pubkey/' % USERNAME_PAT,
+    path('<slug:user>/pubkey/',
         UserPublicKeyUpdateView.as_view(), name='pubkey_update'),
-    re_path(r'^(?P<user>%s)/notifications/' % USERNAME_PAT,
+    path('<slug:user>/notifications/',
         UserNotificationsView.as_view(), name='users_notifications'),
-    re_path(r'^(?P<user>%s)/' % USERNAME_PAT,
+    path('<slug:user>/',
         UserProfileView.as_view(), name='users_profile'),
-    re_path(r'^', redirect_to_user_profile, name='accounts_profile'),
+    path('', redirect_to_user_profile, name='accounts_profile'),
 ]

@@ -36,7 +36,6 @@ class EmailMFABackend(object):
     Backend to authenticate a user through either her username
     or email address.
     """
-    #pylint: disable=no-self-use
 
     def create_token(self, user, request=None):
         user.mfa_priv_key = generate_random_code()

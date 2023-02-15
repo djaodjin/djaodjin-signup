@@ -32,13 +32,13 @@ var userPasswordModalMixin = {
                 vm.passwordIncorrect = true;
             } else {
                 vm.modalHide();
-                showErrorMessages(res);
+                vm.showErrorMessages(res);
             }
         },
     },
     computed: {
         dialog: function(){ // XXX depends on jQuery / bootstrap.js
-            var dialog = $(this.modalSelector);
+            var dialog = $(this.$el).find(this.modalSelector);
             if(dialog && jQuery().modal){
                 return dialog;
             }
@@ -68,8 +68,6 @@ Vue.component('contact-list', {
             vm.reqPost(vm.url, this.contact,
             function(resp) {
                 window.location = vm.redirectUrl(resp.slug);
-            }, function(resp) {
-                showErrorMessages(resp);
             });
         },
         redirectUrl: function(contact) {
@@ -110,8 +108,6 @@ Vue.component('contact-update', {
                 account: vm.itemSelected.slug
             }, function(resp) {
                 vm.get();
-            }, function(resp){
-                showErrorMessages(resp);
             });
         },
         getCandidates: function(query, done) {
@@ -138,13 +134,9 @@ Vue.component('user-update', {
             picture_url: this.$urls.user.api_user_picture,
             redirect_url: this.$urls.profile_redirect,
             api_activate_url: this.$urls.user.api_activate,
-            api_generate_keys_url: this.$urls.user.api_generate_keys,
             formFields: {},
             userModalOpen: false,
-            apiModalOpen: false,
-            apiKey: "Generating ...",
             picture: null,
-            password: '',
         };
     },
     methods: {
@@ -153,29 +145,8 @@ Vue.component('user-update', {
             vm.reqPost(vm.api_activate_url,
             function(resp) {
                 if( resp.detail ) {
-                    showMessages([resp.detail], "info");
+                    vm.showMessages([resp.detail], "info");
                 }
-            }, function(resp){
-                showErrorMessages(resp);
-            });
-        },
-        resetKey: function(){
-            this.apiModalOpen = true;
-        },
-        generateKey: function() {
-            var vm = this;
-            vm.reqPost(vm.api_generate_keys_url,
-                { password: vm.password },
-            function(resp) {
-                vm.apiKey = resp.secret;
-            }, function(resp){
-                if(resp.responseJSON && resp.responseJSON.length > 0) {
-                    // this most likely tells that the password
-                    // is incorrect
-                    vm.apiKey = resp.responseJSON[0];
-                    return;
-                }
-                showErrorMessages(resp);
             });
         },
         deleteProfile: function() {
@@ -183,8 +154,6 @@ Vue.component('user-update', {
             vm.reqDelete(vm.url,
             function() {
                 window.location = vm.redirect_url;
-            }, function(resp){
-                showErrorMessages(resp);
             });
         },
         get: function(){
@@ -212,7 +181,7 @@ Vue.component('user-update', {
                 // XXX should really be success but then it needs to be changed
                 // in Django views as well.
                 if( resp.detail ) {
-                    showMessages([resp.detail], "info");
+                    vm.showMessages([resp.detail], "info");
                 }
             });
             if(vm.imageSelected){
@@ -230,7 +199,7 @@ Vue.component('user-update', {
                     vm.formFields.picture = resp.location;
                     vm.picture.remove();
                     vm.$forceUpdate();
-                    showMessages(["Profile was updated."], "success");
+                    vm.showMessages(["Profile was updated."], "success");
                 });
             }, 'image/jpeg');
         },
@@ -302,13 +271,54 @@ Vue.component('user-update-password', {
                 vm.newPassword = '';
                 vm.newPassword2 = '';
                 if( resp.detail ) {
-                    showMessages([resp.detail], "success");
+                    vm.showMessages([resp.detail], "success");
                 }
             }, vm.failCb);
         },
         submitPassword: function(){
             var vm = this;
             vm.updatePassword();
+        },
+    },
+});
+
+
+Vue.component('user-rotate-api-keys', {
+    mixins: [
+        httpRequestMixin,
+        userPasswordModalMixin
+    ],
+    data: function () {
+        return {
+            url: this.$urls.user.api_generate_keys,
+            modalSelector: '.user-password-modal',
+            apiKey: '',
+        };
+    },
+    methods: {
+        generateKey: function() {
+            var vm = this;
+            vm.reqPost(vm.url,
+                { password: vm.password },
+            function(resp) {
+                vm.apiKey = resp.secret;
+                vm.modalHide();
+                if( resp.detail ) {
+                    vm.showMessages([resp.detail], "success");
+                }
+            }, function(resp){
+                if(resp.responseJSON && resp.responseJSON.length > 0) {
+                    // this most likely tells that the password
+                    // is incorrect
+                    vm.apiKey = resp.responseJSON[0];
+                    return;
+                }
+                vm.showErrorMessages(resp);
+            });
+        },
+        submitPassword: function(){
+            var vm = this;
+            vm.generateKey();
         },
     },
 });
@@ -335,7 +345,7 @@ Vue.component('user-update-pubkey', {
             }, function(resp){
                 vm.modalHide();
                 if( resp.detail ) {
-                    showMessages([resp.detail], "success");
+                    vm.showMessages([resp.detail], "success");
                 }
             }, vm.failCb);
         },

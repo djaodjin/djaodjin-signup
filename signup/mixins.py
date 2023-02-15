@@ -40,7 +40,7 @@ from . import signals, settings
 from .auth import validate_redirect
 from .compat import gettext_lazy as _, is_authenticated, reverse, six
 from .decorators import check_has_credentials
-from .helpers import full_name_natural_split
+from .helpers import full_name_natural_split, update_context_urls
 from .models import Contact, DelegateAuth
 from .utils import (get_login_throttle, get_password_reset_throttle,
     handle_uniq_error)
@@ -381,27 +381,7 @@ class RegisterMixin(ChecksMixin):
         return user
 
 
-class UrlsMixin(object):
-
-    @staticmethod
-    def update_context_urls(context, urls):
-        if 'urls' in context:
-            for key, val in six.iteritems(urls):
-                if key in context['urls']:
-                    if isinstance(val, dict):
-                        context['urls'][key].update(val)
-                    else:
-                        # Because organization_create url is added in this mixin
-                        # and in ``OrganizationRedirectView``.
-                        context['urls'][key] = val
-                else:
-                    context['urls'].update({key: val})
-        else:
-            context.update({'urls': urls})
-        return context
-
-
-class ContactMixin(UrlsMixin):
+class ContactMixin(settings.EXTRA_MIXIN):
 
     lookup_field = 'slug'
     lookup_url_kwarg = 'user'
@@ -432,7 +412,7 @@ class ContactMixin(UrlsMixin):
         return obj
 
 
-class UserMixin(UrlsMixin):
+class UserMixin(settings.EXTRA_MIXIN):
 
     user_field = 'username'
     user_url_kwarg = 'user'
@@ -472,7 +452,7 @@ class UserMixin(UrlsMixin):
         context = super(UserMixin, self).get_context_data(**kwargs)
         # URLs for user
         if is_authenticated(self.request):
-            self.update_context_urls(context, {
+            update_context_urls(context, {
                 'profile_redirect': reverse('accounts_profile'),
                 'user': {
                     'notifications': reverse(
