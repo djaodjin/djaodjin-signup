@@ -31,14 +31,12 @@ from django.conf import locale
 from django.core import validators
 from django.contrib.auth import password_validation, get_user_model
 from django.contrib.auth.forms import (
-    AuthenticationForm as AuthenticationBaseForm,
-    PasswordResetForm as PasswordResetBaseForm)
+    AuthenticationForm as AuthenticationBaseForm)
 from phonenumber_field.formfields import PhoneNumberField
 
 from . import settings, validators
 from .compat import gettext_lazy as _, six
 from .helpers import full_name_natural_split
-from .models import Contact
 from .utils import get_recaptcha_form_field
 
 
@@ -251,11 +249,11 @@ class PasswordChangeForm(PasswordUpdateForm):
         fields = ['password', 'new_password', 'new_password2']
 
 
-class PasswordResetForm(PasswordResetBaseForm):
+class RecoverForm(forms.Form):
     """
-    Form displayed to recover password.
+    Form displayed to authenticate through a verification link.
     """
-    email = CommField()
+    username = UsernameOrCommField()
 
 
 class ActivationForm(PasswordConfirmMixin, forms.Form):
@@ -270,10 +268,8 @@ class ActivationForm(PasswordConfirmMixin, forms.Form):
         " do not match."),
     }
 
-    email = EmailField(label=_("E-mail address"),
-        disabled=True, required=False)
-    phone = PhoneField(label=_("Phone number"),
-        disabled=True, required=False)
+    email = EmailField(label=_("E-mail address"), required=False)
+    phone = PhoneField(label=_("Phone number"), required=False)
     full_name = forms.RegexField(
         regex=r'^[\w\s]+$', max_length=60,
         widget=forms.TextInput(attrs={'placeholder':'Full name'}),
@@ -295,25 +291,16 @@ class ActivationForm(PasswordConfirmMixin, forms.Form):
             'placeholder': _("Confirm password")}))
 
     def __init__(self, *args, **kwargs):
-        self.user = kwargs.pop('instance')
+        initial = kwargs.get('initial')
+        email_verification = initial.pop('email_verification', False)
+        phone_verification = initial.pop('phone_verification', False)
         super(ActivationForm, self).__init__(*args, **kwargs)
+        if email_verification:
+            self.fields['email'].disabled = True
+        if phone_verification:
+            self.fields['phone'].disabled = True
         if settings.REQUIRES_RECAPTCHA:
             self.fields['captcha'] = get_recaptcha_form_field()
-
-
-class UserActivateForm(forms.Form):
-    """
-    Verfication of an e-mail address
-    """
-    password = forms.CharField(
-        label=_("Password"),
-        widget=forms.PasswordInput(attrs={'placeholder': _("Password")}),
-        strip=False,
-        help_text=password_validation.password_validators_help_text_html())
-
-    def __init__(self, *args, **kwargs):
-        self.user = kwargs.pop('instance')
-        super(UserActivateForm, self).__init__(*args, **kwargs)
 
 
 class PublicKeyForm(forms.Form):
@@ -352,7 +339,7 @@ class UserForm(forms.ModelForm):
 
     class Meta:
         model = get_user_model()
-        fields = ['username', 'email', 'full_name']
+        fields = ['username', 'full_name', 'email']
 
     def __init__(self, instance=None, **kwargs):
         super(UserForm, self).__init__(instance=instance, **kwargs)
@@ -411,18 +398,6 @@ class UserNotificationsForm(forms.Form):
                 required=False, initial=initial[1])
 
 
-class StartAuthenticationForm(forms.Form):
-    """
-    Form to present a user who may or may not have an account yet.
-    """
-    username = UsernameOrCommField()
-    submit_title = _("Submit")
-
-    def __init__(self, *args, **kwargs):
-        kwargs.pop('request')
-        super(StartAuthenticationForm, self).__init__(*args, **kwargs)
-
-
 class AuthenticationForm(AuthenticationBaseForm):
 
     # The field is called `username`, yet it is technically
@@ -442,7 +417,29 @@ class AuthenticationForm(AuthenticationBaseForm):
                 = placeholder_label
 
 
-class MFACodeForm(AuthenticationForm):
+class StartAuthenticationForm(forms.Form):
+    """
+    Form to present a user who may or may not have an account yet.
+    """
+    username = UsernameOrCommField()
+    submit_title = _("Submit")
+
+    def __init__(self, *args, **kwargs):
+        kwargs.pop('request')
+        super(StartAuthenticationForm, self).__init__(*args, **kwargs)
+
+
+class PasswordAuthForm(StartAuthenticationForm):
+
+    password = forms.CharField(widget=forms.PasswordInput(
+        attrs={'placeholder': _("Password")}), label=_("Password"))
+
+    def __init__(self, *args, **kwargs):
+        super(PasswordAuthForm, self).__init__(*args, **kwargs)
+        self.fields['username'].widget = forms.HiddenInput()
+
+
+class MFACodeForm(PasswordAuthForm):
 
     code = forms.IntegerField(widget=forms.TextInput(
         attrs={'placeholder': _("One-time authentication code"),
@@ -451,13 +448,4 @@ class MFACodeForm(AuthenticationForm):
 
     def __init__(self, *args, **kwargs):
         super(MFACodeForm, self).__init__(*args, **kwargs)
-        self.fields['username'].widget = forms.HiddenInput()
         self.fields['password'].widget = forms.HiddenInput()
-
-    def clean(self):
-        super(MFACodeForm, self).clean()
-        code = self.cleaned_data.get('code')
-        contact = Contact.objects.filter(user=self.user_cache).first()
-        if not contact or code != contact.mfa_priv_key:
-            raise forms.ValidationError(_("MFA code does not match."))
-        return self.cleaned_data

@@ -1,4 +1,4 @@
-# Copyright (c) 2022, Djaodjin Inc.
+# Copyright (c) 2023, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -24,8 +24,8 @@
 
 from ... import settings
 from ...compat import path, re_path
-from ...api.auth import (JWTActivate, JWTLogin, JWTPasswordResetConfirm,
-    JWTRegister, PasswordResetAPIView)
+from ...api.auth import (JWTActivate, JWTLogin, JWTRegister,
+    RecoverAPIView)
 
 
 urlpatterns = [
@@ -33,8 +33,6 @@ urlpatterns = [
         % settings.EMAIL_VERIFICATION_PAT,
         JWTActivate.as_view(), name='api_activate'),
     path('auth/register', JWTRegister.as_view(), name='api_register'),
-    path('auth/recover', PasswordResetAPIView.as_view(), name='api_recover'),
-    re_path(r'^auth/reset/(?P<uidb64>[0-9A-Za-z_\-]+)/(?P<token>[0-9A-Za-z]{1,13}-[0-9A-Za-z]{1,20})$', #pylint: disable=line-too-long
-        JWTPasswordResetConfirm.as_view(), name='api_password_reset_confirm'),
+    path('auth/recover', RecoverAPIView.as_view(), name='api_recover'),
     path('auth', JWTLogin.as_view(), name='api_login'),
 ]

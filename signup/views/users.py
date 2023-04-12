@@ -43,7 +43,7 @@ from ..forms import (PasswordChangeForm, PublicKeyForm, UserForm,
     UserNotificationsForm)
 from ..helpers import has_invalid_password, update_context_urls
 from ..mixins import UserMixin
-from ..models import Contact, Notification
+from ..models import Contact, Notification, OTPGenerator
 from ..utils import update_db_row
 
 
@@ -108,6 +108,7 @@ class UserProfileView(UserMixin, UpdateView):
             initial.update({'full_name': self.object.get_full_name()})
         return initial
 
+
     def get_context_data(self, **kwargs):
         context = super(UserProfileView, self).get_context_data(**kwargs)
         setattr(context['user'], 'full_name', context['user'].get_full_name())
@@ -118,12 +119,15 @@ class UserProfileView(UserMixin, UpdateView):
         # URLs for user
         if is_authenticated(self.request):
             update_context_urls(context, {'user': {
+                'api_recover': reverse('api_recover'),
                 'api_generate_keys': reverse(
                     'api_generate_keys', args=(self.object,)),
                 'api_profile': reverse(
                     'api_user_profile', args=(self.object,)),
                 'api_password_change': reverse(
                     'api_user_password_change', args=(self.object,)),
+                'api_otp_change': reverse(
+                    'api_user_otp_change', args=(self.object,)),
                 'api_user_picture': reverse(
                     'api_user_picture', args=(self.object,)),
                 'api_contact': reverse(
@@ -140,6 +144,16 @@ class UserProfileView(UserMixin, UpdateView):
                     'api_activate': reverse(
                         'api_user_activate', args=(self.object,)),
                 }})
+            contact = context['user'].contacts.filter(
+                email=self.object.email).order_by('created_at').first()
+            if contact:
+                context.update({
+                    'email_verified_at': contact.email_verified_at,
+                    'phone_verified_at': contact.phone_verified_at
+                })
+            context.update({
+                'otp_enabled': OTPGenerator.objects.filter(
+                    user=self.object).exists()})
         return context
 
     def get_success_url(self):

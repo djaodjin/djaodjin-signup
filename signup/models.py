@@ -30,6 +30,7 @@ from __future__ import unicode_literals
 
 import datetime, hashlib, logging, random, re, string
 
+import pyotp
 from django.core.exceptions import ValidationError
 from django.core.validators import (RegexValidator, URLValidator,
     validate_email as validate_email_base)
@@ -195,7 +196,8 @@ class ActivatedUserManager(UserManager):
                 if uses_sso_provider:
                     at_time = datetime_or_now()
                     try:
-                        contact = Contact.objects.get(user=user, email=email)
+                        contact = Contact.objects.get(user=user,
+                            email__iexact=email)
                         contact.email_verified_at = at_time
                         contact.save()
                     except Contact.DoesNotExist:
@@ -208,13 +210,13 @@ class ActivatedUserManager(UserManager):
                         }
                         Contact.objects.create(**create_kwargs)
                 else:
-                    Contact.objects.prepare_email_verification(user, email,
-                        phone=phone, lang=lang, extra=extra)
+                    Contact.objects.prepare_email_verification(email,
+                        user=user, phone=phone, lang=lang, extra=extra)
             elif phone:
                 # Force is_active to True and create an email verification key
                 # (see above definition of active user).
-                Contact.objects.prepare_phone_verification(user, phone,
-                    email=email, lang=lang, extra=extra)
+                Contact.objects.prepare_phone_verification(phone,
+                    user=user, email=email, lang=lang, extra=extra)
             user.is_active = True
             user.save()
             LOGGER.info("'%s <%s>' registered with username '%s'%s%s",
@@ -297,7 +299,7 @@ class ContactManager(models.Manager):
                 pass # We return None instead here.
         return None
 
-    def prepare_email_verification(self, user, email, at_time=None,
+    def prepare_email_verification(self, email, user=None, at_time=None,
                                    verification_key=None, reason=None,
                                    **kwargs):
         #pylint:disable=too-many-arguments
@@ -306,15 +308,26 @@ class ContactManager(models.Manager):
             random_key = str(random.random()).encode('utf-8')
             salt = hashlib.sha1(random_key).hexdigest()[:5]
             verification_key = hashlib.sha1(
-                (salt+user.username).encode('utf-8')).hexdigest()
+                (salt+email).encode('utf-8')).hexdigest()
         # XXX The get() needs to be targeted at the write database in order
         # to avoid potential transaction consistency problems.
+        contact = None
         try:
+            if user:
+                contact = self.get(email=email, user=user)
+            else:
+                contact = self.get(email=email, user__isnull=True)
+        except self.model.DoesNotExist:
+            pass
+        if not contact and user:
+            contact = self.filter(email__isnull=True, user=user).first()
+
+        if contact:
+            created = False
             with transaction.atomic():
                 # We have to wrap in a transaction.atomic here, otherwise
                 # we end-up with a TransactionManager error when Contact.slug
                 # already exists in db and we generate new one.
-                contact = self.get(user=user, email=email)
                 if not contact.email_verification_key:
                     # If we already have a verification key, let's keep it.
                     # We want to avoid users clicking multiple times on a link
@@ -327,23 +340,29 @@ class ContactManager(models.Manager):
                 if reason:
                     contact.extra = reason
                 contact.save()
-                return contact, False
-        except self.model.DoesNotExist:
+        else:
+            created = True
             kwargs.update({
                 'user': user,
                 'email': email,
-                'full_name': user.get_full_name(),
-                'nick_name': user.first_name,
                 'email_verification_key': verification_key,
                 'email_verification_at': at_time
             })
+            if user:
+                kwargs.update({
+                    'full_name': user.get_full_name(),
+                    'nick_name': user.first_name,
+                })
             if reason:
                 # XXX It is possible a 'reason' field would be a better
                 # implementation.
                 kwargs.update({'extra': reason})
-        return self.create(**kwargs), True
+            contact = self.create(**kwargs)
 
-    def prepare_phone_verification(self, user, phone, at_time=None,
+        return contact, created
+
+
+    def prepare_phone_verification(self, phone, user=None, at_time=None,
                                    verification_key=None, reason=None,
                                    **kwargs):
         #pylint:disable=too-many-arguments
@@ -352,15 +371,27 @@ class ContactManager(models.Manager):
             random_key = str(random.random()).encode('utf-8')
             salt = hashlib.sha1(random_key).hexdigest()[:5]
             verification_key = hashlib.sha1(
-                (salt+user.username).encode('utf-8')).hexdigest()
+                (salt+phone).encode('utf-8')).hexdigest()
         # XXX The get() needs to be targeted at the write database in order
         # to avoid potential transaction consistency problems.
+        contact = None
+        qs_kwargs = {}
         try:
+            if user:
+                contact = self.get(phone=phone, user=user)
+            else:
+                contact = self.get(phone=phone, user__isnull=True)
+        except self.model.DoesNotExist:
+            pass
+        if not contact and user:
+            contact = self.filter(phone__isnull=True, user=user).first()
+
+        if contact:
+            created = False
             with transaction.atomic():
                 # We have to wrap in a transaction.atomic here, otherwise
                 # we end-up with a TransactionManager error when Contact.slug
                 # already exists in db and we generate new one.
-                contact = self.get(user=user, phone=phone)
                 if not contact.phone_verification_key:
                     # If we already have a verification key, let's keep it.
                     # We want to avoid users clicking multiple times on a link
@@ -373,21 +404,25 @@ class ContactManager(models.Manager):
                 if reason:
                     contact.extra = reason
                 contact.save()
-                return contact, False
-        except self.model.DoesNotExist:
+        else:
+            created = True
             kwargs.update({
                 'user': user,
                 'phone': phone,
-                'full_name': user.get_full_name(),
-                'nick_name': user.first_name,
                 'phone_verification_key': verification_key,
                 'phone_verification_at': at_time
             })
+            if user:
+                kwargs.update({
+                    'full_name': user.get_full_name(),
+                    'nick_name': user.first_name,
+                })
             if reason:
                 # XXX It is possible a 'reason' field would be a better
                 # implementation.
                 kwargs.update({'extra': reason})
-        return self.create(**kwargs), True
+            contact = self.create(**kwargs)
+        return contact, created
 
     def activate_user(self, verification_key,
                       username=None, password=None, full_name=None):
@@ -399,7 +434,7 @@ class ContactManager(models.Manager):
         try:
             token = self.get_token(verification_key=verification_key)
             if token:
-                LOGGER.info('user %s activated through code: %s',
+                LOGGER.info('active user %s through code: %s ...',
                     token.user, verification_key,
                     extra={'event': 'activate', 'username': token.user.username,
                         'verification_key': verification_key,
@@ -422,15 +457,24 @@ class ContactManager(models.Manager):
                             full_name_natural_split(full_name)
                         token.user.first_name = first_name
                         token.user.last_name = last_name
+                        LOGGER.info('%s (first_name, last_name) needs '\
+                            'to be saved as ("%s", "%s")', verification_key,
+                            token.user.first_name, token.user.last_name)
                         needs_save = True
                     if username:
                         token.user.username = username
+                        LOGGER.info('%s username needs to be saved as "%s"',
+                            verification_key, token.user.username)
                         needs_save = True
                     if password:
                         token.user.set_password(password)
+                        LOGGER.info('%s password needs to be saved',
+                            verification_key)
                         needs_save = True
                     if not token.user.is_active:
                         token.user.is_active = True
+                        LOGGER.info('%s user needs to be activated',
+                            verification_key)
                         needs_save = True
                     if needs_save:
                         token.user.save()
@@ -557,10 +601,13 @@ class Contact(models.Model):
                 force_insert=force_insert, force_update=force_update,
                 using=using, update_fields=update_fields)
         max_length = self._meta.get_field('slug').max_length
-        slug_base = (self.user.username
-            if self.user else slugify(self.email.split('@')[0]))
-        if not slug_base:
+        slug_base = None
+        if self.user:
+            slug_base = self.user.username
+        if not slug_base and self.email:
             # email might be empty
+            slug_base = slugify(self.email.split('@', maxsplit=1)[0])
+        if not slug_base:
             slug_base = generate_random_slug(15)
         elif len(slug_base) > max_length:
             slug_base = slug_base[:max_length]
@@ -568,7 +615,7 @@ class Contact(models.Model):
         for idx in range(1, 10): #pylint:disable=unused-variable
             try:
                 try:
-                    with transaction.atomic():
+                    with transaction.atomic(using=using):
                         if self.user:
                             # pylint:disable=unused-variable
                             save_user = False
@@ -683,6 +730,31 @@ class Credentials(models.Model):
         return check_password(raw_api_priv_key, self.api_priv_key, setter)
 
 
+class OTPGenerator(models.Model):
+    """
+    Generates OTP one-time code for authentication
+    """
+
+    user = models.OneToOneField(settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE, related_name='otp')
+    priv_key = models.CharField(
+        _("Private key for the OTP generator"), max_length=40, null=True)
+    nb_attempts = models.IntegerField(
+        _("Number of attempts to pass the OTP code"), default=0)
+
+    def verify(self, code):
+        totp = pyotp.TOTP(self.priv_key)
+        return totp.verify(code)
+
+    def clear_attempts(self):
+        self.nb_attempts = 0
+        self.save()
+
+    def provisioning_uri(self, issuer_name=None):
+        return pyotp.totp.TOTP(self.priv_key).provisioning_uri(
+            name=self.user.email, issuer_name=issuer_name)
+
+
 @python_2_unicode_compatible
 class DelegateAuth(models.Model):
     """
@@ -707,8 +779,8 @@ def get_user_contact(user):
         return import_string(settings.USER_CONTACT_CALLABLE)(user)
     if user:
         return Contact.objects.filter(
-            models.Q(slug=user.username)
-            | models.Q(email=user.email)).order_by(
+            models.Q(slug__iexact=user.username)
+            | models.Q(email__iexact=user.email)).order_by(
             'slug', 'email').first()
     return None
 

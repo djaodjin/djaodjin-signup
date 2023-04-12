@@ -132,11 +132,13 @@ Vue.component('user-update', {
         return {
             url: this.$urls.user.api_profile,
             picture_url: this.$urls.user.api_user_picture,
+            verify_url: this.$urls.user.api_recover,
             redirect_url: this.$urls.profile_redirect,
             api_activate_url: this.$urls.user.api_activate,
             formFields: {},
             userModalOpen: false,
             picture: null,
+            codeSent: false
         };
     },
     methods: {
@@ -222,6 +224,48 @@ Vue.component('user-update', {
             }
             return !isEmpty;
         },
+        verifyEmail: function() {
+            var vm = this;
+            vm.reqPost(vm.verify_url, {email: vm.$refs.email.value},
+            function(resp) {
+                vm.modalHide();
+                if( resp.detail ) {
+                    vm.showMessages([resp.detail], "success");
+                }
+            }, function(resp) {
+                vm.codeSent = true;
+                if( resp.detail ) {
+                    vm.showMessages([resp.detail], "success");
+                }
+            });
+        },
+        verifyPhone: function() {
+            var vm = this;
+            vm.reqPost(vm.verify_url, {email: vm.$refs.phone.value},
+            function(resp) {
+                vm.codeSent = true;
+                if( resp.detail ) {
+                    vm.showMessages([resp.detail], "success");
+                }
+            }, function(resp) {
+                vm.codeSent = true;
+                if( resp.detail ) {
+                    vm.showMessages([resp.detail], "success");
+                }
+            });
+        },
+        submitCode: function() {
+            // submit the one-time code that was e-mailed
+            // or sent by text message.
+            var vm = this;
+            vm.reqPost(vm.verify_url, {code: vm.$refs.code.value},
+            function(resp) {
+                vm.modalHide();
+                if( resp.detail ) {
+                    vm.showMessages([resp.detail], "success");
+                }
+            });
+        }
     },
     computed: {
         imageSelected: function(){
@@ -247,14 +291,19 @@ Vue.component('user-update-password', {
     data: function () {
         return {
             url: this.$urls.user.api_password_change,
+            otp_url: this.$urls.user.api_otp_change,
             modalSelector: '.user-password-modal',
             newPassword: '',
             newPassword2: '',
+            otpEnabled: true,
+            otpPrivKey: '',
+            nextCb: null
         };
     },
     methods: {
-        modalShowAndValidate: function() {
+        modalShowAndValidate: function(nextCb) {
             var vm = this;
+            vm.nextCb = nextCb ? nextCb : null;
             vm.modalShow();
         },
         updatePassword: function(){
@@ -267,7 +316,6 @@ Vue.component('user-update-password', {
                 new_password: vm.newPassword,
                 new_password2: vm.newPassword2
             }, function(resp) {
-                vm.modalHide();
                 vm.newPassword = '';
                 vm.newPassword2 = '';
                 if( resp.detail ) {
@@ -277,7 +325,36 @@ Vue.component('user-update-password', {
         },
         submitPassword: function(){
             var vm = this;
-            vm.updatePassword();
+            vm.modalHide();
+            if( vm.nextCb ) {
+                vm[vm.nextCb]();
+            } else {
+                vm.updatePassword();
+            }
+        },
+        enableOTP: function() {
+            var vm = this;
+            vm.reqPut(vm.otp_url, {
+                password: vm.password,
+                enable: true
+            }, function(resp){
+                vm.otpEnabled = true;
+                vm.otpPrivKey = resp.priv_key
+                QRCode.toCanvas(
+                    document.getElementById('otp-qr-canvas'),
+                    resp.provisioning_uri, function (error) {
+                        if (error) vm.showErrorMessages(error);
+                    })
+            })
+        },
+        disableOTP: function() {
+            var vm = this;
+            vm.reqPut(vm.otp_url, {
+                password: vm.password,
+                enable: false
+            }, function(resp){
+                vm.otpEnabled = false;
+            })
         },
     },
 });

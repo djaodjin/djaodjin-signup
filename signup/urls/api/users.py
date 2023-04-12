@@ -1,4 +1,4 @@
-# Copyright (c) 2022, Djaodjin Inc.
+# Copyright (c) 2023, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -23,14 +23,17 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from ...compat import path
-from ...api.users import (PasswordChangeAPIView, UserDetailAPIView,
-    UserListCreateAPIView, UserNotificationsAPIView, UserPictureAPIView)
+from ...api.users import (OTPChangeAPIView, PasswordChangeAPIView,
+    UserDetailAPIView, UserListCreateAPIView, UserNotificationsAPIView,
+    UserPictureAPIView)
 
 urlpatterns = [
     path('users/<slug:user>/notifications',
         UserNotificationsAPIView.as_view(), name='api_user_notifications'),
     path('users/<slug:user>/picture',
         UserPictureAPIView.as_view(), name='api_user_picture'),
+    path('users/<slug:user>/otp',
+        OTPChangeAPIView.as_view(), name='api_user_otp_change'),
     path('users/<slug:user>/password',
         PasswordChangeAPIView.as_view(), name='api_user_password_change'),
     path('users/<slug:user>',

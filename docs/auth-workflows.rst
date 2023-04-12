@@ -1,5 +1,5 @@
 Authentication workflows
-------------------------
+========================
 
 The authentication workflows are particularly important because they transition
 HTTP requests from anonymous visitors to authenticated users.
@@ -15,7 +15,7 @@ pipeline for a POST HTTP request with custom steps at specific points.
 
 +-------------------------+-------------------------+-------------------------+
 | Login                   | Verify                  | Register                |
-| (/login/, /activate/,   | (/activate/{key},       | (/register/,            |
+| (/login/, /activate/,   | (/activate/{key}/,      | (/register/,            |
 | /recover/, /api/auth)   | /api/auth/activate/{key}| /register/{form}/,      |
 |                         | )                       | /api/auth/register)     |
 +=========================+=========================+=========================+
@@ -40,25 +40,19 @@ pipeline for a POST HTTP request with custom steps at specific points.
 +-------------------------+-------------------------+-------------------------+
 | Redirects if email requires SSO                                             |
 +-------------------------+-------------------------+-------------------------+
+| If login by verify      |                                                   |
+|   e-mail or phone,      |                                                   |
+|   send code             |                                                   |
+| Else check password     |                                                   |
++-------------------------+-------------------------+-------------------------+
+| If required, check 2FA                            |                         |
++-------------------------+-------------------------+-------------------------+
 |                         |                         | Bot prevention          |
 |                         |                         |   verify e-mail if it   |
 |                         |                         |   looks suspicious.     |
 +-------------------------+-------------------------+-------------------------+
-| If recover password,    |                         |                         |
-| reset password          |                         |                         |
-+-------------------------+-------------------------+-------------------------+
-| If no password,         |                                                   |
-| verify e-mail or phone  |                                                   |
-+-------------------------+-------------------------+-------------------------+
-| If required, check 2FA                            |                         |
-+-------------------------+-------------------------+-------------------------+
 |                         | If does not exist,      | Create User             |
 |                         | create User from Contact|                         |
-+-------------------------+-------------------------+-------------------------+
-| Check password          |                         |                         |
-+-------------------------+-------------------------+-------------------------+
-|                         | If no password,         |                         |
-|                         | set new password        |                         |
 +-------------------------+-------------------------+-------------------------+
 | Create session                                                              |
 +-------------------------+-------------------------+-------------------------+

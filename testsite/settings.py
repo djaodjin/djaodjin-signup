@@ -24,6 +24,8 @@ BYPASS_VERIFICATION_KEY_EXPIRED_CHECK = False
 JS_FRAMEWORK = 'vuejs'
 
 ALLOWED_HOSTS = []
+APPEND_SLASH = False # Django will return a 500 error by default on
+                     # `POST /login/.` though that's what bots would do.
 
 SOCIAL_AUTH_SAML_ENABLED_IDPS = {}
 

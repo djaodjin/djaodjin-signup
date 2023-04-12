@@ -1,4 +1,4 @@
-# Copyright (c) 2022, Djaodjin Inc.
+# Copyright (c) 2023, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -23,10 +23,10 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from ... import settings
-from ...compat import include, re_path
+from ...compat import include, path, re_path
 from ...forms import StartAuthenticationForm
-from ...views.auth import (ActivationView, PasswordResetView,
-    PasswordResetConfirmView, SigninView, SignoutView, SignupView)
+from ...views.auth import (ActivationView, RecoverView, SigninView,
+    SignoutView, SignupView)
 from ...views.saml import saml_metadata_view
 
 urlpatterns = [
@@ -36,21 +36,19 @@ urlpatterns = [
     re_path(r'^activate/(?P<verification_key>%s)/'
         % settings.EMAIL_VERIFICATION_PAT,
         ActivationView.as_view(), name='registration_activate'),
-    re_path(r'^activate/',
+    path(r'activate/',
         SigninView.as_view(
             form_class=StartAuthenticationForm,
             template_name='accounts/activate/index.html'),
         name='registration_activate_start'),
-    re_path('', include('social_django.urls', namespace='social')),
-    re_path(r'^login/',
+    path('', include('social_django.urls', namespace='social')),
+    path(r'login/',
         SigninView.as_view(), name='login'),
-    re_path(r'^logout/',
+    path(r'logout/',
         SignoutView.as_view(), name='logout'),
-    re_path(r'^recover/',
-        PasswordResetView.as_view(), name='password_reset'),
-    re_path(r'^register/',
+    path(r'recover/',
+        RecoverView.as_view(), name='password_reset'),
+    path(r'register/',
         SignupView.as_view(), name='registration_register'),
-    re_path(r'^reset/(?P<uidb64>[0-9A-Za-z_\-]+)/(?P<token>[0-9A-Za-z\-]+)/$',
-        PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
-    re_path('^saml/', saml_metadata_view),
+    path('saml/', saml_metadata_view),
 ]

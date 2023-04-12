@@ -16,10 +16,11 @@ You are required to login through the following Single Sign On (SSO) provider:
       <button type="submit" name="submit">Submit</button>
   </form>
   <p>
-      <a href="{% url 'password_reset' %}">Forgot password?</a>
-  </p>
-  <p>
-      Don't have an account? -- <a href="{% url 'registration_register' %}">Sign up</a>
+    <a href="{{urls.user.password_reset}}{% if next %}?next={{next}}{% endif %}">Forgot password?</a>
+    {% if urls.user.register %}
+    or
+    <a href="{{urls.user.register}}{% if next %}?next={{next}}{% endif %}">Sign Up</a>
+    {% endif %}
   </p>
   {% endif %}
 </div>

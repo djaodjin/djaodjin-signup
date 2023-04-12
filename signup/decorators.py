@@ -104,7 +104,7 @@ def send_verification_phone(contact, request,
     """
     # XXX needs to send phone text message instead of e-mail!!!
     back_url = request.build_absolute_uri(reverse('registration_activate',
-        args=(contact.email_verification_key,)))
+        args=(contact.phone_verification_key,)))
     if next_url:
         back_url += '?%s=%s' % (redirect_field_name, next_url)
     signals.user_verification.send(
@@ -124,7 +124,7 @@ def check_has_credentials(request, user,
         # Let's send e-mail again.
         #pylint:disable=unused-variable
         contact, created = Contact.objects.prepare_email_verification(
-            user, user.email)
+            user.email, user=user)
         if not next_url:
             next_url = validate_redirect(request)
         send_verification_email(
@@ -145,7 +145,7 @@ def check_email_verified(request, user,
         return True
 
     contact, created = Contact.objects.prepare_email_verification(
-        user, user.email)
+        user.email, user=user)
     # Let's send e-mail again.
     if not next_url:
         next_url = validate_redirect(request)
@@ -166,7 +166,7 @@ def check_phone_verified(request, user,
         return True
 
     contact, created = Contact.objects.prepare_phone_verification(
-        user, user.phone) # XXX
+        user.phone, user=user) # XXX
     # Let's send e-mail again.
     if not next_url:
         next_url = validate_redirect(request)

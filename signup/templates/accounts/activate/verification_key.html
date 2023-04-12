@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block localheader_title %}Sign In{% endblock %}
+{% block localheader_title %}Activate{% endblock %}
 
 {% block content %}
 <div>
@@ -11,6 +11,10 @@
 You are required to login through the following Single Sign On (SSO) provider:
     </p>
     <a href="{{sso_required.url}}">{{sso_required.printable_name}}</a>
+    {% elif reason %}
+    <p>
+      {{reason}}
+    </p>
     {% else %}
     <p>
 You are about to activate your account. Please set a password to secure it.

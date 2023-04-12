@@ -1,4 +1,4 @@
-# Copyright (c) 2022, DjaoDjin inc.
+# Copyright (c) 2023, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -24,41 +24,29 @@
 
 import logging
 
-from django.contrib.auth import (get_user_model,
-    authenticate, login as auth_login, logout as auth_logout)
+from django.contrib.auth import get_user_model, logout as auth_logout
 from django.contrib.auth.tokens import default_token_generator
-from django.utils.http import urlsafe_base64_decode
 import jwt
 from rest_framework import exceptions, permissions, status, serializers
-from rest_framework.generics import GenericAPIView, CreateAPIView
+from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
 
 
 from .. import settings
-from ..compat import gettext_lazy as _, six
+from ..compat import gettext_lazy as _
 from ..docs import OpenAPIResponse, no_body, swagger_auto_schema
 from ..helpers import as_timestamp, datetime_or_now
-from ..mixins import (ActivateMixin, LoginMixin, RecoverMixin, RegisterMixin,
-    SSORequired)
+from ..mixins import (LoginMixin, RegisterMixin, VerifyMixin,
+    VerifyCompleteMixin, SSORequired)
 from ..models import Contact
 from ..serializers_overrides import UserDetailSerializer
-from ..serializers import (ActivateSerializer, CredentialsSerializer,
-    PasswordResetSerializer, PasswordResetConfirmSerializer,
-    TokenSerializer, UserCreateSerializer, ValidationErrorSerializer)
-from ..utils import get_disabled_authentication, get_disabled_registration
+from ..serializers import (CredentialsSerializer,
+    RecoverSerializer, TokenSerializer, UserActivateSerializer,
+    UserCreateSerializer, ValidationErrorSerializer)
+from ..utils import get_disabled_registration
 
 
 LOGGER = logging.getLogger(__name__)
-
-
-class AllowAuthenticationEnabled(permissions.BasePermission):
-    """
-    Allows access only authentication is not disabled.
-    """
-    message = _("authentication has been temporarly disabled.")
-
-    def has_permission(self, request, view):
-        return not get_disabled_authentication(request)
 
 
 class AllowRegistrationEnabled(permissions.BasePermission):
@@ -73,7 +61,6 @@ class AllowRegistrationEnabled(permissions.BasePermission):
 
 class JWTBase(GenericAPIView):
 
-    permission_classes = [AllowAuthenticationEnabled]
     serializer_class = TokenSerializer
 
     def create_token(self, user, expires_at=None):
@@ -91,15 +78,8 @@ class JWTBase(GenericAPIView):
         except AttributeError:
             # PyJWT==2.0.1 already returns an oject of type `str`.
             pass
-        LOGGER.info("%s signed in.", user,
-            extra={'event': 'login', 'request': self.request})
         return Response(TokenSerializer().to_representation({'token': token}),
             status=status.HTTP_201_CREATED)
-
-    @staticmethod
-    def optional_session_cookie(request, user):
-        if request.query_params.get('cookie', False):
-            auth_login(request, user)
 
     def permission_denied(self, request, message=None, code=None):
         # We override this function from `APIView`. The request will never
@@ -108,7 +88,123 @@ class JWTBase(GenericAPIView):
         raise exceptions.PermissionDenied(detail=message)
 
 
-class JWTActivate(ActivateMixin, JWTBase):
+class JWTLogin(LoginMixin, JWTBase):
+    """
+    Authenticates a user
+
+    Returns a JSON Web Token that can be used in HTTP requests that require
+    authentication.
+
+    The API is typically used within an HTML
+    `login page </docs/guides/themes/#workflow_login>`_
+    as present in the default theme.
+
+    **Tags: auth, visitor, usermodel
+
+    **Example
+
+    .. code-block:: http
+
+        POST /api/auth HTTP/1.1
+
+    .. code-block:: json
+
+        {
+          "username": "donny",
+          "password": "yoyo"
+        }
+
+    responds
+
+    .. code-block:: json
+
+        {"token":"eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VybmFtZSI6\
+ImRvbm55IiwiZW1haWwiOiJzbWlyb2xvKzRAZGphb2RqaW4uY29tIiwiZnV\
+sbF9uYW1lIjoiRG9ubnkgQ29vcGVyIiwiZXhwIjoxNTI5NjU4NzEwfQ.F2y\
+1iwj5NHlImmPfSff6IHLN7sUXpBFmX0qjCbFTe6A"}
+    """
+    # XXX add "How to enable MFA" in the documentation
+    model = get_user_model()
+    serializer_class = CredentialsSerializer
+
+    @swagger_auto_schema(responses={
+        201: OpenAPIResponse("", TokenSerializer),
+        400: OpenAPIResponse("parameters error", ValidationErrorSerializer)})
+    def post(self, request, *args, **kwargs):
+        try:
+            user_with_backend = self.run_pipeline()
+            return self.create_token(user_with_backend)
+        except SSORequired as err:
+            raise serializers.ValidationError({'detail': _(
+                "SSO required through %(provider)s") % {
+                    'provider': err.printable_name},
+                    'provider': err.delegate_auth.provider,
+                    'url': self.request.build_absolute_uri(err.url)})
+
+        raise exceptions.PermissionDenied()
+
+
+class JWTRegister(RegisterMixin, JWTBase):
+    """
+    Registers a user
+
+    Creates a new user and returns a JSON Web Token that can subsequently
+    be used to authenticate the new user in HTTP requests.
+
+    The API is typically used within an HTML
+    `register page </docs/guides/themes/#workflow_register>`_
+    as present in the default theme.
+
+    **Tags: auth, visitor, usermodel
+
+    **Example
+
+    .. code-block:: http
+
+        POST /api/auth/register HTTP/1.1
+
+    .. code-block:: json
+
+        {
+          "username": "joe1",
+          "password": "yoyo",
+          "email": "joe+1@example.com",
+          "full_name": "Joe Card1"
+        }
+
+    responds
+
+    .. code-block:: json
+
+        {
+            "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VybmFtZSI6\
+ImpvZTEiLCJlbWFpbCI6ImpvZSsxQGRqYW9kamluLmNvbSIsImZ1bGxfbmFtZ\
+SI6IkpvZSAgQ2FyZDEiLCJleHAiOjE1Mjk2NTUyMjR9.GFxjU5AvcCQbVylF1P\
+JwcBUUMECj8AKxsHtRHUSypco"
+        }
+    """
+    model = get_user_model()
+    permission_classes = [AllowRegistrationEnabled]
+    serializer_class = UserCreateSerializer
+
+    @swagger_auto_schema(responses={
+        201: OpenAPIResponse("", TokenSerializer),
+        400: OpenAPIResponse("parameters error", ValidationErrorSerializer)})
+    def post(self, request, *args, **kwargs):#pylint:disable=unused-argument
+        try:
+            user_with_backend = self.run_pipeline()
+            return self.create_token(user_with_backend)
+        except SSORequired as err:
+            raise serializers.ValidationError({'detail': _(
+                "SSO required through %(provider)s") % {
+                    'provider': err.printable_name},
+                    'provider': err.delegate_auth.provider,
+                    'url': self.request.build_absolute_uri(err.url)})
+
+        raise serializers.ValidationError({'detail': "invalid request"})
+
+
+class JWTActivate(VerifyCompleteMixin, JWTRegister):
     """
     Retrieves an activation key
 
@@ -141,12 +237,11 @@ class JWTActivate(ActivateMixin, JWTBase):
           "created_at": "2020-05-30T00:00:00Z"
         }
     """
-    model = get_user_model()
-    serializer_class = ActivateSerializer
+    serializer_class = UserActivateSerializer
 
     def get_serializer_class(self):
         if self.request.method.lower() == 'get':
-            return UserDetailSerializer
+            return  UserDetailSerializer
         return super(JWTActivate, self).get_serializer_class()
 
     def get(self, request, *args, **kwargs):#pylint:disable=unused-argument
@@ -195,214 +290,7 @@ class JWTActivate(ActivateMixin, JWTBase):
     JwcBUUMECj8AKxsHtRHUSypco"
             }
         """
-        serializer = self.get_serializer(data=request.data)
-        if serializer.is_valid():
-            # We are not using `is_valid(raise_exception=True)` here
-            # because we do not want to give clues on the reasons for failure.
-            user = self.activate_user(**serializer.validated_data)
-            if user:
-                # Okay, security check complete. Log the user in.
-                user_with_backend = authenticate(
-                    request, username=user.username,
-                    password=serializer.validated_data.get('new_password'))
-                self.optional_session_cookie(request, user_with_backend)
-                return self.create_token(user_with_backend)
-        raise serializers.ValidationError({'detail': "invalid request"})
-
-
-class JWTLogin(LoginMixin, JWTBase):
-    """
-    Authenticates a user
-
-    Returns a JSON Web Token that can be used in HTTP requests that require
-    authentication.
-
-    The API is typically used within an HTML
-    `login page </docs/guides/themes/#workflow_login>`_
-    as present in the default theme.
-
-    **Tags: auth, visitor, usermodel
-
-    **Example
-
-    .. code-block:: http
-
-        POST /api/auth HTTP/1.1
-
-    .. code-block:: json
-
-        {
-          "username": "donny",
-          "password": "yoyo"
-        }
-
-    responds
-
-    .. code-block:: json
-
-        {"token":"eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VybmFtZSI6\
-ImRvbm55IiwiZW1haWwiOiJzbWlyb2xvKzRAZGphb2RqaW4uY29tIiwiZnV\
-sbF9uYW1lIjoiRG9ubnkgQ29vcGVyIiwiZXhwIjoxNTI5NjU4NzEwfQ.F2y\
-1iwj5NHlImmPfSff6IHLN7sUXpBFmX0qjCbFTe6A"}
-    """
-    # XXX add "How to enable MFA" in the documentation
-    model = get_user_model()
-    serializer_class = CredentialsSerializer
-
-    @swagger_auto_schema(responses={
-        201: OpenAPIResponse("", TokenSerializer),
-        400: OpenAPIResponse("parameters error", ValidationErrorSerializer)})
-    def post(self, request, *args, **kwargs):
-        #pylint:disable=unused-argument,too-many-nested-blocks
-        serializer = self.get_serializer(data=request.data)
-        if serializer.is_valid():
-            try:
-                user = self.login_user(**serializer.validated_data)
-                if user:
-                    self.optional_session_cookie(request, user)
-                    return self.create_token(user)
-            except SSORequired as err:
-                raise serializers.ValidationError({'detail': _(
-                    "SSO required through %(provider)s") % {
-                        'provider': err.printable_name},
-                    'provider': err.delegate_auth.provider,
-                    'url': self.request.build_absolute_uri(err.url)})
-
-        raise exceptions.PermissionDenied()
-
-
-class JWTPasswordResetConfirm(JWTBase):
-    """
-    Confirms a password reset
-
-    Sets a new password after a recover password was triggered
-    and returns a JSON Web Token that can subsequently
-    be used to authenticate the new user in HTTP requests.
-
-    The API is typically used within an HTML
-    `reset password page </docs/guides/themes/#workflow_reset>`_
-    as present in the default theme.
-
-    **Tags: auth, visitor, usermodel
-
-    **Example
-
-    .. code-block:: http
-
-        POST /api/auth/reset/0123456789abcef0123456789abcef/abc123 HTTP/1.1
-
-    .. code-block:: json
-
-        {
-          "new_password": "yoyo"
-        }
-
-    responds
-
-    .. code-block:: json
-
-        {
-            "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VybmFtZSI6\
-ImpvZTEiLCJlbWFpbCI6ImpvZSsxQGRqYW9kamluLmNvbSIsImZ1bGxfbmFtZ\
-SI6IkpvZSAgQ2FyZDEiLCJleHAiOjE1Mjk2NTUyMjR9.GFxjU5AvcCQbVylF1P\
-JwcBUUMECj8AKxsHtRHUSypco"
-        }
-    """
-    model = get_user_model()
-    serializer_class = PasswordResetConfirmSerializer
-    token_generator = default_token_generator
-
-    @swagger_auto_schema(responses={
-        201: OpenAPIResponse("", TokenSerializer),
-        400: OpenAPIResponse("parameters error", ValidationErrorSerializer)})
-    def post(self, request, *args, **kwargs):#pylint:disable=unused-argument
-        serializer = self.get_serializer(data=request.data)
-        if serializer.is_valid():
-            # We are not using `is_valid(raise_exception=True)` here
-            # because we do not want to give clues on the reasons for failure.
-            try:
-                uid = urlsafe_base64_decode(self.kwargs.get('uidb64'))
-                if not isinstance(uid, six.string_types):
-                    # See Django2.2 release notes
-                    uid = uid.decode()
-                user = self.model.objects.get(pk=uid)
-            except (TypeError, ValueError, OverflowError,
-                    self.model.DoesNotExist):
-                user = None
-            if user is not None and self.token_generator.check_token(
-                                        user, self.kwargs.get('token')):
-                new_password = serializer.validated_data['new_password']
-                user.set_password(new_password)
-                user.save()
-                LOGGER.info("%s reset her/his password.", user,
-                    extra={'event': 'resetpassword', 'request': request})
-                user_with_backend = authenticate(
-                    request, username=user.username, password=new_password)
-                self.optional_session_cookie(request, user_with_backend)
-                return self.create_token(user_with_backend)
-        raise serializers.ValidationError({'detail': "invalid request"})
-
-
-class JWTRegister(RegisterMixin, JWTBase):
-    """
-    Registers a user
-
-    Creates a new user and returns a JSON Web Token that can subsequently
-    be used to authenticate the new user in HTTP requests.
-
-    The API is typically used within an HTML
-    `register page </docs/guides/themes/#workflow_register>`_
-    as present in the default theme.
-
-    **Tags: auth, visitor, usermodel
-
-    **Example
-
-    .. code-block:: http
-
-        POST /api/auth/register HTTP/1.1
-
-    .. code-block:: json
-
-        {
-          "username": "joe1",
-          "password": "yoyo",
-          "email": "joe+1@example.com",
-          "full_name": "Joe Card1"
-        }
-
-    responds
-
-    .. code-block:: json
-
-        {
-            "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VybmFtZSI6\
-ImpvZTEiLCJlbWFpbCI6ImpvZSsxQGRqYW9kamluLmNvbSIsImZ1bGxfbmFtZ\
-SI6IkpvZSAgQ2FyZDEiLCJleHAiOjE1Mjk2NTUyMjR9.GFxjU5AvcCQbVylF1P\
-JwcBUUMECj8AKxsHtRHUSypco"
-        }
-    """
-    model = get_user_model()
-    permission_classes = [AllowAuthenticationEnabled, AllowRegistrationEnabled]
-    serializer_class = UserCreateSerializer
-
-    def register(self, serializer):
-        return self.register_user(**serializer.validated_data)
-
-    @swagger_auto_schema(responses={
-        201: OpenAPIResponse("", TokenSerializer),
-        400: OpenAPIResponse("parameters error", ValidationErrorSerializer)})
-    def post(self, request, *args, **kwargs):#pylint:disable=unused-argument
-        serializer = self.get_serializer(data=request.data)
-        if serializer.is_valid(raise_exception=True):
-            # It is OK to use `raise_exception=True` because the serializer
-            # purely does field validation (i.e. no checks of values
-            # in database).
-            user = self.register(serializer)
-            if user:
-                self.optional_session_cookie(request, user)
-                return self.create_token(user)
-        raise serializers.ValidationError({'detail': "invalid request"})
+        return super(JWTActivate, self).post(request, *args, **kwargs)
 
 
 class JWTLogout(JWTBase):
@@ -435,9 +323,9 @@ class JWTLogout(JWTBase):
         return response
 
 
-class PasswordResetAPIView(RecoverMixin, CreateAPIView):
+class RecoverAPIView(VerifyMixin, JWTBase):
     """
-    Sends a password reset link
+    Sends a one-time link or code
 
     The user is uniquely identified by her email address.
 
@@ -468,22 +356,18 @@ class PasswordResetAPIView(RecoverMixin, CreateAPIView):
         }
     """
     model = get_user_model()
-    permission_classes = [AllowAuthenticationEnabled]
-    serializer_class = PasswordResetSerializer
+    serializer_class = RecoverSerializer
     token_generator = default_token_generator
 
-    def perform_create(self, serializer):
+    def post(self, request, *args, **kwargs):#pylint:disable=unused-argument
         try:
-            self.recover_user(**serializer.validated_data)
+            user_with_backend = self.run_pipeline()
+            return self.create_token(user_with_backend)
         except SSORequired as err:
             raise serializers.ValidationError({'detail': _(
                 "SSO required through %(provider)s") % {
                     'provider': err.printable_name},
-                'provider': err.delegate_auth.provider,
-                'url': self.request.build_absolute_uri(err.url)})
+                    'provider': err.delegate_auth.provider,
+                    'url': self.request.build_absolute_uri(err.url)})
 
-    def permission_denied(self, request, message=None, code=None):
-        # We override this function from `APIView`. The request will never
-        # be authenticated by definition since we are dealing with login
-        # and register APIs.
-        raise exceptions.PermissionDenied(detail=message)
+        raise exceptions.PermissionDenied()

@@ -5,6 +5,7 @@ django-recaptcha>=2.0
 djangorestframework>=3.9
 phonenumbers>=8.12.6
 PyJWT>=1.6.1
+pyotp>=2.8.0
 python-dateutil>=2.2
 python3-saml>=1.2.1     # This will require transitively to install native
                         # package xmlsec1-devel and xmlsec1-openssl.

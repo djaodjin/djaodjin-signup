@@ -72,7 +72,6 @@ _SETTINGS = {
     'MFA_MAX_ATTEMPTS': 3,
     'NOTIFICATION_TYPE': tuple([]),
     'NOTIFICATIONS_OPT_OUT': True,
-    'PASSWORD_RESET_THROTTLE': None,
     'PICTURE_STORAGE_CALLABLE': None,
     'RANDOM_SEQUENCE': [],
     'REQUIRES_RECAPTCHA': False,
@@ -128,11 +127,6 @@ LOGOUT_CLEAR_COOKIES = _SETTINGS.get('LOGOUT_CLEAR_COOKIES')
 MFA_MAX_ATTEMPTS = _SETTINGS.get('MFA_MAX_ATTEMPTS')
 NOTIFICATION_TYPE = _SETTINGS.get('NOTIFICATION_TYPE')
 NOTIFICATIONS_OPT_OUT = _SETTINGS.get('NOTIFICATIONS_OPT_OUT')
-
-#: A callable function, which is passed a triplet (request, view, user), and
-#: that throttles the HTTP request when there are too many attempts for that
-#: particular user to reset his/her password.
-PASSWORD_RESET_THROTTLE = _SETTINGS.get('PASSWORD_RESET_THROTTLE')
 
 #: A callable function which returns a `Storage` object that will be used
 #: to upload a contact picture

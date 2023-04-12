@@ -23,11 +23,18 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from ...compat import path
-from ...views.contacts import ContactListView, ContactDetailView
+from ...api.activities import (ActivityByAccountAPIView,
+    ActivityByAccountIndexAPIView)
+from ...api.users import ActivityByAccountContactAPIView
 
 urlpatterns = [
-    # These three URLs must be protected.
-    path('<slug:user>/',
-        ContactDetailView.as_view(), name='signup_contact'),
-    path(r'', ContactListView.as_view(), name='signup_contacts'),
+    path('activities/<slug:profile>/contacts',
+        ActivityByAccountContactAPIView.as_view(),
+        name='api_profile_activities_contacts'),
+    path('activities/<slug:profile>',
+        ActivityByAccountAPIView.as_view(),
+        name='api_profile_activities'),
+    path('activities',
+        ActivityByAccountIndexAPIView.as_view(),
+        name='api_profile_activities_index'),
 ]

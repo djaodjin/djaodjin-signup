@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block localheader_title %}Sign In{% endblock %}
+{% block localheader_title %}Get started!{% endblock %}
 
 {% block content %}
 <div>
@@ -40,6 +40,15 @@
         {% endif %}
         <button type="submit" name="submit">Submit</button>
   </form>
+  {% if email_verification_link %}
+  <form method="post" action="{{urls.user.password_reset}}{% if next %}/?next={{next}}{% endif %}">
+    {% csrf_token %}
+    <button id="email-verification-link">Email me a one-time link</button>
+  </form>
+  {% endif %}
+  {% if register_link %}
+  <a id="register-link" href="{{register_link}}{% if next %}?next={{next}}{% endif %}">Sign Up</a>
+  {% endif %}
   {% endif %}
 </div>
 {% endblock %}

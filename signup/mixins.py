@@ -22,28 +22,25 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import logging
+import logging, re
 
 from django.http import Http404
-from django.contrib.auth import (REDIRECT_FIELD_NAME, authenticate,
-    get_user_model)
+from django.contrib.auth import (authenticate,
+    get_user_model, login as auth_login)
 from django.db import IntegrityError
 from django.utils import translation
-from django.utils.encoding import force_bytes
-from django.utils.http import urlencode, urlsafe_base64_encode
-from django.utils.safestring import mark_safe
+from django.utils.http import urlencode
 from rest_framework import exceptions, serializers
 from rest_framework.generics import get_object_or_404
-from rest_framework.settings import api_settings
 
 from . import signals, settings
-from .auth import validate_redirect
 from .compat import gettext_lazy as _, is_authenticated, reverse, six
-from .decorators import check_has_credentials
-from .helpers import full_name_natural_split, update_context_urls
-from .models import Contact, DelegateAuth
-from .utils import (get_login_throttle, get_password_reset_throttle,
-    handle_uniq_error)
+from .decorators import send_verification_email, send_verification_phone
+from .helpers import (full_name_natural_split, has_invalid_password,
+    update_context_urls)
+from .models import Contact, DelegateAuth, OTPGenerator
+from .utils import (get_disabled_authentication, get_disabled_registration,
+    get_email_dynamic_validator, get_login_throttle, handle_uniq_error)
 from .validators import as_email_or_phone
 
 LOGGER = logging.getLogger(__name__)
@@ -78,23 +75,446 @@ class SSORequired(exceptions.AuthenticationFailed):
         return self.provider_info.get('name', str(self.delegate_auth.provider))
 
 
-class ChecksMixin(object):
+class IncorrectPath(exceptions.AuthenticationFailed):
+    """
+    Incorrect path
+    """
+
+class IncorrectUser(exceptions.AuthenticationFailed):
+    """
+    Cannot find user or contact
+    """
+
+
+class VerifyRequired(exceptions.AuthenticationFailed):
+    """
+    break workflow because we are waiting for a link/code to continue.
+    """
+
+class OTPRequired(exceptions.AuthenticationFailed):
+    """
+    break workflow because we require the user to enter an OTP
+    """
+
+class PasswordRequired(exceptions.AuthenticationFailed):
+    """
+    break workflow because we require the user to enter a password
+    """
+
+class AuthDisabled(exceptions.PermissionDenied):
+    """
+    Authentication is disabled
+    """
+
+class RegistrationDisabled(exceptions.PermissionDenied):
+    """
+    Registration is disabled
+    """
+
+
+class AuthMixin(object):
+    """
+    Steps used in authentiction workflows, either login through a password
+    or through an e-mail link.
+    """
+    backend_path = 'signup.backends.auth.UsernameOrEmailPhoneModelBackend'
+    model = get_user_model()
+    form_class = None
+    serializer_class = None
+
+    def prefetch_contact_info(self):
+        return {}
+
+    def validate_inputs(self, initial_data=None):
+        # The authentication URLs are anonymously accessible, hence
+        # prime candidates for bots. These will POST to '/login/.' for
+        # example because there is a `action="."` in the <form> tag
+        # in login.html.
+        # We cannot catch these by restricting the match pattern.
+        # 1. '^login/$' will not match 'login/.' hence trigger the catch
+        #    all pattern that might forward the HTTP request.
+        # 2. 'login/(?P<extra>.*)' will through a missing argument
+        #    exception in `reverse` calls.
+        try:
+            pat = (r'(?P<expected_path>%s)(?P<extra>.*)' %
+                self.request.resolver_match.route)
+            look = re.match(pat, self.request.path.lstrip('/'))
+            if look:
+                expected_path = '/' + look.group('expected_path')
+                extra =  look.group('extra')
+                if extra:
+                    raise IncorrectPath(
+                        self.request.build_absolute_uri(expected_path))
+        except AttributeError:
+            pass # Django<=1.11 ResolverMatch does not have
+                 # a route attribute.
+
+        cleaned_data = {}
+        if initial_data:
+            cleaned_data = initial_data.copy()
+        if self.form_class is not None:
+            form = self.get_form()
+            if self.request.method.lower() in ('post',):
+                if not form.is_valid():
+                    raise serializers.ValidationError()
+                for field_name in six.iterkeys(form.data):
+                    cleaned_data.update({
+                        field_name: form.cleaned_data.get(
+                            field_name, form.data[field_name])})
+            cleaned_data.update({'next_url': self.get_success_url()})
+        elif self.serializer_class is not None:
+            data = initial_data.copy()
+            data.update(self.request.data)
+            serializer = self.get_serializer(data=data)
+            serializer.is_valid(raise_exception=True)
+            for field_name in six.iterkeys(data):
+                if field_name == 'phone':
+                    # See serializers_overrides.py:UserDetailSerializer
+                    field_value = serializer.validated_data.get('get_phone',
+                        serializer.validated_data.get(
+                            field_name, data[field_name]))
+                else:
+                    field_value = serializer.validated_data.get(
+                        field_name, data[field_name])
+                cleaned_data.update({field_name: field_value})
+
+        if 'email' not in cleaned_data and 'phone' not in cleaned_data:
+            username = cleaned_data.get('username')
+            email, phone = as_email_or_phone(username)
+            cleaned_data.update({'email': email, 'phone': phone})
+        if 'phone' not in cleaned_data:
+            email = cleaned_data.get('email')
+            email, phone = as_email_or_phone(email)
+            cleaned_data.update({'email': email, 'phone': phone})
+
+        return cleaned_data
+
+    def register_check_disabled(self):
+        pass
+
+    def register_check_data(self, **cleaned_data):
+        pass
+
+    def find_candidate(self, **cleaned_data):
+        username = cleaned_data.get('username')
+        email = cleaned_data.get('email')
+        phone = cleaned_data.get('phone')
+        if not username:
+            username = email
+        if not username:
+            username = phone
+        try:
+            user = self.model.objects.find_user(username)
+
+            if not email:
+                email = user.email
+
+        except self.model.DoesNotExist:
+            user = None
+
+        return user, email
+
+    def auth_check_disabled(self, user):
+        auth_disabled = get_disabled_authentication(self.request, user)
+        if auth_disabled:
+            raise AuthDisabled()
+
+    def check_user_throttles(self, request, user):
+        """
+        Rate-limit based on the user.
+        """
+        throttle = get_login_throttle()
+        if throttle:
+            throttle(request, self, user)
+
+    def check_sso_required(self, email):
+        # If the user cannot be found and we are not login
+        # with an e-mail address, we cannot tell if we should
+        # redirect to an SSO provider or not.
+        if email:
+            domain = email.split('@')[-1]
+            try:
+                delegate_auth = DelegateAuth.objects.get(domain=domain)
+                raise SSORequired(delegate_auth)
+            except DelegateAuth.DoesNotExist:
+                pass
+
+    def auth_check_mfa(self, user, **cleaned_data):
+        code = cleaned_data.get('code')
+        if OTPGenerator.objects.filter(user=user).exists():
+            if not code:
+                raise OTPRequired({
+                    'code': _("OTP code is required.")})
+            if not user.otp.verify(code):
+                if user.otp.nb_attempts >= settings.MFA_MAX_ATTEMPTS:
+                    user.otp.clear_attempts()
+                    raise exceptions.PermissionDenied({'detail': _(
+            "You have exceeded the number of attempts to enter the OTP code."\
+                        " Please start again.")})
+                user.otp.nb_attempts += 1
+                user.otp.save()
+                raise serializers.ValidationError({
+                    'code': _("OTP code does not match.")})
+            user.otp.clear_attempts()
+
+    def create_user(self, **cleaned_data):
+        #pylint:disable=unused-argument
+        return None
+
+    def check_password(self, user, **cleaned_data):
+        #pylint:disable=unused-argument
+        return None
+
+    def create_session(self, user_with_backend):
+        """
+        Attaches a session cookie to the request and
+        generates an login event in the audit logs.
+        """
+        if self.form_class or self.request.query_params.get('cookie', False):
+            auth_login(self.request, user_with_backend)
+        LOGGER.info("%s signed in.", user_with_backend,
+            extra={'event': 'login', 'request': self.request})
+
+    def run_pipeline(self):
+        # Register: Check if registration or auth is disabled
+        self.register_check_disabled()
+        # Login, Verify, Register:
+        # Bot prevention
+        # - no extra characters on URL path
+        # - validate fields through regex
+        # - optional Captcha
+
+        # `ActivationView` will run the pipeline in GET HTTP requests
+        # (uses `verification_key` in URL path), while other views will
+        # solely do so in POST HTTP requests.
+        initial_data = self.prefetch_contact_info()
+        LOGGER.debug("[run_pipeline] initial_data=%s", str(initial_data))
+        cleaned_data = self.validate_inputs(initial_data)
+        LOGGER.debug("[run_pipeline] cleaned_data=%s", str(cleaned_data))
+        # Login, Verify: Find candidate User or Contact
+        user, email = self.find_candidate(**cleaned_data)
+        LOGGER.debug("[run_pipeline] found_candidate user=%s, email=%s" % (
+            user, email))
+        # Login, Verify: Check if auth is disabled for User, or
+        # auth disabled globally if we only have a Contact
+        self.auth_check_disabled(user)
+        # Login, Verify: Auth rate-limiter
+        self.check_user_throttles(self.request, user)
+        # Login, Verify, Register:
+        # Redirects if email requires SSO
+        self.check_sso_required(email)
+        # Login: If login by verifying e-mail or phone, send code
+        #        Else check password
+        user_with_backend = self.check_password(user, **cleaned_data)
+
+        # Login, Verify: If required, check 2FA
+        self.auth_check_mfa(user, **cleaned_data)
+
+        # Register: Bot prevention verify e-mail if it looks suspicious.
+        self.register_check_data(**cleaned_data)
+        # Verify: If does not exist, create User from Contact
+        # Register: Create User
+        if not user_with_backend:
+            user_with_backend = self.create_user(**cleaned_data)
+        # Login, Verify, Register: Create session
+        LOGGER.debug("[run_pipeline] create session for user_with_backend=%s",
+            user_with_backend)
+
+        self.create_session(user_with_backend)
+        return user_with_backend
+
+
+class LoginMixin(AuthMixin):
+    """
+    Workflow for authentication (login/sign-in) either through an HTML page
+    view or an API call.
+    """
+    def check_password(self, user, **cleaned_data):
+        user_with_backend = None
+        username = cleaned_data.get('username')
+        password = cleaned_data.get('password')
+        user_with_backend = authenticate(self.request,
+            username=username, password=password)
+        if user_with_backend:
+            return user_with_backend
+
+        disabled_registration = get_disabled_registration(self.request)
+        if not disabled_registration:
+            if not user:
+                phone = email = None # XXX call find_candidate again?
+                if phone:
+                    raise IncorrectUser({'phone': _("Not found.")})
+                if email:
+                    raise IncorrectUser({'email': _("Not found.")})
+                raise IncorrectUser({'username': _("Not found.")})
+        if not password:
+            raise PasswordRequired({
+                'password': _("Password is required.")})
+
+        raise serializers.ValidationError({
+            'detail': _("Credentials do not match.")})
+
+
+class VerifyMixin(AuthMixin):
+    """
+    Authenticate by verifying e-mail or phone
+    """
+    def check_password(self, user, **cleaned_data):
+        next_url = cleaned_data.get('next_url')
+        email = cleaned_data.get('email')
+        if not email:
+            email = user.email
+        # send link through e-mail
+        if email:
+            contact, unused = Contact.objects.prepare_email_verification(
+                email, user=user)
+            send_verification_email(contact, self.request, next_url=next_url)
+            raise VerifyRequired({'detail': _(
+                    "We sent a one-time link to your e-mail address.")})
+
+        raise serializers.ValidationError({
+            'detail': _("Credentials do not match.")})
+
+
+class VerifyPhoneMixin(AuthMixin):
+    """
+    Authenticate by verifying phone
+    """
+    def check_password(self, user, **cleaned_data):
+        next_url = cleaned_data.get('next_url')
+
+        phone = cleaned_data.get('phone')
+        # send link through phone
+        if phone:
+            contact, unused = Contact.objects.prepare_phone_verification(
+                phone, user=user)
+            send_verification_phone(contact, self.request, next_url=next_url)
+            raise VerifyRequired({'detail': _(
+                    "We sent a one-time code to your phone.")})
+
+        raise serializers.ValidationError({
+            'detail': _("Credentials do not match.")})
+
+
+class RegisterMixin(AuthMixin):
+
+    registration_fields = (
+        'country',
+        'email',
+        'full_name',
+        'first_name',
+        'last_name',
+        'nick_name',
+        'get_nick_name',
+        'lang',
+        'get_lang',
+        'locality',
+        'postal_code',
+        'new_password',
+        'new_password2',
+        'password',
+        'phone',
+        'get_phone',
+        'region',
+        'street_address',
+        'username',
+    )
+
+    def register_check_disabled(self):
+        disabled_registration = get_disabled_registration(self.request)
+        if disabled_registration:
+            raise RegistrationDisabled()
+
+    def register_check_data(self, **cleaned_data):
+        email = cleaned_data.get('email')
+        if email:
+            dynamic_validator = get_email_dynamic_validator()
+            if dynamic_validator:
+                dynamic_validator(email)
 
     @staticmethod
-    def check_sso_required(email):
-        domain = email.split('@')[-1]
-        try:
-            delegate_auth = DelegateAuth.objects.get(domain=domain)
-            raise SSORequired(delegate_auth)
-        except DelegateAuth.DoesNotExist:
-            pass
+    def first_and_last_names(**cleaned_data):
+        first_name = cleaned_data.get('first_name', None)
+        last_name = cleaned_data.get('last_name', None)
+        if not first_name:
+            # If the form does not contain a first_name/last_name pair,
+            # we assume a full_name was passed instead.
+            full_name = cleaned_data.get(
+                'user_full_name', cleaned_data.get('full_name', None))
+            first_name, _, last_name = full_name_natural_split(full_name)
+        return first_name, last_name
+
+    def create_user(self, **cleaned_data):
+        first_name, last_name = self.first_and_last_names(**cleaned_data)
+        email = cleaned_data.get('email')
+        phone = cleaned_data.get('phone')
+        username = cleaned_data.get('username')
+        password = cleaned_data.get('new_password',
+            cleaned_data.get('password'))
+        lang = cleaned_data.get('lang', cleaned_data.get('get_lang',
+            translation.get_language_from_request(self.request)))
+        user_extra = {}
+        for field_name, field_value in six.iteritems(cleaned_data):
+            if field_name not in self.registration_fields:
+                if field_name.startswith('user_'):
+                    user_extra.update({field_name[5:]: field_value})
+        if not user_extra:
+            user_extra = None
+        user = self.model.objects.create_user(username,
+            email=email, password=password, phone=phone,
+            first_name=first_name, last_name=last_name,
+            lang=lang, extra=user_extra)
+        # Bypassing authentication here, we are doing frictionless registration
+        # the first time around.
+        user.backend = self.backend_path
+        return user
 
 
-class ActivateMixin(ChecksMixin):
+class VerifyCompleteMixin(AuthMixin):
 
     key_url_kwarg = 'verification_key'
 
-    def activate_user(self, **cleaned_data):
+    def prefetch_contact_info(self):
+        data = {}
+        verification_key = self.kwargs.get(self.key_url_kwarg)
+        contact = Contact.objects.get_token(verification_key)
+        if contact:
+            fields = []
+            if self.form_class is not None:
+                fields = six.iterkeys(self.get_initial())
+            elif self.serializer_class is not None:
+                fields = self.serializer_class.Meta.fields
+            for field_name in fields:
+                field_value = getattr(contact, field_name, None)
+                if not field_value and contact.user:
+                    field_value = getattr(contact.user, field_name, None)
+                if field_value:
+                    data.update({field_name: field_value})
+        return data
+
+    def find_candidate(self, **cleaned_data):
+        verification_key = self.kwargs.get(self.key_url_kwarg)
+        contact = Contact.objects.get_token(verification_key)
+        if not contact:
+            raise serializers.ValidationError({
+                'detail': _("verification key not found")})
+
+        if contact.user:
+            email = contact.user.email
+        else:
+            email = contact.email
+
+        return contact.user, email
+
+
+    def check_password(self, user, **cleaned_data):
+        #pylint:disable=unused-argument
+        if (self.request.method.lower() == 'get' and
+            (not user or has_invalid_password(user))):
+            raise IncorrectUser({'email': _("Not found.")})
+        return None
+
+    def create_user(self, **cleaned_data):
         verification_key = self.kwargs.get(self.key_url_kwarg)
         full_name = cleaned_data.get('full_name', None)
         if not full_name:
@@ -126,255 +546,7 @@ class ActivateMixin(ChecksMixin):
                 signals.user_activated.send(sender=__name__, user=user,
                     verification_key=self.kwargs.get(self.key_url_kwarg),
                     request=self.request)
-        return user
 
-
-class AuthMixin(ChecksMixin):
-    """
-    Steps used in authentiction workflows, either login through a password
-    or through an e-mail link.
-    """
-    def check_user_throttles(self, request, user):
-        throttle = get_login_throttle()
-        if throttle:
-            throttle(request, self, user)
-
-    def candidate_user(self, username):
-        """
-        Login through an e-mail link.
-        """
-        email, phone = as_email_or_phone(username)
-        try:
-            user = self.model.objects.find_user(username)
-
-            # Rate-limit based on the user.
-            self.check_user_throttles(self.request, user)
-            if not email:
-                email = user.email
-
-        except self.model.DoesNotExist:
-            user = None
-
-        # If the user cannot be found and we are not login
-        # with an e-mail address, we cannot tell if we should
-        # redirect to an SSO provider or not.
-        if email:
-            self.check_sso_required(email)
-
-        if not user:
-            if phone:
-                raise serializers.ValidationError({'detail': _(
-                    "We cannot find an account"\
-                    " for this phone number. Please verify the spelling.")})
-            if email:
-                raise serializers.ValidationError({'detail': _(
-                    "We cannot find an account"\
-                    " for this e-mail address. Please verify the spelling.")})
-            raise serializers.ValidationError({'detail': _(
-                "We cannot find an account"\
-                " for this username. Please verify the spelling.")})
-
-        next_url = validate_redirect(self.request)
-        if not check_has_credentials(self.request, user,
-                    next_url=next_url):
-            if phone:
-                raise serializers.ValidationError({'detail':
-                    _("You should now secure and activate"\
-                      " your account following the instructions"\
-                      " we just phoned you. Thank you.")})
-            if email:
-                raise serializers.ValidationError({'detail':
-                    _("You should now secure and activate"\
-                      " your account following the instructions"\
-                      " we just emailed you. Thank you.")})
-
-        return user
-
-
-class LoginMixin(AuthMixin):
-    """
-    Workflow for authentication (login/sign-in) either through an HTML page
-    view or an API call.
-    """
-    def login_user(self, **cleaned_data):
-        """
-        Login through a password.
-        """
-        username = cleaned_data.get('username', None)
-        self.candidate_user(username)
-
-        password = cleaned_data.get('password')
-        if not password:
-            raise serializers.ValidationError({
-                'password': _("password is required.")})
-
-        user_with_backend = authenticate(self.request,
-            username=username, password=password)
-
-        contact = getattr(user_with_backend, '_contact', None)
-        if contact and contact.mfa_backend:
-            if not contact.mfa_priv_key:
-                contact.create_mfa_token()
-                raise serializers.ValidationError({
-                    'code': _("MFA code is required.")})
-
-            code = cleaned_data.get('code')
-            if code != contact.mfa_priv_key:
-                if contact.mfa_nb_attempts >= settings.MFA_MAX_ATTEMPTS:
-                    contact.clear_mfa_token()
-                    raise exceptions.PermissionDenied({'detail': _(
-            "You have exceeded the number of attempts to enter the MFA code."\
-                        " Please start again.")})
-                contact.mfa_nb_attempts += 1
-                contact.save()
-                raise serializers.ValidationError({
-                    'code': _("MFA code does not match.")})
-
-            contact.clear_mfa_token()
-
-        return user_with_backend
-
-
-class RecoverMixin(AuthMixin):
-
-    def check_user_throttles(self, request, user):
-        throttle = get_password_reset_throttle()
-        if throttle:
-            throttle(request, self, user)
-
-    def recover_user(self, **cleaned_data):
-        """
-        Login through an e-mail link.
-        """
-        username = cleaned_data.get('email', None)
-        user = self.candidate_user(username)
-
-        # Make sure that a reset password email is sent to a user
-        # that actually has an activated account.
-        uid = urlsafe_base64_encode(force_bytes(user.pk))
-        if not isinstance(uid, six.string_types):
-            # See Django2.2 release notes
-            uid = uid.decode()
-        token = self.token_generator.make_token(user)
-        next_url = validate_redirect(self.request)
-        back_url = self.request.build_absolute_uri(
-            reverse('password_reset_confirm', args=(uid, token)))
-        if next_url:
-            back_url += '?%s=%s' % (REDIRECT_FIELD_NAME, next_url)
-        signals.user_reset_password.send(
-            sender=__name__, user=user, request=self.request,
-            back_url=back_url, expiration_days=settings.KEY_EXPIRATION)
-
-
-class RegisterMixin(ChecksMixin):
-
-    backend_path = 'signup.backends.auth.UsernameOrEmailPhoneModelBackend'
-
-    registration_fields = (
-        'country',
-        'email',
-        'full_name',
-        'first_name',
-        'last_name',
-        'nick_name',
-        'get_nick_name',
-        'lang',
-        'get_lang',
-        'locality',
-        'postal_code',
-        'new_password',
-        'new_password2',
-        'password',
-        'phone',
-        'get_phone',
-        'region',
-        'street_address',
-        'username',
-    )
-
-    @staticmethod
-    def first_and_last_names(**cleaned_data):
-        first_name = cleaned_data.get('first_name', None)
-        last_name = cleaned_data.get('last_name', None)
-        if not first_name:
-            # If the form does not contain a first_name/last_name pair,
-            # we assume a full_name was passed instead.
-            full_name = cleaned_data.get(
-                'user_full_name', cleaned_data.get('full_name', None))
-            first_name, _, last_name = full_name_natural_split(full_name)
-        return first_name, last_name
-
-    def register_user(self, next_url=None, **cleaned_data):
-        email = cleaned_data.get('email', None)
-        if email:
-            self.check_sso_required(email)
-            try:
-                user = self.model.objects.find_user(email)
-                if check_has_credentials(self.request, user, next_url=next_url):
-                    raise serializers.ValidationError(
-                        {'email':
-                         _("A user with that e-mail address already exists."),
-                         api_settings.NON_FIELD_ERRORS_KEY:
-                         mark_safe(_(
-                             "This email address has already been registered!"\
-    " Please <a href=\"%s\">login</a> with your credentials. Thank you.")
-                            % reverse('login'))})
-                raise serializers.ValidationError(
-                    {'email':
-                     _("A user with that e-mail address already exists."),
-                     api_settings.NON_FIELD_ERRORS_KEY:
-                     mark_safe(_(
-                         "This email address has already been registered!"\
-    " You should now secure and activate your account following "\
-    " the instructions we just emailed you. Thank you."))})
-            except self.model.DoesNotExist:
-                # OK to continue. We will have raised an exception in all other
-                # cases.
-                pass
-
-        phone = cleaned_data.get('phone', cleaned_data.get('get_phone'))
-        if phone:
-            try:
-                user = self.model.objects.find_user(phone)
-                if check_has_credentials(self.request, user, next_url=next_url):
-                    raise serializers.ValidationError(
-                        {'phone':
-                         _("A user with that phone number already exists."),
-                         api_settings.NON_FIELD_ERRORS_KEY:
-                         mark_safe(_(
-                             "This phone number has already been registered!"\
-    " Please <a href=\"%s\">login</a> with your credentials. Thank you.")
-                            % reverse('login'))})
-                raise serializers.ValidationError(
-                    {'phone':
-                     _("A user with that phone number already exists."),
-                     api_settings.NON_FIELD_ERRORS_KEY:
-                     mark_safe(_(
-                         "This phone number has already been registered!"\
-    " You should now secure and activate your account following "\
-    " the instructions we just messaged you. Thank you."))})
-            except self.model.DoesNotExist:
-                # OK to continue. We will have raised an exception in all other
-                # cases.
-                pass
-
-        first_name, last_name = self.first_and_last_names(**cleaned_data)
-        username = cleaned_data.get('username', None)
-        password = cleaned_data.get('new_password',
-            cleaned_data.get('password', None))
-        lang = cleaned_data.get('lang', cleaned_data.get('get_lang',
-            translation.get_language_from_request(self.request)))
-        user_extra = {}
-        for field_name, field_value in six.iteritems(cleaned_data):
-            if field_name not in self.registration_fields:
-                if field_name.startswith('user_'):
-                    user_extra.update({field_name[5:]: field_value})
-        if not user_extra:
-            user_extra = None
-        user = self.model.objects.create_user(username,
-            email=email, password=password, phone=phone,
-            first_name=first_name, last_name=last_name,
-            lang=lang, extra=user_extra)
         # Bypassing authentication here, we are doing frictionless registration
         # the first time around.
         user.backend = self.backend_path

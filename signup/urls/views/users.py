@@ -23,8 +23,9 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from ...compat import path
-from ...views.users import (PasswordChangeView, UserPublicKeyUpdateView,
-    UserProfileView, UserNotificationsView, redirect_to_user_profile)
+from ...views.users import (PasswordChangeView,
+    UserPublicKeyUpdateView, UserProfileView, UserNotificationsView,
+    redirect_to_user_profile)
 
 urlpatterns = [
     # These three URLs must be protected.

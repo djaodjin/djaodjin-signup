@@ -75,21 +75,6 @@ class NoModelSerializer(serializers.Serializer):
         raise RuntimeError('`update()` should not be called.')
 
 
-class ActivateSerializer(serializers.ModelSerializer):
-
-    username = serializers.CharField(required=False,
-        help_text=_("Username to identify the account"))
-    new_password = serializers.CharField(required=False, write_only=True,
-        style={'input_type': 'password'}, help_text=_("Password with which"\
-            " a user can authenticate with the service"))
-    full_name = serializers.CharField(required=False,
-        help_text=_("Full name (effectively first name followed by last name)"))
-
-    class Meta:
-        model = get_user_model()
-        fields = ('username', 'new_password', 'full_name')
-
-
 class ActivitySerializer(serializers.ModelSerializer):
 
     account = get_account_serializer()(allow_null=True,
@@ -136,15 +121,6 @@ class APIKeysSerializer(NoModelSerializer):
         fields = ('secret',)
 
 
-class PublicKeySerializer(AuthenticatedUserPasswordSerializer):
-    """
-    Updates a user public key
-    """
-    pubkey = serializers.CharField(max_length=500,
-        style={'input_type': 'password'},
-        help_text=_("New public key for the user referenced in the URL"))
-
-
 class StringListField(serializers.ListField):
     child = serializers.CharField()
 
@@ -177,6 +153,41 @@ class CredentialsSerializer(NoModelSerializer):
             " is enabled."))
 
 
+class OTPUpdateSerializer(AuthenticatedUserPasswordSerializer):
+    """
+    Returns sensitive information to setup OTP generator
+    """
+    enable = serializers.BooleanField(write_only=True,
+        help_text=_("Enables/disables OTP"))
+
+    class Meta(AuthenticatedUserPasswordSerializer.Meta):
+        fields = AuthenticatedUserPasswordSerializer.Meta.fields + (
+            'enable',)
+
+
+class OTPSerializer(NoModelSerializer):
+    """
+    Returns sensitive information to setup OTP generator
+    """
+    priv_key = serializers.CharField(
+        help_text=_("Private key"))
+    provisioning_uri = serializers.URLField(
+        help_text=_("Provisioning URI"))
+
+    class Meta:
+        fields = ('priv_key', 'provisioning_uri')
+        read_only_fields = ('priv_key', 'provisioning_uri')
+
+
+class PublicKeySerializer(AuthenticatedUserPasswordSerializer):
+    """
+    Updates a user public key
+    """
+    pubkey = serializers.CharField(max_length=500,
+        style={'input_type': 'password'},
+        help_text=_("New public key for the user referenced in the URL"))
+
+
 class PasswordResetConfirmSerializer(NoModelSerializer):
 
     new_password = serializers.CharField(write_only=True,
@@ -191,7 +202,7 @@ class PasswordChangeSerializer(PasswordResetConfirmSerializer):
         help_text=_("Password of the user making the HTTP request"))
 
 
-class PasswordResetSerializer(NoModelSerializer):
+class RecoverSerializer(NoModelSerializer):
     """
     Serializer to send an e-mail to a user in order to recover her account.
     """
@@ -227,14 +238,14 @@ class UserCreateSerializer(UserDetailSerializer):
 
     username = serializers.CharField(required=False,
         help_text=_("Unique identifier for the user, typically used in URLs"))
-    password = serializers.CharField(required=False, write_only=True,
+    new_password = serializers.CharField(required=False, write_only=True,
         style={'input_type': 'password'}, help_text=_("Password with which"\
             " a user can authenticate with the service"))
     full_name = serializers.CharField(
         help_text=_("Full name (effectively first name followed by last name)"))
 
     class Meta(UserDetailSerializer.Meta):
-        fields = UserDetailSerializer.Meta.fields + ('password',)
+        fields = UserDetailSerializer.Meta.fields + ('new_password',)
 
     def validate(self, attrs):
         if not (attrs.get('email') or
@@ -243,3 +254,12 @@ class UserCreateSerializer(UserDetailSerializer):
                 {'email': _("Either email or phone must be valid."),
                  'phone': _("Either email or phone must be valid.")})
         return super(UserCreateSerializer, self).validate(attrs)
+
+
+class UserActivateSerializer(UserCreateSerializer):
+
+    new_password = serializers.CharField(required=True, write_only=True,
+        style={'input_type': 'password'}, help_text=_("Password with which"\
+            " a user can authenticate with the service"))
+    full_name = serializers.CharField(required=False,
+        help_text=_("Full name (effectively first name followed by last name)"))

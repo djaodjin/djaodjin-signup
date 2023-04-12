@@ -1,4 +1,4 @@
-# Copyright (c) 2022, DjaoDjin inc.
+# Copyright (c) 2023, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -24,14 +24,13 @@
 
 import hashlib, logging, os, re
 
+import pyotp
 from django.contrib.auth import logout as auth_logout
 from django.db import transaction, IntegrityError
 from django.core.exceptions import PermissionDenied
 from django.contrib.auth import update_session_auth_hash, get_user_model
-from rest_framework import parsers, status
+from rest_framework import generics, parsers, status
 from rest_framework.exceptions import ValidationError
-from rest_framework.generics import (CreateAPIView, ListCreateAPIView,
-    RetrieveUpdateDestroyAPIView, GenericAPIView, RetrieveUpdateAPIView)
 from rest_framework.response import Response
 from rest_framework.settings import api_settings
 
@@ -43,10 +42,11 @@ from ..decorators import check_has_credentials
 from ..docs import OpenAPIResponse, no_body, swagger_auto_schema
 from ..helpers import full_name_natural_split
 from ..mixins import ContactMixin, UserMixin
-from ..models import Contact, Credentials, Notification
+from ..models import Contact, Credentials, Notification, OTPGenerator
 from ..serializers_overrides import UserSerializer, UserDetailSerializer
-from ..serializers import (PasswordChangeSerializer, NotificationsSerializer,
-    UploadBlobSerializer, UserCreateSerializer, ValidationErrorSerializer)
+from ..serializers import (OTPSerializer, OTPUpdateSerializer,
+    PasswordChangeSerializer, NotificationsSerializer, UploadBlobSerializer,
+    UserCreateSerializer, ValidationErrorSerializer)
 from ..utils import generate_random_code, get_picture_storage, handle_uniq_error
 
 
@@ -79,7 +79,7 @@ def get_order_func(fields):
         get_order_func(fields[1:])(left, right))
 
 
-class UserActivateAPIView(ContactMixin, GenericAPIView):
+class UserActivateAPIView(ContactMixin, generics.GenericAPIView):
     """
     Sends an activation link
 
@@ -129,7 +129,7 @@ class UserActivateAPIView(ContactMixin, GenericAPIView):
         return Response(resp_data)
 
 
-class UserDetailAPIView(UserMixin, RetrieveUpdateDestroyAPIView):
+class UserDetailAPIView(UserMixin, generics.RetrieveUpdateDestroyAPIView):
     """
     Retrieves a user account
 
@@ -390,44 +390,8 @@ class UserDetailAPIView(UserMixin, RetrieveUpdateDestroyAPIView):
         serializer._data.update({'detail': _("Profile updated.")})
 
 
-class UserListCreateAPIView(ListCreateAPIView):
-    """
-    Lists user accounts
+class UserListMixin(object):
 
-    Returns a list of {{PAGE_SIZE}} profile and user accounts.
-
-    The queryset can be filtered for at least one field to match a search
-    term (``q``).
-
-    The queryset can be ordered by a field by adding an HTTP query parameter
-    ``o=`` followed by the field name. A sequence of fields can be used
-    to create a complete ordering by adding a sequence of ``o`` HTTP query
-    parameters. To reverse the natural order of a field, prefix the field
-    name by a minus (-) sign.
-
-    **Tags: profile, broker, usermodel
-
-    **Example
-
-    .. code-block:: http
-
-        GET /api/users?q=xia HTTP/1.1
-
-    responds
-
-    .. code-block:: json
-
-        {
-            "count": 1,
-            "next": null,
-            "previous": null,
-            "results": [{
-              "slug": "xia",
-              "username": "xia",
-              "printable_name": "Xia"
-            }]
-        }
-    """
     search_fields = (
         'email',
         # fields in User model:
@@ -445,50 +409,6 @@ class UserListCreateAPIView(ListCreateAPIView):
     serializer_class = UserSerializer
     queryset = Contact.objects.all().select_related('user')
     user_queryset = get_user_model().objects.filter(is_active=True)
-
-    def get_serializer_class(self):
-        if self.request.method.lower() == 'post':
-            return UserCreateSerializer
-        return super(UserListCreateAPIView, self).get_serializer_class()
-
-    @swagger_auto_schema(responses={
-        201: OpenAPIResponse("success", UserDetailSerializer),
-        400: OpenAPIResponse("parameters error", ValidationErrorSerializer)})
-    def post(self, request, *args, **kwargs):
-        """
-        Creates a user account
-
-        **Tags: profile, broker, usermodel
-
-        **Examples
-
-        .. code-block:: http
-
-            POST /api/users HTTP/1.1
-
-        .. code-block:: json
-
-            {
-              "full_name": "Xia Lee",
-              "nick_name": "Xia",
-              "email": "xia@locahost.localdomain"
-            }
-
-        responds
-
-        .. code-block:: json
-
-            {
-              "slug": "xia",
-              "username": "xia",
-              "created_at": "2018-01-01T00:00:00Z",
-              "printable_name": "Xia",
-              "full_name": "Xia Lee",
-              "nick_name": "Xia",
-              "email": "xia@locahost.localdomain"
-            }
-        """
-        return self.create(request, *args, **kwargs)
 
     def as_user(self, contact):
         user_model = self.user_queryset.model
@@ -577,7 +497,91 @@ class UserListCreateAPIView(ListCreateAPIView):
         serializer = self.get_serializer(page, many=True)
         return self.get_paginated_response(serializer.data)
 
+
+class UserListCreateAPIView(UserListMixin, generics.ListCreateAPIView):
+    """
+    Lists user accounts
+
+    Returns a list of {{PAGE_SIZE}} profile and user accounts.
+
+    The queryset can be filtered for at least one field to match a search
+    term (``q``).
+
+    The queryset can be ordered by a field by adding an HTTP query parameter
+    ``o=`` followed by the field name. A sequence of fields can be used
+    to create a complete ordering by adding a sequence of ``o`` HTTP query
+    parameters. To reverse the natural order of a field, prefix the field
+    name by a minus (-) sign.
+
+    **Tags: profile, broker, usermodel
+
+    **Example
+
+    .. code-block:: http
+
+        GET /api/users?q=xia HTTP/1.1
+
+    responds
+
+    .. code-block:: json
+
+        {
+            "count": 1,
+            "next": null,
+            "previous": null,
+            "results": [{
+              "slug": "xia",
+              "username": "xia",
+              "printable_name": "Xia"
+            }]
+        }
+    """
+    def get_serializer_class(self):
+        if self.request.method.lower() == 'post':
+            return UserCreateSerializer
+        return super(UserListCreateAPIView, self).get_serializer_class()
+
+    @swagger_auto_schema(responses={
+        201: OpenAPIResponse("success", UserDetailSerializer),
+        400: OpenAPIResponse("parameters error", ValidationErrorSerializer)})
+    def post(self, request, *args, **kwargs):
+        """
+        Creates a user account
+
+        **Tags: profile, broker, usermodel
+
+        **Examples
+
+        .. code-block:: http
+
+            POST /api/users HTTP/1.1
+
+        .. code-block:: json
+
+            {
+              "full_name": "Xia Lee",
+              "nick_name": "Xia",
+              "email": "xia@locahost.localdomain"
+            }
+
+        responds
+
+        .. code-block:: json
+
+            {
+              "slug": "xia",
+              "username": "xia",
+              "created_at": "2018-01-01T00:00:00Z",
+              "printable_name": "Xia",
+              "full_name": "Xia Lee",
+              "nick_name": "Xia",
+              "email": "xia@locahost.localdomain"
+            }
+        """
+        return self.create(request, *args, **kwargs)
+
     def create(self, request, *args, **kwargs):
+        #pylint:disable=too-many-locals
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -620,7 +624,116 @@ class UserListCreateAPIView(ListCreateAPIView):
             status=status.HTTP_201_CREATED, headers={'Location': location})
 
 
-class PasswordChangeAPIView(GenericAPIView):
+class ActivityByAccountContactAPIView(UserListMixin, generics.ListAPIView):
+    """
+    Lists contacts for activities on an account
+
+    Returns a list of {{PAGE_SIZE}} contacts for activities on {account}.
+
+    **Tags: profile, broker, usermodel
+
+    **Example
+
+    .. code-block:: http
+
+        GET /api/activities/xia/contacts HTTP/1.1
+
+    responds
+
+    .. code-block:: json
+
+        {
+            "count": 1,
+            "next": null,
+            "previous": null,
+            "results": [{
+              "slug": "xia",
+              "username": "xia",
+              "printable_name": "Xia"
+            }]
+        }
+    """
+    def get_queryset(self):
+        return Contact.objects.filter(activities__account__slug=self.kwargs.get(
+            self.account_url_kwarg)).select_related('user')
+
+
+class OTPChangeAPIView(UserMixin, generics.GenericAPIView):
+
+    serializer_class = OTPUpdateSerializer
+
+    def get_issuer_name(self):
+        return None
+
+    def get_queryset(self):
+        return OTPGenerator.objects.filter(user=self.user)
+
+    @swagger_auto_schema(responses={
+        200: OpenAPIResponse("success", OTPSerializer),
+        201: OpenAPIResponse("success", OTPSerializer),
+        400: OpenAPIResponse("parameters error", ValidationErrorSerializer)})
+    def put(self, request, *args, **kwargs):
+        """
+        Enables or disables OTP
+
+        The API is typically used within an HTML
+        `update password page </docs/guides/themes/#dashboard_users_password>`_
+        as present in the default theme.
+
+        **Tags: auth, user, usermodel
+
+        **Example
+
+        .. code-block:: http
+
+            POST /api/users/xia/otp HTTP/1.1
+
+        .. code-block:: json
+
+            {
+              "password": "yoyo",
+              "enable": true
+            }
+
+        responds
+
+        .. code-block:: json
+
+            {
+              "priv_key": "**********************",
+              "provisioning_uri": ""
+            }
+        """
+        #pylint:disable=unused-argument
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        password = serializer.validated_data['password']
+        if not self.request.user.check_password(password):
+            raise PermissionDenied(_("Incorrect credentials"))
+
+        if serializer.validated_data.get('enable'):
+            otp, created = OTPGenerator.objects.get_or_create(
+                user=self.user, defaults={
+                    'priv_key': pyotp.random_base32()
+                })
+
+            return Response(OTPSerializer().to_representation({
+                'priv_key': otp.priv_key,
+                'provisioning_uri': otp.provisioning_uri(
+                    issuer_name=self.get_issuer_name())
+            }), status=(status.HTTP_201_CREATED
+                if created else status.HTTP_200_OK))
+
+        try:
+            OTPGenerator.objects.get(user=self.user).delete()
+        except OTPGenerator.DoesNotExist:
+            pass
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class PasswordChangeAPIView(generics.GenericAPIView):
     """
     Updates a user password
     """
@@ -683,7 +796,7 @@ class PasswordChangeAPIView(GenericAPIView):
         return Response({'detail': _("Password updated successfully.")})
 
 
-class UserNotificationsAPIView(UserMixin, RetrieveUpdateAPIView):
+class UserNotificationsAPIView(UserMixin, generics.RetrieveUpdateAPIView):
     """
     Lists a user notifications preferences
 
@@ -789,7 +902,7 @@ class UserNotificationsAPIView(UserMixin, RetrieveUpdateAPIView):
                         self.user.notifications.add(notification)
 
 
-class UserPictureAPIView(ContactMixin, CreateAPIView):
+class UserPictureAPIView(ContactMixin, generics.CreateAPIView):
     """
     Uploads a picture for a user account
 

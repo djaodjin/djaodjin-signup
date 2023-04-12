@@ -223,9 +223,9 @@ def verify_token(token):
     return user
 
 
-def get_disabled_authentication(request):
+def get_disabled_authentication(request, user):
     if isinstance(settings.DISABLED_AUTHENTICATION, six.string_types):
-        return import_string(settings.DISABLED_AUTHENTICATION)(request)
+        return import_string(settings.DISABLED_AUTHENTICATION)(request, user)
     return bool(settings.DISABLED_AUTHENTICATION)
 
 
@@ -244,12 +244,6 @@ def get_email_dynamic_validator():
 def get_login_throttle():
     if isinstance(settings.LOGIN_THROTTLE, six.string_types):
         return import_string(settings.LOGIN_THROTTLE)
-    return None
-
-
-def get_password_reset_throttle():
-    if isinstance(settings.PASSWORD_RESET_THROTTLE, six.string_types):
-        return import_string(settings.PASSWORD_RESET_THROTTLE)
     return None
 
 

@@ -81,8 +81,8 @@ class SearchFilter(BaseSearchFilter):
     @staticmethod
     def filter_valid_fields(queryset, fields, view):
         #pylint:disable=protected-access
-        model_fields = set([
-            field.name for field in queryset.model._meta.get_fields()])
+        model_fields = {
+            field.name for field in queryset.model._meta.get_fields()}
         # We add all the fields that could be aliases then filter out the ones
         # which are not present in the model.
         alternate_fields = getattr(view, 'alternate_fields', {})
@@ -204,8 +204,8 @@ class OrderingFilter(BaseOrderingFilter):
             field.name for field in queryset.model._meta.get_fields()}
         base_fields = super(OrderingFilter, self).get_valid_fields(
             queryset, view, context=context if context else {})
-        valid_fields = tuple([
-            field for field in base_fields if field[0] in model_fields])
+        valid_fields = tuple(
+            field for field in base_fields if field[0] in model_fields)
         return valid_fields
 
     def get_ordering(self, request, queryset, view):

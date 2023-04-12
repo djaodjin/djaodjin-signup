@@ -30,8 +30,6 @@ Replacing default functions
 
 .. autodata:: signup.settings.LOGIN_THROTTLE
 
-.. autodata:: signup.settings.PASSWORD_RESET_THROTTLE
-
 .. autodata:: signup.settings.PICTURE_STORAGE_CALLABLE
 
 
