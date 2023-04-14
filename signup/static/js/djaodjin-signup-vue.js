@@ -357,6 +357,11 @@ Vue.component('user-update-password', {
             })
         },
     },
+    mounted: function() {
+        if( this.$el.dataset ) {
+            this.otpEnabled = !!this.$el.dataset.otpEnabled;
+        }
+    }
 });
 
 
