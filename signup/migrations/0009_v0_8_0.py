@@ -13,6 +13,31 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        migrations.RenameField(
+            model_name='credentials',
+            old_name='api_priv_key',
+            new_name='api_password',
+        ),
+        migrations.RenameField(
+            model_name='contact',
+            old_name='mfa_priv_key',
+            new_name='one_time_code',
+        ),
+        migrations.RenameField(
+            model_name='contact',
+            old_name='mfa_nb_attempts',
+            new_name='otc_nb_attempts',
+        ),
+        migrations.RenameField(
+            model_name='contact',
+            old_name='mfa_backend',
+            new_name='otc_backend',
+        ),
+        migrations.AlterField(
+            model_name='contact',
+            name='user',
+            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='contacts', to=settings.AUTH_USER_MODEL),
+        ),
         migrations.CreateModel(
             name='OTPGenerator',
             fields=[

@@ -37,7 +37,7 @@ from rest_framework import serializers
 
 from .. import settings
 from ..auth import validate_redirect
-from ..compat import gettext_lazy as _, is_authenticated, reverse
+from ..compat import gettext_lazy as _, reverse
 from ..forms import (ActivationForm, AuthenticationForm, FrictionlessSignupForm,
     MFACodeForm, PasswordAuthForm, RecoverForm)
 from ..helpers import has_invalid_password, update_context_urls

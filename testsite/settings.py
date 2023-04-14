@@ -27,6 +27,7 @@ ALLOWED_HOSTS = []
 APPEND_SLASH = False # Django will return a 500 error by default on
                      # `POST /login/.` though that's what bots would do.
 
+FERNET_KEYS = []
 SOCIAL_AUTH_SAML_ENABLED_IDPS = {}
 
 

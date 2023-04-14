@@ -1,4 +1,4 @@
-# Copyright (c) 2021, Djaodjin Inc.
+# Copyright (c) 2023, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -59,6 +59,7 @@ _SETTINGS = {
     'DISABLED_AUTHENTICATION': False,
     'DISABLED_REGISTRATION': False,
     'EMAIL_DYNAMIC_VALIDATOR': None,
+    'ENCRYPTED_FIELD': 'fernet_fields.EncryptedCharField',
     'EXTRA_FIELD': None,
     'EXTRA_MIXIN': object,
     'JWT_ALGORITHM': 'HS256',
@@ -110,6 +111,7 @@ DISABLED_REGISTRATION = _SETTINGS.get('DISABLED_REGISTRATION')
 #: when the email suspiciously looks like it belongs to a bot.
 EMAIL_DYNAMIC_VALIDATOR = _SETTINGS.get('EMAIL_DYNAMIC_VALIDATOR')
 
+ENCRYPTED_FIELD = _SETTINGS.get('ENCRYPTED_FIELD')
 EXTRA_FIELD = _SETTINGS.get('EXTRA_FIELD')
 EXTRA_MIXIN = _SETTINGS.get('EXTRA_MIXIN')
 JWT_SECRET_KEY = _SETTINGS.get('JWT_SECRET_KEY')

@@ -1,4 +1,4 @@
-# Copyright (c) 2019, Djaodjin Inc.
+# Copyright (c) 2023, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -31,14 +31,29 @@ from .. import signals
 from ..utils import generate_random_code
 
 
-class EmailMFABackend(object):
+class EmailOTCBackend(object):
     """
-    Backend to authenticate a user through either her username
-    or email address.
+    Backend to authenticate a user through a code sent to an email address.
     """
 
     def create_token(self, user, request=None):
-        user.mfa_priv_key = generate_random_code()
+        user.one_time_code = generate_random_code()
+        user.otc_backend = user.EMAIL_BACKEND
         user.save()
         signals.user_mfa_code.send(
-            sender=__name__, user=user, code=user.mfa_priv_key, request=request)
+            sender=__name__, user=user, code=user.one_time_code,
+            request=request)
+
+
+class PhoneOTCBackend(object):
+    """
+    Backend to authenticate a user through a code sent to a phone number.
+    """
+
+    def create_token(self, user, request=None):
+        user.one_time_code = generate_random_code()
+        user.otc_backend = user.PHONE_BACKEND
+        user.save()
+        signals.user_mfa_code.send(
+            sender=__name__, user=user, code=user.one_time_code,
+            request=request)

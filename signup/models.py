@@ -1,4 +1,4 @@
-# Copyright (c) 2022, Djaodjin Inc.
+# Copyright (c) 2023, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -43,7 +43,7 @@ from phonenumber_field.modelfields import PhoneNumberField
 from rest_framework.exceptions import ValidationError as DRFValidationError
 
 from . import settings, signals
-from .backends.mfa import EmailMFABackend
+from .backends.mfa import EmailOTCBackend, PhoneOTCBackend
 from .compat import (gettext_lazy as _, import_string,
     python_2_unicode_compatible, six)
 from .helpers import (datetime_or_now, full_name_natural_split,
@@ -63,6 +63,14 @@ def _get_extra_field_class():
     elif isinstance(extra_class, str):
         extra_class = import_string(extra_class)
     return extra_class
+
+def _get_encrypted_field_class():
+    encrypted_class = settings.ENCRYPTED_FIELD
+    if encrypted_class is None:
+        encrypted_class = models.CharField
+    elif isinstance(encrypted_class, str):
+        encrypted_class = import_string(encrypted_class)
+    return encrypted_class
 
 
 def domain_name_validator(value):
@@ -375,7 +383,6 @@ class ContactManager(models.Manager):
         # XXX The get() needs to be targeted at the write database in order
         # to avoid potential transaction consistency problems.
         contact = None
-        qs_kwargs = {}
         try:
             if user:
                 contact = self.get(phone=phone, user=user)
@@ -503,12 +510,14 @@ class Contact(models.Model):
     """
     Used in workflow to verify the email address of a ``User``.
     """
-    NO_MFA = 0
+    NO_OTC = 0
     EMAIL_BACKEND = 1
+    PHONE_BACKEND = 2
 
-    MFA_BACKEND_TYPE = (
-        (NO_MFA, "password only"),
+    OTC_BACKEND_TYPE = (
+        (NO_OTC, "send link instead of one-time code"),
         (EMAIL_BACKEND, "send one-time authentication code through email"),
+        (PHONE_BACKEND, "send one-time authentication code through phone"),
     )
 
     objects = ContactManager()
@@ -554,13 +563,13 @@ class Contact(models.Model):
          default=settings.LANGUAGE_CODE, max_length=8,
         help_text=_("Two-letter ISO 639 code for the preferred"\
         " communication language (ex: en)"))
-    mfa_backend = models.PositiveSmallIntegerField(
-        choices=MFA_BACKEND_TYPE, default=NO_MFA,
+    otc_backend = models.PositiveSmallIntegerField(
+        choices=OTC_BACKEND_TYPE, default=NO_OTC,
         help_text=_("Backend to use for multi-factor authentication"))
-    mfa_priv_key = models.IntegerField(
+    one_time_code = models.IntegerField(
         _("One-time authentication code"), null=True)
-    mfa_nb_attempts = models.IntegerField(
-        _("Number of attempts to pass the MFA code"), default=0)
+    otc_nb_attempts = models.IntegerField(
+        _("Number of attempts to pass the one-time code"), default=0)
     extra = _get_extra_field_class()(null=True,
         help_text=_("Extra meta data (can be stringify JSON)"))
 
@@ -579,17 +588,19 @@ class Contact(models.Model):
             return self.full_name
         return self.username
 
-    def get_mfa_backend(self):
-        if self.mfa_backend == self.EMAIL_BACKEND:
-            return EmailMFABackend()
+    def get_otc_backend(self):
+        if self.otc_backend == self.EMAIL_BACKEND:
+            return EmailOTCBackend()
+        if self.otc_backend == self.PHONE_BACKEND:
+            return PhoneOTCBackend()
         return None
 
-    def create_mfa_token(self):
-        return self.get_mfa_backend().create_token(self)
+    def create_otc_token(self):
+        return self.get_otc_backend().create_token(self)
 
-    def clear_mfa_token(self):
-        self.mfa_priv_key = None
-        self.mfa_nb_attempts = 0
+    def clear_otc_token(self):
+        self.one_time_code = None
+        self.otc_nb_attempts = 0
         self.save()
 
     def save(self, force_insert=False, force_update=False,
@@ -702,10 +713,10 @@ class Credentials(models.Model):
     API Credentials to authenticate a `User`.
     """
     API_PUB_KEY_LENGTH = 32
-    API_PRIV_KEY_LENGTH = 32
+    API_PASSWORD_LENGTH = 32
 
     api_pub_key = models.SlugField(unique=True, max_length=API_PUB_KEY_LENGTH)
-    api_priv_key = models.CharField(max_length=128)
+    api_password = models.CharField(max_length=128)
     user = models.OneToOneField(settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE, related_name='credentials')
     extra = _get_extra_field_class()(null=True)
@@ -713,21 +724,23 @@ class Credentials(models.Model):
     def __str__(self):
         return str(self.api_pub_key)
 
-    def set_priv_key(self, api_priv_key):
-        self.api_priv_key = make_password(api_priv_key)
-        self._api_priv_key = api_priv_key
+    def set_priv_key(self, api_password):
+        #pylint:disable=attribute-defined-outside-init
+        self.api_password = make_password(api_password)
+        self._api_password = api_password
 
-    def check_priv_key(self, raw_api_priv_key):
+    def check_priv_key(self, raw_api_password):
         """
-        Return a boolean of whether the raw api_priv_key was correct. Handles
+        Return a boolean of whether the raw api_password was correct. Handles
         hashing formats behind the scenes.
         """
-        def setter(raw_api_priv_key):
-            self.set_priv_key(raw_api_priv_key)
+        def setter(raw_api_password):
+            #pylint:disable=attribute-defined-outside-init
+            self.set_priv_key(raw_api_password)
             # Password hash upgrades shouldn't be considered password changes.
-            self._api_priv_key = None
-            self.save(update_fields=["api_priv_key"])
-        return check_password(raw_api_priv_key, self.api_priv_key, setter)
+            self._api_password = None
+            self.save(update_fields=["api_password"])
+        return check_password(raw_api_password, self.api_password, setter)
 
 
 class OTPGenerator(models.Model):
@@ -737,7 +750,7 @@ class OTPGenerator(models.Model):
 
     user = models.OneToOneField(settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE, related_name='otp')
-    priv_key = models.CharField(
+    priv_key = _get_encrypted_field_class()(
         _("Private key for the OTP generator"), max_length=40, null=True)
     nb_attempts = models.IntegerField(
         _("Number of attempts to pass the OTP code"), default=0)

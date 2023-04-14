@@ -1,4 +1,4 @@
-# Copyright (c) 2022, Djaodjin Inc.
+# Copyright (c) 2023, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -98,17 +98,17 @@ class ResetAPIKeysAPIView(UserMixin, GenericAPIView):
         api_pub_key = generate_random_slug(
             length=Credentials.API_PUB_KEY_LENGTH,
             allowed_chars=allowed_chars)
-        api_priv_key = generate_random_slug(
-            length=Credentials.API_PRIV_KEY_LENGTH,
+        api_password = generate_random_slug(
+            length=Credentials.API_PASSWORD_LENGTH,
             allowed_chars=allowed_chars)
         Credentials.objects.update_or_create(
             user=self.user,
             defaults={
                 'api_pub_key': api_pub_key,
-                'api_priv_key': make_password(api_priv_key)
+                'api_password': make_password(api_password)
             })
         return Response(APIKeysSerializer().to_representation({
-            'secret': api_pub_key + api_priv_key
+            'secret': api_pub_key + api_password
         }), status=status.HTTP_201_CREATED)
 
 

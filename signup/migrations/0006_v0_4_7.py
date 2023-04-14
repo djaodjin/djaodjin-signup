@@ -110,6 +110,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='notification',
             name='slug',
-            field=models.SlugField(help_text='Unique identifier shown in the URL bar', unique=True),
+            field=models.SlugField(choices=[], help_text='Unique identifier shown in the URL bar', unique=True),
         ),
     ]

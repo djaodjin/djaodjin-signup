@@ -310,12 +310,12 @@ class UserDetailAPIView(UserMixin, generics.RetrieveUpdateDestroyAPIView):
                     contact.phone_verification_key = None
                     contact.phone_verification_at = None
                     contact.phone_verified_at = None
-                    contact.mfa_priv_key = None
+                    contact.one_time_code = None
                 Contact.objects.bulk_update(contacts, [
                     'email', 'phone', 'full_name', 'nick_name', 'picture',
                     'email_verification_key', 'email_verification_at',
                     'email_verified_at', 'phone_verification_key',
-                    'phone_verification_at', 'mfa_priv_key'])
+                    'phone_verification_at', 'one_time_code'])
             if user.pk:
                 self.delete_records(user)
                 requires_logout = (self.request.user == user)

@@ -65,7 +65,7 @@
       "user": 3,
       "slug": "steve",
       "email": "steve@localhost.localdomain",
-      "mfa_backend": 1
+      "otc_backend": 1
     },
     "model": "signup.Contact", "pk": 3
 },
