@@ -42,6 +42,7 @@ REQUIRE_RECAPTCHA
    Requires to answer a recaptcha in registration
 """
 
+import django
 from django.conf import settings
 
 _SETTINGS = {
@@ -59,7 +60,9 @@ _SETTINGS = {
     'DISABLED_AUTHENTICATION': False,
     'DISABLED_REGISTRATION': False,
     'EMAIL_DYNAMIC_VALIDATOR': None,
-    'ENCRYPTED_FIELD': 'fernet_fields.EncryptedCharField',
+    'ENCRYPTED_FIELD': (
+        # django-fernet==0.6 is not compatible with Django4+ (``force_text``)
+        'fernet_fields.EncryptedCharField' if django.VERSION[0] < 4 else None),
     'EXTRA_FIELD': None,
     'EXTRA_MIXIN': object,
     'JWT_ALGORITHM': 'HS256',

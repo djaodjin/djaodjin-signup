@@ -17,6 +17,7 @@ Welcome to djaodjin-signup's documentation!
    mfa
    testcases
    extensions
+   quirks
 
 
 Indices and tables
