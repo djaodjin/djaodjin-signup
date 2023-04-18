@@ -1,0 +1,68 @@
+# This pyproject.toml seems to work to build a new package
+# when `setuptools==67.6.1` is installed.
+[project]
+name = "djaodjin-signup"
+dynamic = ["version"]
+description = "Django app for user authentication"
+readme = "README.md"
+requires-python = ">=3.7"
+license =  {text = "BSD-2-Clause"}
+keywords = ["signup", "authentication", "frictionless", "2fa", "mfa",
+  "otp", "oauth", "saml"]
+authors = [
+  {name = "The DjaoDjin Team", email = "help@djaodjin.com"}
+]
+maintainers = [
+  {name = "The DjaoDjin Team", email = "help@djaodjin.com"}
+]
+classifiers = [
+  "Framework :: Django",
+  "Environment :: Web Environment",
+  "Programming Language :: Python",
+  "License :: OSI Approved :: BSD License"
+]
+dependencies = [
+  "boto3>=1.4.4",
+  "Django>=1.11",
+  "django-fernet-fields>=0.6",
+  "django-phonenumber-field>=2.4.0",
+  "django-recaptcha>=2.0",
+  "djangorestframework>=3.9",
+  "phonenumbers>=8.12.6",
+  "PyJWT>=1.6.1",
+  "pyotp>=2.8.0",
+  "python-dateutil>=2.2",
+  "python3-saml>=1.2.1", # This will require transitively to install native
+                         # package xmlsec1-devel and xmlsec1-openssl.
+  "social-auth-app-django>=4.0.0", # v1.2.0 does not support Django>=2.1
+  "social-auth-core>=4.2.0",       # before 4.2.0 `AzureADOAuth2` is not
+                                   # picking up email correctly.
+]
+
+[project.optional-dependencies]
+ldap = [
+  "python-ldap>=3.2.0"
+]
+
+[project.urls]
+repository = "https://github.com/djaodjin/djaodjin-signup"
+documentation = "https://djaodjin-signup.readthedocs.io/"
+changelog = "https://github.com/djaodjin/djaodjin-signup/changelog"
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["signup*"]
+
+[tool.setuptools.package-data]
+signup = [
+  'templates/accounts/*.html',
+  'templates/notification/*.eml',
+  'templates/users/*.html',
+  'static/js/*.js'
+]
+
+[tool.setuptools.dynamic]
+version = {attr = "signup.__version__"}

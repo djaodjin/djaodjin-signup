@@ -21,42 +21,6 @@
 # WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+from setuptools import setup
 
-from distutils.core import setup
-
-import signup
-
-requirements = []
-with open('./requirements.txt') as requirements_txt:
-    for line in requirements_txt:
-        prerequisite = line.split('#')[0].strip()
-        if prerequisite:
-            requirements += [prerequisite]
-
-setup(
-    name='djaodjin-signup',
-    version=signup.__version__,
-    author='The DjaoDjin Team',
-    author_email='support@djaodjin.com',
-    install_requires=requirements,
-    packages=['signup',
-              'signup.api',
-              'signup.backends',
-              'signup.migrations',
-              'signup.views',
-              'signup.urls',
-              'signup.urls.api',
-              'signup.urls.views',
-              ],
-    package_data={'signup': ['templates/accounts/*.html',
-                             'templates/notification/*.eml',
-                             'templates/users/*.html',
-                             'static/js/*.js']},
-    url='https://github.com/djaodjin/djaodjin-signup/',
-    download_url='https://github.com/djaodjin/djaodjin-signup/tarball/%s' \
-        % signup.__version__,
-    license='BSD',
-    description="DjaoDjin's Implementation of Frictionless Sign Up",
-    long_description_content_type='text/markdown',
-    long_description=open('README.md').read(),
-)
+setup()

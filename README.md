@@ -11,12 +11,6 @@ If during the first login and/or subsequent login, the email address should
 be verified before moving forward (ex: before presenting a payment view),
 you should decorate the view with an *active_required* decorator.
 
-Tested with
-
-- **Python:** 3.7, **Django:** 3.2 ([LTS](https://www.djangoproject.com/download/)), **Django Rest Framework:** 3.12
-- **Python:** 3.10, **Django:** 4.0 (latest), **Django Rest Framework:** 3.12 - see [#55](https://github.com/djaodjin/djaodjin-signup/issues/55)
-- **Python:** 2.7, **Django:** 1.11 (legacy), **Django Rest Framework:** 3.9.4
-
 This project contains bare bone templates which are compatible with Django
 and Jinja2 template engines. To see djaodjin-signup in action as part
 of a full-fledged subscription-based session proxy, take a look
@@ -69,6 +63,12 @@ run the testsite webapp.
 
 Release Notes
 =============
+
+Tested with
+
+- **Python:** 3.7, **Django:** 3.2 ([LTS](https://www.djangoproject.com/download/)), **Django Rest Framework:** 3.12
+- **Python:** 3.10, **Django:** 4.2 (latest) - see [#55](https://github.com/djaodjin/djaodjin-signup/issues/55)
+- **Python:** 2.7, **Django:** 1.11 (legacy) - use testsite/requirements-legacy.txt
 
 0.7.7
 
