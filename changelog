@@ -1,3 +1,11 @@
+0.8.0
+
+  * publishes distribution using pyproject.toml
+  * enables/disables OTP 2FA through user profile
+  * moves API keys to their own page
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Fri, 21 Apr 2023 09:40:00 -0700
+
 0.7.7
 
   * fixes showing notification summary/description on users notifications page

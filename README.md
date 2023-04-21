@@ -70,8 +70,10 @@ Tested with
 - **Python:** 3.10, **Django:** 4.2 (latest) - see [#55](https://github.com/djaodjin/djaodjin-signup/issues/55)
 - **Python:** 2.7, **Django:** 1.11 (legacy) - use testsite/requirements-legacy.txt
 
-0.7.7
+0.8.0
 
-  * fixes showing notification summary/description on users notifications page
+  * publishes distribution using pyproject.toml
+  * enables/disables OTP 2FA through user profile
+  * moves API keys to their own page
 
 [previous release notes](changelog)
