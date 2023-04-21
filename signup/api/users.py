@@ -701,7 +701,7 @@ class OTPChangeAPIView(UserMixin, generics.GenericAPIView):
 
             {
               "priv_key": "**********************",
-              "provisioning_uri": ""
+              "provisioning_uri": "https://localhost:8020/"
             }
         """
         #pylint:disable=unused-argument

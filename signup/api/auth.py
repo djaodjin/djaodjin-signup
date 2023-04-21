@@ -166,10 +166,10 @@ class JWTRegister(RegisterMixin, JWTBase):
     .. code-block:: json
 
         {
-          "username": "joe1",
-          "password": "yoyo",
           "email": "joe+1@example.com",
-          "full_name": "Joe Card1"
+          "full_name": "Joe Card1",
+          "new_password": "yoyo",
+          "username": "joe1"
         }
 
     responds
@@ -275,6 +275,7 @@ class JWTActivate(VerifyCompleteMixin, JWTRegister):
 
             {
               "username": "joe1",
+              "email": "joe1@locahost.localdomain",
               "new_password": "yoyo",
               "full_name": "Joe Card1"
             }
