@@ -1,3 +1,9 @@
+0.8.1
+
+  * fixes regression handling auth URLs with extra characters
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Fri, 21 Apr 2023 15:42:00 -0700
+
 0.8.0
 
   * publishes distribution using pyproject.toml

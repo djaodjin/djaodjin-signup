@@ -193,7 +193,7 @@ class ActivatedUserManager(UserManager):
                     email, password=password, **kwargs)
             elif phone:
                 user = self.create_user_from_phone(
-                    phone, password=password, **kwargs)
+                    phone, password=password, email=email, **kwargs)
             else:
                 raise ValueError("email or phone must be set.")
             if email:

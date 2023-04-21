@@ -70,6 +70,10 @@ Tested with
 - **Python:** 3.10, **Django:** 4.2 (latest) - see [#55](https://github.com/djaodjin/djaodjin-signup/issues/55)
 - **Python:** 2.7, **Django:** 1.11 (legacy) - use testsite/requirements-legacy.txt
 
+0.8.1
+
+  * fixes regression handling auth URLs with extra characters
+
 0.8.0
 
   * publishes distribution using pyproject.toml

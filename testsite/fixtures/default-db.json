@@ -71,6 +71,13 @@
 },
 {
     "fields": {
+      "user": 3,
+      "priv_key": "abc123"
+    },
+    "model": "signup.OTPGenerator", "pk": 3
+},
+{
+    "fields": {
       "created_at": "2020-01-01T00:00:00-09:00",
       "slug": "donny",
       "email": "donny@localhost.localdomain"

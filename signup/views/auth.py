@@ -33,7 +33,7 @@ from django.http import HttpResponseRedirect
 from django.views.decorators.cache import add_never_cache_headers
 from django.views.generic.base import TemplateResponseMixin, View
 from django.views.generic.edit import FormMixin, ProcessFormView
-from rest_framework import serializers
+from rest_framework import exceptions, serializers
 
 from .. import settings
 from ..auth import validate_redirect
@@ -43,7 +43,7 @@ from ..forms import (ActivationForm, AuthenticationForm, FrictionlessSignupForm,
 from ..helpers import has_invalid_password, update_context_urls
 from ..mixins import (LoginMixin, RegisterMixin,  VerifyMixin,
     VerifyCompleteMixin, AuthDisabled, OTPRequired, PasswordRequired,
-    VerifyRequired, SSORequired, RegistrationDisabled, IncorrectUser)
+    VerifyRequired, SSORequired, RegistrationDisabled)
 from ..models import Contact
 from ..utils import fill_form_errors, get_disabled_registration
 
@@ -231,14 +231,6 @@ class ActivationView(VerifyCompleteMixin, AuthResponseMixin, View):
             return FrictionlessSignupForm
         return super(ActivationView, self).get_form_class()
 
-    def get_form_kwargs(self):
-        kwargs = super(ActivationView, self).get_form_kwargs()
-        if self.request.method.upper() in ('GET',):
-            kwargs.update({
-                'data': self.get_initial(),
-                })
-        return kwargs
-
     def dispatch(self, request, *args, **kwargs):
         # We put the code inline instead of using method_decorator() otherwise
         # kwargs is interpreted as parameters in sensitive_post_parameters.
@@ -261,17 +253,10 @@ class ActivationView(VerifyCompleteMixin, AuthResponseMixin, View):
                 " just login. Thank you.")})
             return self.render_to_response(context, status=status_code)
 
-        if self.is_user_active:
-            # We have an active user, so we are login them in directly.
-            pass
         try:
             self.run_pipeline()
+            # We have an active user, so we are login them in directly.
             return HttpResponseRedirect(self.get_success_url())
-        except serializers.ValidationError as err:
-            pass
-        except IncorrectUser as err:
-            # Force registration
-            pass
         except SSORequired as err:
             form = self.get_form()
             context = self.get_context_data(form=form)
@@ -283,6 +268,11 @@ class ActivationView(VerifyCompleteMixin, AuthResponseMixin, View):
             context = {'disabled_authentication': True}
         except RegistrationDisabled:
             context = {'disabled_registration': True}
+        except serializers.ValidationError as err:
+            pass
+        except exceptions.AuthenticationFailed as err:
+            # Force registration
+            pass
 
         if not context:
             context = self.get_context_data(form=self.get_form())
@@ -366,13 +356,6 @@ class SigninView(LoginMixin, AuthResponseMixin, ProcessFormView):
             fill_form_errors(form, err)
             context = self.get_context_data(form=form)
             context.update({'email_verification_link': True})
-        except IncorrectUser as err:
-            form = self.get_form()
-            fill_form_errors(form, err)
-            context = self.get_context_data(form=form)
-            disabled_registration = get_disabled_registration(self.request)
-            context.update({'register_link': (reverse('registration_register')
-                if not disabled_registration else None),})
         except SSORequired as err:
             form = self.get_form()
             context = self.get_context_data(form=form)
@@ -391,6 +374,13 @@ class SigninView(LoginMixin, AuthResponseMixin, ProcessFormView):
             context = self.get_context_data(form=form)
         except AuthDisabled:
             context = {'disabled_authentication': True}
+        except exceptions.AuthenticationFailed as err:
+            form = self.get_form()
+            fill_form_errors(form, err)
+            context = self.get_context_data(form=form)
+            disabled_registration = get_disabled_registration(self.request)
+            context.update({'register_link': (reverse('registration_register')
+                if not disabled_registration else None),})
 
         if not context:
             context = self.get_context_data()
