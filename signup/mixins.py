@@ -293,8 +293,8 @@ class AuthMixin(object):
         LOGGER.debug("[run_pipeline] cleaned_data=%s", str(cleaned_data))
         # Login, Verify: Find candidate User or Contact
         user, email = self.find_candidate(**cleaned_data)
-        LOGGER.debug("[run_pipeline] found_candidate user=%s, email=%s" % (
-            user, email))
+        LOGGER.debug("[run_pipeline] found_candidate user=%s, email=%s",
+            user, email)
         # Login, Verify: Check if auth is disabled for User, or
         # auth disabled globally if we only have a Contact
         self.auth_check_disabled(user)

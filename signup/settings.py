@@ -69,7 +69,7 @@ _SETTINGS = {
     'JWT_SECRET_KEY': getattr(settings, 'SECRET_KEY'),
     'LDAP': {
         'SERVER_URI': None,
-        'USER_SERCH_DN': None
+        'USER_SEARCH_DN': None
     },
     'LOGIN_THROTTLE': None,
     'LOGOUT_CLEAR_COOKIES' : None,
@@ -121,7 +121,7 @@ JWT_SECRET_KEY = _SETTINGS.get('JWT_SECRET_KEY')
 JWT_ALGORITHM = _SETTINGS.get('JWT_ALGORITHM')
 KEY_EXPIRATION = _SETTINGS.get('ACCOUNT_ACTIVATION_DAYS')
 LDAP_SERVER_URI = _SETTINGS.get('LDAP', {}).get('SERVER_URI', None)
-LDAP_USER_SEARCH_DN = _SETTINGS.get('LDAP', {}).get('USER_SERCH_DN', None)
+LDAP_USER_SEARCH_DN = _SETTINGS.get('LDAP', {}).get('USER_SEARCH_DN', None)
 
 #: A callable function, which is passed a triplet (request, view, user), and
 #: that throttles the HTTP request when there are too many attempts for that

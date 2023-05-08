@@ -653,6 +653,8 @@ class ActivityByAccountContactAPIView(UserListMixin, generics.ListAPIView):
             }]
         }
     """
+    account_url_kwarg = 'profile'
+
     def get_queryset(self):
         return Contact.objects.filter(activities__account__slug=self.kwargs.get(
             self.account_url_kwarg)).select_related('user')
@@ -785,8 +787,14 @@ class PasswordChangeAPIView(generics.GenericAPIView):
         if not self.request.user.check_password(password):
             raise PermissionDenied(_("Incorrect credentials"))
         if new_password:
-            serializer.instance.set_password(new_password)
-            serializer.instance.save()
+            from signup.backends.auth_ldap import set_ldap_password
+            if (serializer.instance.backend ==
+                'signup.backends.auth_ldap.LDAPBackend'):
+                set_ldap_password(serializer.instance, new_password,
+                    bind_password=password)
+            else:
+                serializer.instance.set_password(new_password)
+                serializer.instance.save()
             # Updating the password logs out all other sessions for the user
             # except the current one if
             # django.contrib.auth.middleware.SessionAuthenticationMiddleware
@@ -931,7 +939,7 @@ class UserPictureAPIView(ContactMixin, generics.CreateAPIView):
         #pylint:disable=unused-argument
         uploaded_file = request.data.get('file')
         if not uploaded_file:
-            return Response({'detail': "no location or file specified."},
+            return Response({'detail': _("no location or file specified.")},
                 status=status.HTTP_400_BAD_REQUEST)
 
         # tentatively extract file extension.

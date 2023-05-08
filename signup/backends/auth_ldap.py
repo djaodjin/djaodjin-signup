@@ -37,7 +37,7 @@ AUTHENTICATION_BACKENDS = (
 """
 import logging
 
-import ldap  # pip install python-ldap==3.1.0
+import ldap  # pip install python-ldap>=3.1.0
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
 from django.utils.encoding import force_bytes
@@ -49,64 +49,49 @@ from ..compat import force_str
 LOGGER = logging.getLogger(__name__)
 
 
-class LDAPUser(object):
+# Implementation Note:
+# `django.db.models.fields.related_lookups.get_normalized_value` will check
+# our model is an instance of `django.db.models.Model` so we might as well
+# make it an instance of `AbstractBaseUser`.
+# That works until queries are built by the ORM...
 
-    def __init__(self, backend, db_user=None):
-        self.backend = backend
-        self._dbuser = db_user
+def _get_bind_dn(user):
+    return settings.LDAP_USER_SEARCH_DN % {'user': force_str(user)}
 
-    def __getattr__(self, name):
-        return getattr(self._dbuser, name)
 
-    def __str__(self):
-        return self._dbuser.__str__()
+def set_ldap_password(dbuser, raw_password, bind_password=None):
+    bind_dn = _get_bind_dn(dbuser.username)
+    ldap_connection = ldap.initialize(
+        settings.LDAP_SERVER_URI, bytes_mode=False)
+    try:
+        ldap_connection.simple_bind_s(
+            force_str(bind_dn),
+            force_str(bind_password))
+        ldap_connection.passwd_s(
+            force_str(bind_dn),
+            oldpw=force_str(bind_password),
+            newpw=force_str(raw_password))
+    except ldap.LDAPError as err:
+        raise PermissionDenied(str(err))
+    finally:
+        ldap_connection.unbind_s()
 
-    def _get_pk_val(self, meta=None):
-        #pylint:disable=protected-access
-        return self._dbuser._get_pk_val(meta=meta)
 
-    def _set_pk_val(self, value):
-        #pylint:disable=protected-access
-        return self._dbuser._set_pk_val(value)
-
-    pk = property(_get_pk_val, _set_pk_val) #pylint:disable=invalid-name
-
-    @staticmethod
-    def _get_bind_dn(user):
-        return settings.LDAP_USER_SEARCH_DN % {'user': force_str(user)}
-
-    def set_password(self, raw_password, bind_password=None):
-        bind_dn = self._get_bind_dn(self._dbuser.username)
-        ldap_connection = ldap.initialize(
-            settings.LDAP_SERVER_URI, bytes_mode=False)
-        try:
-            ldap_connection.simple_bind_s(
-                force_str(bind_dn),
-                force_str(bind_password))
-            ldap_connection.passwd_s(
-                force_str(bind_dn),
-                oldpw=force_str(bind_password),
-                newpw=force_str(raw_password))
-        except ldap.LDAPError as err:
-            raise PermissionDenied(str(err))
-        finally:
-            ldap_connection.unbind_s()
-
-    def set_pubkey(self, pubkey, bind_password=None):
-        bind_dn = self._get_bind_dn(self._dbuser.username)
-        ldap_connection = ldap.initialize(
-            settings.LDAP_SERVER_URI, bytes_mode=False)
-        try:
-            ldap_connection.simple_bind_s(
-                force_str(bind_dn),
-                force_str(bind_password))
-            ldap_connection.modify_s(force_str(bind_dn),
-                [(ldap.MOD_REPLACE, 'sshPublicKey',
-                  [force_bytes(pubkey)])])
-        except ldap.LDAPError as err:
-            raise PermissionDenied(str(err))
-        finally:
-            ldap_connection.unbind_s()
+def set_ldap_pubkey(dbuser, pubkey, bind_password=None):
+    bind_dn = _get_bind_dn(dbuser.username)
+    ldap_connection = ldap.initialize(
+        settings.LDAP_SERVER_URI, bytes_mode=False)
+    try:
+        ldap_connection.simple_bind_s(
+            force_str(bind_dn),
+            force_str(bind_password))
+        ldap_connection.modify_s(force_str(bind_dn),
+            [(ldap.MOD_REPLACE, 'sshPublicKey',
+              [force_bytes(pubkey)])])
+    except ldap.LDAPError as err:
+        raise PermissionDenied(str(err))
+    finally:
+        ldap_connection.unbind_s()
 
 
 class LDAPBackend(object):
@@ -115,14 +100,10 @@ class LDAPBackend(object):
     """
     model = get_user_model()
 
-    @staticmethod
-    def _get_bind_dn(user):
-        return settings.LDAP_USER_SEARCH_DN % {'user': force_str(user)}
-
     def authenticate(self, request, username=None, password=None, **kwargs):
         #pylint:disable=unused-argument
         user = None
-        bind_dn = self._get_bind_dn(username)
+        bind_dn = _get_bind_dn(username)
         try:
             ldap_connection = ldap.initialize(
                 settings.LDAP_SERVER_URI, bytes_mode=False)
@@ -137,7 +118,7 @@ class LDAPBackend(object):
             })
             if created:
                 LOGGER.debug("created user '%s' in database.", username)
-            user = LDAPUser(self, db_user=db_user)
+            user = db_user
         except ldap.LDAPError:
             user = None
         finally:
@@ -147,6 +128,6 @@ class LDAPBackend(object):
 
     def get_user(self, user_id):
         try:
-            return LDAPUser(self, db_user=self.model.objects.get(pk=user_id))
+            return self.model.objects.get(pk=user_id)
         except self.model.DoesNotExist:
             return None

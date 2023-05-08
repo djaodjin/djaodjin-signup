@@ -154,12 +154,16 @@ class PublicKeyAPIView(UserMixin, GenericAPIView):
         if not request.user.check_password(password):
             raise PermissionDenied(_("Incorrect credentials"))
         try:
-            self.user.set_pubkey(serializer.validated_data['pubkey'],
-                bind_password=serializer.validated_data['password'])
-            LOGGER.info("%s updated pubkey for %s.",
-                self.request.user, self.user, extra={
-                'event': 'update-pubkey', 'request': self.request,
-                'modified': self.user.username})
+            from signup.backends.auth_ldap import set_ldap_pubkey
+            if (serializer.instance.backend ==
+                'signup.backends.auth_ldap.LDAPBackend'):
+                set_ldap_pubkey(self.user,
+                    serializer.validated_data['pubkey'],
+                    bind_password=serializer.validated_data['password'])
+                LOGGER.info("%s updated pubkey for %s.",
+                    self.request.user, self.user, extra={
+                    'event': 'update-pubkey', 'request': self.request,
+                    'modified': self.user.username})
         except AttributeError:
             raise ValidationError(
                 'Cannot store public key in the User model.')
