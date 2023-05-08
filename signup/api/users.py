@@ -784,8 +784,6 @@ class PasswordChangeAPIView(generics.GenericAPIView):
 
         password = serializer.validated_data['password']
         new_password = serializer.validated_data.get('new_password')
-        if not self.request.user.check_password(password):
-            raise PermissionDenied(_("Incorrect credentials"))
         if new_password:
             from signup.backends.auth_ldap import set_ldap_password
             if (serializer.instance.backend ==
@@ -793,6 +791,8 @@ class PasswordChangeAPIView(generics.GenericAPIView):
                 set_ldap_password(serializer.instance, new_password,
                     bind_password=password)
             else:
+                if not self.request.user.check_password(password):
+                    raise PermissionDenied(_("Incorrect credentials"))
                 serializer.instance.set_password(new_password)
                 serializer.instance.save()
             # Updating the password logs out all other sessions for the user
