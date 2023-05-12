@@ -232,9 +232,8 @@ class AuthMixin(object):
         # with an e-mail address, we cannot tell if we should
         # redirect to an SSO provider or not.
         if email:
-            domain = email.split('@')[-1]
             try:
-                delegate_auth = DelegateAuth.objects.get(domain=domain)
+                delegate_auth = DelegateAuth.objects.get_from_email(email)
                 raise SSORequired(delegate_auth)
             except DelegateAuth.DoesNotExist:
                 pass
@@ -305,6 +304,7 @@ class AuthMixin(object):
         self.check_sso_required(email)
         # Login: If login by verifying e-mail or phone, send code
         #        Else check password
+        #pylint:disable=assignment-from-none
         user_with_backend = self.check_password(user, **cleaned_data)
 
         # Login, Verify: If required, check 2FA
@@ -315,6 +315,7 @@ class AuthMixin(object):
         # Verify: If does not exist, create User from Contact
         # Register: Create User
         if not user_with_backend:
+            #pylint:disable=assignment-from-none
             user_with_backend = self.create_user(**cleaned_data)
         # Login, Verify, Register: Create session
         LOGGER.debug("[run_pipeline] create session for user_with_backend=%s",
@@ -366,6 +367,7 @@ class VerifyMixin(AuthMixin):
             email = user.email
         # send link through e-mail
         if email:
+            #pylint:disable=unused-variable
             contact, unused = Contact.objects.prepare_email_verification(
                 email, user=user)
             send_verification_email(contact, self.request, next_url=next_url)
@@ -386,6 +388,7 @@ class VerifyPhoneMixin(AuthMixin):
         phone = cleaned_data.get('phone')
         # send link through phone
         if phone:
+            #pylint:disable=unused-variable
             contact, unused = Contact.objects.prepare_phone_verification(
                 phone, user=user)
             send_verification_phone(contact, self.request, next_url=next_url)
@@ -512,7 +515,8 @@ class VerifyCompleteMixin(AuthMixin):
         if (self.request.method.lower() == 'get' and
             (not user or has_invalid_password(user))):
             raise IncorrectUser({'email': _("Not found.")})
-        return None
+        return super(VerifyCompleteMixin, self).check_password(
+            user, **cleaned_data)
 
     def create_user(self, **cleaned_data):
         verification_key = self.kwargs.get(self.key_url_kwarg)
@@ -615,6 +619,7 @@ class UserMixin(settings.EXTRA_MIXIN):
         return self._user
 
     def as_user(self, contact):
+        #pylint:disable=unused-variable
         first_name, unused, last_name = full_name_natural_split(
             contact.full_name)
         return self.queryset.model(username=contact.slug, email=contact.email,

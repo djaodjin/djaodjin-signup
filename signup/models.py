@@ -43,6 +43,7 @@ from phonenumber_field.modelfields import PhoneNumberField
 from rest_framework.exceptions import ValidationError as DRFValidationError
 
 from . import settings, signals
+from .backends.auth_ldap import is_ldap_user
 from .backends.mfa import EmailOTCBackend, PhoneOTCBackend
 from .compat import (gettext_lazy as _, import_string,
     python_2_unicode_compatible, six)
@@ -50,7 +51,6 @@ from .helpers import (datetime_or_now, full_name_natural_split,
     has_invalid_password)
 from .utils import generate_random_slug, handle_uniq_error
 from .validators import validate_phone
-
 
 LOGGER = logging.getLogger(__name__)
 EMAIL_VERIFICATION_RE = re.compile('^%s$' % settings.EMAIL_VERIFICATION_PAT)
@@ -128,7 +128,7 @@ class ActivatedUserManager(UserManager):
         raise err
 
     def create_user_from_phone(self, phone, password=None, **kwargs):
-        #pylint:disable=protected-access
+        #pylint:disable=protected-access,unused-argument
         field = self.model._meta.get_field('username')
         max_length = field.max_length
         prefix = 'user_'
@@ -768,12 +768,21 @@ class OTPGenerator(models.Model):
             name=self.user.email, issuer_name=issuer_name)
 
 
+class DelegateAuthManager(models.Manager):
+
+    def get_from_email(self, email):
+        domain = email.split('@')[-1]
+        return super(DelegateAuthManager, self).get(domain=domain)
+
+
 @python_2_unicode_compatible
 class DelegateAuth(models.Model):
     """
     Authentication for users with e-mail addresses in these domains must be
     delegated to a SSO provider.
     """
+    objects = DelegateAuthManager()
+
     domain = models.CharField(max_length=100, unique=True,
         validators=[domain_name_validator, RegexValidator(URLValidator.host_re,
             _("Enter a valid 'domain', ex: example.com"), 'invalid')],
@@ -785,6 +794,15 @@ class DelegateAuth(models.Model):
 
     def __str__(self):
         return "%s/%s" % (self.provider, self.domain)
+
+
+def get_disabled_email_update(user):
+    try:
+        DelegateAuth.objects.get_from_email(user.email)
+        return True
+    except DelegateAuth.DoesNotExist:
+        pass
+    return is_ldap_user(user)
 
 
 def get_user_contact(user):

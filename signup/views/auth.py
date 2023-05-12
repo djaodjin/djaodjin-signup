@@ -261,16 +261,16 @@ class ActivationView(VerifyCompleteMixin, AuthResponseMixin, View):
             form = self.get_form()
             context = self.get_context_data(form=form)
             context.update({'sso_required': err})
-        except OTPRequired as err:
+        except OTPRequired:
             form = self.get_mfa_form()
             context = self.get_context_data(form=form)
         except AuthDisabled:
             context = {'disabled_authentication': True}
         except RegistrationDisabled:
             context = {'disabled_registration': True}
-        except serializers.ValidationError as err:
+        except serializers.ValidationError:
             pass
-        except exceptions.AuthenticationFailed as err:
+        except exceptions.AuthenticationFailed:
             # Force registration
             pass
 
@@ -338,7 +338,7 @@ class SigninView(LoginMixin, AuthResponseMixin, ProcessFormView):
         if not 'password' in form_class.base_fields:
             form_class = self.password_form_class
             form = form_class(**self.get_form_kwargs())
-            form._errors = ErrorDict()
+            form._errors = ErrorDict() #pylint:disable=protected-access
         else:
             form = form_class(**self.get_form_kwargs())
         return form

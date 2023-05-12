@@ -272,6 +272,7 @@ class UserPublicKeyUpdateView(UserProfileView):
                 self.request.user, self.object, extra={
                 'event': 'update-pubkey', 'request': self.request,
                 'modified': self.object.username})
+            #pylint:disable=attribute-defined-outside-init
             self.object = self.user
         except AttributeError:
             form.add_error(None, "Cannot store public key in the User model.")

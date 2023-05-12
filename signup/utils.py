@@ -41,11 +41,6 @@ from .compat import gettext_lazy as _, import_string, six
 LOGGER = logging.getLogger(__name__)
 
 
-def get_accept_list(request):
-    http_accept = request.META.get('HTTP_ACCEPT', '*/*')
-    return [item.strip() for item in http_accept.split(',')]
-
-
 def generate_random_code():
     return int(generate_random_slug(6, allowed_chars="0123456789"))
 
@@ -107,6 +102,49 @@ def get_user_serializer():
     return import_string(settings.USER_SERIALIZER)
 
 
+def handle_uniq_error(err, renames=None):
+    """
+    Will raise a ``ValidationError`` with the appropriate error message.
+    """
+    field_name = None
+    err_msg = str(err).splitlines().pop()
+    # PostgreSQL unique constraint.
+    look = re.match(
+        r'DETAIL:\s+Key \(([a-z_]+)\)=\(.*\) already exists\.', err_msg)
+    if look:
+        field_name = look.group(1)
+    else:
+        look = re.match(
+          r'DETAIL:\s+Key \(lower\(([a-z_]+)::text\)\)=\(.*\) already exists\.',
+            err_msg)
+        if look:
+            field_name = look.group(1)
+        else:
+            # SQLite unique constraint.
+            look = re.match(
+                r'UNIQUE constraint failed: [a-z_]+\.([a-z_]+)', err_msg)
+            if look:
+                field_name = look.group(1)
+            else:
+                # On CentOS 7, installed sqlite 3.7.17
+                # returns differently-formatted error message.
+                look = re.match(
+                    r'column ([a-z_]+) is not unique', err_msg)
+                if look:
+                    field_name = look.group(1)
+    if field_name:
+        if renames and field_name in renames:
+            field_name = renames[field_name]
+        if field_name in ('email',):
+            # We treat these fields differently because translation of `this`
+            # is different depending on the `field_name`.
+            raise ValidationError({field_name:
+                _("This e-mail address is already taken.")})
+        raise ValidationError({field_name:
+            _("This %(field)s is already taken.") % {'field': field_name}})
+    raise err
+
+
 def printable_name(user):
     full_name = user.get_full_name()
     if full_name:
@@ -152,49 +190,6 @@ def fill_form_errors(form, err):
                 form.add_error(NON_FIELD_ERRORS,
                     _("No field '%(field)s': %(msg)s" % {
                     'field': field, 'msg': msg}))
-
-
-def handle_uniq_error(err, renames=None):
-    """
-    Will raise a ``ValidationError`` with the appropriate error message.
-    """
-    field_name = None
-    err_msg = str(err).splitlines().pop()
-    # PostgreSQL unique constraint.
-    look = re.match(
-        r'DETAIL:\s+Key \(([a-z_]+)\)=\(.*\) already exists\.', err_msg)
-    if look:
-        field_name = look.group(1)
-    else:
-        look = re.match(
-          r'DETAIL:\s+Key \(lower\(([a-z_]+)::text\)\)=\(.*\) already exists\.',
-            err_msg)
-        if look:
-            field_name = look.group(1)
-        else:
-            # SQLite unique constraint.
-            look = re.match(
-                r'UNIQUE constraint failed: [a-z_]+\.([a-z_]+)', err_msg)
-            if look:
-                field_name = look.group(1)
-            else:
-                # On CentOS 7, installed sqlite 3.7.17
-                # returns differently-formatted error message.
-                look = re.match(
-                    r'column ([a-z_]+) is not unique', err_msg)
-                if look:
-                    field_name = look.group(1)
-    if field_name:
-        if renames and field_name in renames:
-            field_name = renames[field_name]
-        if field_name in ('email',):
-            # We treat these fields differently because translation of `this`
-            # is different depending on the `field_name`.
-            raise ValidationError({field_name:
-                _("This e-mail address is already taken.")})
-        raise ValidationError({field_name:
-            _("This %(field)s is already taken.") % {'field': field_name}})
-    raise err
 
 
 def verify_token(token):

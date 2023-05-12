@@ -31,6 +31,7 @@ from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
 
+from ..backends.auth_ldap import is_ldap_user, set_ldap_pubkey
 from ..compat import gettext_lazy as _
 from ..docs import OpenAPIResponse, swagger_auto_schema
 from ..mixins import UserMixin
@@ -152,9 +153,7 @@ class PublicKeyAPIView(UserMixin, GenericAPIView):
         serializer.is_valid(raise_exception=True)
         password = serializer.validated_data.get('password')
         try:
-            from signup.backends.auth_ldap import set_ldap_pubkey
-            if (serializer.instance.backend ==
-                'signup.backends.auth_ldap.LDAPBackend'):
+            if is_ldap_user(self.user):
                 set_ldap_pubkey(self.user,
                     serializer.validated_data['pubkey'],
                     bind_password=password)

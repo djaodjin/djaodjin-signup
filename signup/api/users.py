@@ -36,13 +36,15 @@ from rest_framework.settings import api_settings
 
 
 from .. import filters, settings
+from ..backends.auth_ldap import is_ldap_user, set_ldap_password
 from ..compat import (force_str, gettext_lazy as _, reverse, six,
     urlparse, urlunparse)
 from ..decorators import check_has_credentials
 from ..docs import OpenAPIResponse, no_body, swagger_auto_schema
 from ..helpers import full_name_natural_split
 from ..mixins import ContactMixin, UserMixin
-from ..models import Contact, Credentials, Notification, OTPGenerator
+from ..models import (Contact, Credentials, Notification, OTPGenerator,
+    get_disabled_email_update)
 from ..serializers_overrides import UserSerializer, UserDetailSerializer
 from ..serializers import (OTPSerializer, OTPUpdateSerializer,
     PasswordChangeSerializer, NotificationsSerializer, UploadBlobSerializer,
@@ -355,10 +357,6 @@ class UserDetailAPIView(UserMixin, generics.RetrieveUpdateDestroyAPIView):
             serializer.validated_data.get('get_lang'))
         if lang:
             update_fields.update({'lang': lang})
-        for key in ('email',):
-            value = serializer.validated_data.get(key)
-            if value:
-                update_fields.update({key: value})
         with transaction.atomic():
             user = self.get_object()
             try:
@@ -375,9 +373,18 @@ class UserDetailAPIView(UserMixin, generics.RetrieveUpdateDestroyAPIView):
                             user.first_name = (
                                 first_name + " " + mid_name).strip()
                         user.last_name = last_name
-                    if serializer.validated_data.get('email'):
-                        user.email = serializer.validated_data.get('email')
+                    if get_disabled_email_update(user):
+                        serializer.validated_data.pop('email')
+                    else:
+                        email = serializer.validated_data.get('email')
+                        if email:
+                            user.email = email
                     user.save()
+                    update_fields.update({'email': user.email})
+                if 'email' not in update_fields:
+                    email = serializer.validated_data.get('email')
+                    if email:
+                        update_fields.update({'email': email})
                 Contact.objects.update_or_create(
                     slug=self.kwargs.get(self.lookup_url_kwarg),
                     defaults=update_fields)
@@ -412,6 +419,7 @@ class UserListMixin(object):
 
     def as_user(self, contact):
         user_model = self.user_queryset.model
+        #pylint:disable=unused-variable
         first_name, unused, last_name = full_name_natural_split(
             contact.full_name)
         return user_model(username=contact.slug, email=contact.email,
@@ -592,6 +600,7 @@ class UserListCreateAPIView(UserListMixin, generics.ListCreateAPIView):
             serializer.validated_data.get('get_full_name'))
         nick_name = serializer.validated_data.get('nick_name')
         if not nick_name:
+            #pylint:disable=unused-variable
             nick_name, unused1, unused2 = full_name_natural_split(
                 full_name, middle_initials=False)
         phone = serializer.validated_data.get('phone',
@@ -785,9 +794,7 @@ class PasswordChangeAPIView(generics.GenericAPIView):
         password = serializer.validated_data['password']
         new_password = serializer.validated_data.get('new_password')
         if new_password:
-            from signup.backends.auth_ldap import set_ldap_password
-            if (serializer.instance.backend ==
-                'signup.backends.auth_ldap.LDAPBackend'):
+            if is_ldap_user(serializer.instance):
                 set_ldap_password(serializer.instance, new_password,
                     bind_password=password)
             else:

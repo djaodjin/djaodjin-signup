@@ -1,4 +1,4 @@
-# Copyright (c) 2022, Djaodjin Inc.
+# Copyright (c) 2023, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -37,6 +37,7 @@ from phonenumber_field.formfields import PhoneNumberField
 from . import settings, validators
 from .compat import gettext_lazy as _, six
 from .helpers import full_name_natural_split
+from .models import get_disabled_email_update
 from .utils import get_recaptcha_form_field
 
 
@@ -344,6 +345,8 @@ class UserForm(forms.ModelForm):
     def __init__(self, instance=None, **kwargs):
         super(UserForm, self).__init__(instance=instance, **kwargs)
         if instance:
+            if get_disabled_email_update(instance):
+                self.fields['email'].disabled = True
             # define other fields dynamically
             self.fields['phone'] = PhoneField(required=False)
             lang_code = settings.LANGUAGE_CODE

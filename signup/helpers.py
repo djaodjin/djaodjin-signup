@@ -1,4 +1,4 @@
-# Copyright (c) 2020, DjaoDjin inc.
+# Copyright (c) 2023, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -27,7 +27,15 @@ import datetime
 from dateutil.parser import parse
 from django.utils.timezone import utc
 
+# Implementation Note: We cannot import `signup.settings` here otherwise
+# EXTRA_MIXIN is not setup properly (i.e. it uses the default one).
 from .compat import six
+
+def as_timestamp(dtime_at=None):
+    if not dtime_at:
+        dtime_at = datetime_or_now()
+    return int((
+        dtime_at - datetime.datetime(1970, 1, 1, tzinfo=utc)).total_seconds())
 
 
 def datetime_or_now(dtime_at=None):
@@ -38,13 +46,6 @@ def datetime_or_now(dtime_at=None):
     if dtime_at.tzinfo is None:
         dtime_at = dtime_at.replace(tzinfo=utc)
     return dtime_at
-
-
-def as_timestamp(dtime_at=None):
-    if not dtime_at:
-        dtime_at = datetime_or_now()
-    return int((
-        dtime_at - datetime.datetime(1970, 1, 1, tzinfo=utc)).total_seconds())
 
 
 def full_name_natural_split(full_name, middle_initials=True):
@@ -72,6 +73,11 @@ def full_name_natural_split(full_name, middle_initials=True):
     else:
         mid_name = " ".join(parts)
     return first_name, mid_name, last_name
+
+
+def get_accept_list(request):
+    http_accept = request.META.get('HTTP_ACCEPT', '*/*')
+    return [item.strip() for item in http_accept.split(',')]
 
 
 def has_invalid_password(user):

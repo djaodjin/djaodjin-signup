@@ -37,7 +37,7 @@ AUTHENTICATION_BACKENDS = (
 """
 import logging
 
-import ldap  # pip install python-ldap>=3.1.0
+from django.conf import settings as django_settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
 from django.utils.encoding import force_bytes
@@ -45,8 +45,12 @@ from django.utils.encoding import force_bytes
 from .. import settings
 from ..compat import force_str
 
-
 LOGGER = logging.getLogger(__name__)
+
+try:
+    import ldap  # pip install python-ldap>=3.1.0
+except ImportError:
+    LOGGER.warning("ldap module was not imported. LDAP login is disabled.")
 
 
 # Implementation Note:
@@ -57,6 +61,24 @@ LOGGER = logging.getLogger(__name__)
 
 def _get_bind_dn(user):
     return settings.LDAP_USER_SEARCH_DN % {'user': force_str(user)}
+
+
+def is_ldap_user(user):
+    found = False
+    if ('signup.backends.auth_ldap.LDAPBackend'
+        in django_settings.AUTHENTICATION_BACKENDS):
+        bind_dn = _get_bind_dn(user.username)
+        try:
+            ldap_connection = ldap.initialize(
+                settings.LDAP_SERVER_URI, bytes_mode=False)
+            resp = ldap_connection.search_s(
+                bind_dn, ldap.SCOPE_BASE) #pylint:disable=no-member
+            found = True
+        except ldap.LDAPError: #pylint:disable=no-member
+            found = False
+        finally:
+            ldap_connection.unbind_s()
+    return found
 
 
 def set_ldap_password(dbuser, raw_password, bind_password=None):
@@ -71,7 +93,7 @@ def set_ldap_password(dbuser, raw_password, bind_password=None):
             force_str(bind_dn),
             oldpw=force_str(bind_password),
             newpw=force_str(raw_password))
-    except ldap.LDAPError as err:
+    except ldap.LDAPError as err: #pylint:disable=no-member
         raise PermissionDenied(str(err))
     finally:
         ldap_connection.unbind_s()
@@ -86,9 +108,9 @@ def set_ldap_pubkey(dbuser, pubkey, bind_password=None):
             force_str(bind_dn),
             force_str(bind_password))
         ldap_connection.modify_s(force_str(bind_dn),
-            [(ldap.MOD_REPLACE, 'sshPublicKey',
+            [(ldap.MOD_REPLACE, 'sshPublicKey', #pylint:disable=no-member
               [force_bytes(pubkey)])])
-    except ldap.LDAPError as err:
+    except ldap.LDAPError as err:               #pylint:disable=no-member
         raise PermissionDenied(str(err))
     finally:
         ldap_connection.unbind_s()
@@ -110,7 +132,15 @@ class LDAPBackend(object):
             ldap_connection.simple_bind_s(
                 force_str(bind_dn), force_str(password))
 
-            defaults = {}
+            resp = ldap_connection.search_s(
+                bind_dn, ldap.SCOPE_BASE) #pylint:disable=no-member
+            defaults = {
+                'first_name': force_str(resp.get('sn', "")),
+                'last_name': force_str(resp.get('cn', "")),
+                'email': force_str(resp.get('mail', "")),
+                'password': "ldap" # prevent user from showing as inactive
+                                   # (see `has_invalid_password`).
+            }
             #pylint:disable=protected-access
             db_user, created = self.model._default_manager.get_or_create(**{
                 self.model.USERNAME_FIELD: username,
@@ -119,7 +149,7 @@ class LDAPBackend(object):
             if created:
                 LOGGER.debug("created user '%s' in database.", username)
             user = db_user
-        except ldap.LDAPError:
+        except ldap.LDAPError: #pylint:disable=no-member
             user = None
         finally:
             ldap_connection.unbind_s()
@@ -128,6 +158,8 @@ class LDAPBackend(object):
 
     def get_user(self, user_id):
         try:
-            return self.model.objects.get(pk=user_id)
+            user = self.model.objects.get(pk=user_id)
+            user.backend = 'signup.backends.auth_ldap.LDAPBackend'
+            return user
         except self.model.DoesNotExist:
             return None
