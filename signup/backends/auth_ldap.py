@@ -134,7 +134,7 @@ class LDAPBackend(object):
 
             resp = ldap_connection.search_s(
                 bind_dn, ldap.SCOPE_BASE) #pylint:disable=no-member
-            ldap_user = resp[0] if resp else {}
+            ldap_user = resp[0][1] if resp else {}
             defaults = {
                 'first_name': force_str(ldap_user.get('sn', "")),
                 'last_name': force_str(ldap_user.get('cn', "")),
