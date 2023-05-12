@@ -134,10 +134,11 @@ class LDAPBackend(object):
 
             resp = ldap_connection.search_s(
                 bind_dn, ldap.SCOPE_BASE) #pylint:disable=no-member
+            ldap_user = resp[0] if resp else {}
             defaults = {
-                'first_name': force_str(resp.get('sn', "")),
-                'last_name': force_str(resp.get('cn', "")),
-                'email': force_str(resp.get('mail', "")),
+                'first_name': force_str(ldap_user.get('sn', "")),
+                'last_name': force_str(ldap_user.get('cn', "")),
+                'email': force_str(ldap_user.get('mail', "")),
                 'password': "ldap" # prevent user from showing as inactive
                                    # (see `has_invalid_password`).
             }
@@ -159,7 +160,6 @@ class LDAPBackend(object):
     def get_user(self, user_id):
         try:
             user = self.model.objects.get(pk=user_id)
-            user.backend = 'signup.backends.auth_ldap.LDAPBackend'
             return user
         except self.model.DoesNotExist:
             return None
