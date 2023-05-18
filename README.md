@@ -70,14 +70,10 @@ Tested with
 - **Python:** 3.10, **Django:** 4.2 (latest) - see [#55](https://github.com/djaodjin/djaodjin-signup/issues/55)
 - **Python:** 2.7, **Django:** 1.11 (legacy) - use testsite/requirements-legacy.txt
 
-0.8.1
+0.8.2
 
-  * fixes regression handling auth URLs with extra characters
-
-0.8.0
-
-  * publishes distribution using pyproject.toml
-  * enables/disables OTP 2FA through user profile
-  * moves API keys to their own page
+  * disables update of e-mail for SSO workflows
+  * fixes 500 posting to incorrect /recover/ URL
+  * finds Signup model matching e-mail case insensitive and with user or not
 
 [previous release notes](changelog)
