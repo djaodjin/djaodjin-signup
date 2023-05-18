@@ -144,7 +144,10 @@ class AuthMixin(object):
                 extra =  look.group('extra')
                 if extra:
                     raise IncorrectPath(
-                        self.request.build_absolute_uri(expected_path))
+                        {'detail': (
+                         _("Incorrect path in URL. Expecting %(path)s") % {
+                        'path': self.request.build_absolute_uri(expected_path)}
+                    )})
         except AttributeError:
             pass # Django<=1.11 ResolverMatch does not have
                  # a route attribute.
@@ -217,7 +220,8 @@ class AuthMixin(object):
     def auth_check_disabled(self, user):
         auth_disabled = get_disabled_authentication(self.request, user)
         if auth_disabled:
-            raise AuthDisabled()
+            raise AuthDisabled(
+                {'detail': _("Authentication is disabled")})
 
     def check_user_throttles(self, request, user):
         """
@@ -426,7 +430,8 @@ class RegisterMixin(AuthMixin):
     def register_check_disabled(self):
         disabled_registration = get_disabled_registration(self.request)
         if disabled_registration:
-            raise RegistrationDisabled()
+            raise RegistrationDisabled(
+                {'detail': _("Registration is disabled")})
 
     def register_check_data(self, **cleaned_data):
         email = cleaned_data.get('email')

@@ -114,7 +114,8 @@ class RecoverView(VerifyMixin, AuthResponseMixin, View):
         try:
             self.run_pipeline()
             return HttpResponseRedirect(self.get_success_url())
-        except serializers.ValidationError as err:
+        except (serializers.ValidationError,
+                exceptions.AuthenticationFailed) as err:
             form = self.get_form()
             fill_form_errors(form, err)
             context = self.get_context_data(form=form)
