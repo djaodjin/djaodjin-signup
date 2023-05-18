@@ -322,9 +322,9 @@ class ContactManager(models.Manager):
         contact = None
         try:
             if user:
-                contact = self.get(email=email, user=user)
+                contact = self.get(email__iexact=email, user=user)
             else:
-                contact = self.get(email=email, user__isnull=True)
+                contact = self.get(email__iexact=email, user__isnull=True)
         except self.model.DoesNotExist:
             pass
         if not contact and user:

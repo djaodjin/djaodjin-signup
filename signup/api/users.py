@@ -610,7 +610,7 @@ class UserListCreateAPIView(UserListMixin, generics.ListCreateAPIView):
         with transaction.atomic():
             try:
                 user = user_model.objects.get(
-                    email=serializer.validated_data.get('email'))
+                    email__iexact=serializer.validated_data.get('email'))
             except user_model.DoesNotExist:
                 user = None
             try:

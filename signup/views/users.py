@@ -60,7 +60,8 @@ class UserProfileView(UserMixin, UpdateView):
     template_name = 'users/index.html'
 
     def form_valid(self, form):
-        contact = self.object.contacts.filter(email=self.object.email).first()
+        contact = self.object.contacts.filter(
+            email__iexact=self.object.email).first()
         if not contact:
             contact = self.object.contacts.order_by('pk').first()
         failed = False
@@ -145,7 +146,7 @@ class UserProfileView(UserMixin, UpdateView):
                         'api_user_activate', args=(self.object,)),
                 }})
             contact = context['user'].contacts.filter(
-                email=self.object.email).order_by('created_at').first()
+                email__iexact=self.object.email).order_by('created_at').first()
             if contact:
                 context.update({
                     'email_verified_at': contact.email_verified_at,
