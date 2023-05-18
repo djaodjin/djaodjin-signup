@@ -114,8 +114,7 @@ class RecoverView(VerifyMixin, AuthResponseMixin, View):
         try:
             self.run_pipeline()
             return HttpResponseRedirect(self.get_success_url())
-        except (serializers.ValidationError,
-                exceptions.AuthenticationFailed) as err:
+        except serializers.ValidationError as err:
             form = self.get_form()
             fill_form_errors(form, err)
             context = self.get_context_data(form=form)
@@ -129,7 +128,10 @@ class RecoverView(VerifyMixin, AuthResponseMixin, View):
             context = self.get_context_data(form=form)
         except AuthDisabled:
             context = {'disabled_authentication': True}
-
+        except exceptions.AuthenticationFailed as err:
+            form = self.get_form()
+            fill_form_errors(form, err)
+            context = self.get_context_data(form=form)
         if not context:
             context = self.get_context_data()
         return self.render_to_response(context)
