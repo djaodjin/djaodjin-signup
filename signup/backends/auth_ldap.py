@@ -126,6 +126,7 @@ class LDAPBackend(object):
         #pylint:disable=unused-argument
         user = None
         bind_dn = _get_bind_dn(username)
+        ldap_connection = None
         try:
             ldap_connection = ldap.initialize(
                 settings.LDAP_SERVER_URI, bytes_mode=False)
@@ -153,7 +154,8 @@ class LDAPBackend(object):
         except ldap.LDAPError: #pylint:disable=no-member
             user = None
         finally:
-            ldap_connection.unbind_s()
+            if ldap_connection:
+                ldap_connection.unbind_s()
 
         return user
 
