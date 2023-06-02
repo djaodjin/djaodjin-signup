@@ -444,13 +444,15 @@ class ContactManager(models.Manager):
         try:
             token = self.get_token(verification_key=verification_key)
             if token:
+                token_username = (
+                    token.user.username if token.user else token.slug)
                 LOGGER.info('active user %s through code: %s ...',
-                    token.user, verification_key,
-                    extra={'event': 'activate', 'username': token.user.username,
+                    token_username, verification_key,
+                    extra={'event': 'activate', 'username': token_username,
                         'verification_key': verification_key,
                         'email_verification_key': token.email_verification_key,
                         'phone_verification_key': token.phone_verification_key})
-                previously_inactive = has_invalid_password(token.user)
+                user_model = get_user_model()
                 with transaction.atomic():
                     if token.email_verification_key == verification_key:
                         token.email_verification_key = None
@@ -458,7 +460,16 @@ class ContactManager(models.Manager):
                     elif token.phone_verification_key == verification_key:
                         token.phone_verification_key = None
                         token.phone_verified_at = at_time
+                    if not token.user:
+                        try:
+                            token.user = user_model.objects.get(
+                                email__iexact=token.email)
+                        except user_model.DoesNotExist:
+                            token.user = user_model.objects.create_user(
+                                username, email=token.email,
+                                password=password)
                     token.save()
+                    previously_inactive = has_invalid_password(token.user)
                     needs_save = False
                     if full_name:
                         token.full_name = full_name
@@ -590,6 +601,9 @@ class Contact(models.Model):
         if self.full_name:
             return self.full_name
         return self.username
+
+    def get_full_name(self):
+        return self.full_name
 
     def get_otc_backend(self):
         if self.otc_backend == self.EMAIL_BACKEND:

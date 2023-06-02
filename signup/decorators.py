@@ -1,4 +1,4 @@
-# Copyright (c) 2022, Djaodjin Inc.
+# Copyright (c) 2023, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -30,7 +30,7 @@ from __future__ import unicode_literals
 from functools import wraps
 
 from django.contrib import messages
-from django.contrib.auth import (REDIRECT_FIELD_NAME, logout as auth_logout)
+from django.contrib.auth import REDIRECT_FIELD_NAME, logout as auth_logout
 from django.contrib.auth.views import redirect_to_login
 from django.core.exceptions import PermissionDenied
 
@@ -87,7 +87,7 @@ def send_verification_email(contact, request,
     if next_url:
         back_url += '?%s=%s' % (redirect_field_name, next_url)
     signals.user_verification.send(
-        sender=__name__, user=contact.user, request=request,
+        sender=__name__, user=contact, request=request,
         back_url=back_url, expiration_days=settings.KEY_EXPIRATION)
 
 
@@ -106,8 +106,8 @@ def send_verification_phone(contact, request,
         args=(contact.phone_verification_key,)))
     if next_url:
         back_url += '?%s=%s' % (redirect_field_name, next_url)
-    signals.user_verification.send(
-        sender=__name__, user=contact.user, request=request,
+    signals.user_phone_verification.send(
+        sender=__name__, user=contact, request=request,
         back_url=back_url, expiration_days=settings.KEY_EXPIRATION)
 
 

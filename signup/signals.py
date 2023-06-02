@@ -38,6 +38,9 @@ user_activated = Signal(
 user_verification = Signal(
 #    providing_args=['user', 'request', 'back_url', 'expiration_days']
 )
+user_phone_verification = Signal(
+#    providing_args=['user', 'request', 'back_url', 'expiration_days']
+)
 user_reset_password = Signal(
 #    providing_args=['user', 'request', 'back_url', 'expiration_days']
 )

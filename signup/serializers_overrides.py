@@ -122,18 +122,26 @@ class UserSerializer(serializers.ModelSerializer):
             printable_name = obj.nick_name
         if printable_name:
             return printable_name
-        opk = obj.pk if hasattr(obj, 'pk') else None
-        if opk:
-            contact = obj.contacts.filter(nick_name__isnull=False).order_by(
-                'created_at').first()
-            if contact:
-                printable_name = contact.nick_name
+        if hasattr(obj, 'full_name'):
+            printable_name = obj.full_name
         if printable_name:
             return printable_name
-        printable_name = obj.get_full_name()
-        if printable_name:
-            return printable_name
-        return obj.username
+        if isinstance(obj, get_user_model()):
+            opk = obj.pk if hasattr(obj, 'pk') else None
+            if opk:
+                contact = obj.contacts.filter(nick_name__isnull=False).order_by(
+                    'created_at').first()
+                if contact:
+                    printable_name = contact.nick_name
+            if printable_name:
+                return printable_name
+            printable_name = obj.get_full_name()
+            if printable_name:
+                return printable_name
+            return obj.username
+        if hasattr(obj, 'slug'):
+            printable_name = obj.slug
+        return printable_name
 
 
 class UserDetailSerializer(UserSerializer):
@@ -186,4 +194,7 @@ class UserDetailSerializer(UserSerializer):
 
     @staticmethod
     def get_credentials(obj):
-        return hasattr(obj, 'pk') and (not has_invalid_password(obj))
+        return ((isinstance(obj, get_user_model()) and
+            hasattr(obj, 'pk') and (not has_invalid_password(obj))) or
+            hasattr(obj, 'user') and obj.user and
+                (not has_invalid_password(obj.user)))

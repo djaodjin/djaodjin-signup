@@ -191,6 +191,24 @@
 },
 {
     "fields": {
+      "slug": "contact-no-user",
+      "created_at": "2023-01-10T00:00:00-00:00",
+      "email": "contact-no-user@locahost.localdomain",
+      "phone": "+14155555555"
+    },
+    "model": "signup.Contact", "pk": 9
+},
+{
+    "fields": {
+      "slug": "contact-bot-email",
+      "created_at": "2023-01-10T00:00:00-00:00",
+      "email": "contact.bot.email@locahost.localdomain",
+      "email_verification_key": "16793aa72a4c7ae94b50b20c2eca52df5b0fe277"
+    },
+    "model": "signup.Contact", "pk": 10
+},
+{
+    "fields": {
       "date_joined": "2022-01-01T00:00:00+00:00",
       "email": "xia+15@localhost.localdomain",
       "first_name": "Xia15",
