@@ -41,11 +41,6 @@ from .models import get_disabled_email_update
 from .utils import get_recaptcha_form_field
 
 
-class EmailField(forms.EmailField):
-
-    default_validators = [validators.validate_email]
-
-
 class PhoneField(PhoneNumberField):
 
     def __init__(self, *args, **kwargs):
@@ -92,7 +87,7 @@ class FrictionlessSignupForm(forms.Form):
     a full name and a way to notify user (email or phone) and you are in.
     We will ask for username and password later.
     """
-    email = EmailField(label=_("E-mail address"), required=False,
+    email = forms.EmailField(label=_("E-mail address"), required=False,
         widget=forms.TextInput(attrs={'placeholder': _("E-mail")}))
     phone = PhoneField(required=False)
     full_name = forms.RegexField(
@@ -269,7 +264,7 @@ class ActivationForm(PasswordConfirmMixin, forms.Form):
         " do not match."),
     }
 
-    email = EmailField(label=_("E-mail address"), required=False)
+    email = forms.EmailField(label=_("E-mail address"), required=False)
     phone = PhoneField(label=_("Phone number"), required=False)
     full_name = forms.RegexField(
         regex=r'^[\w\s]+$', max_length=60,

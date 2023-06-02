@@ -42,7 +42,7 @@ from django.contrib.auth.hashers import check_password, make_password
 from phonenumber_field.modelfields import PhoneNumberField
 from rest_framework.exceptions import ValidationError as DRFValidationError
 
-from . import settings, signals
+from . import settings
 from .backends.auth_ldap import is_ldap_user
 from .backends.mfa import EmailOTCBackend, PhoneOTCBackend
 from .compat import (gettext_lazy as _, import_string,
@@ -227,12 +227,6 @@ class ActivatedUserManager(UserManager):
                     user=user, email=email, lang=lang, extra=extra)
             user.is_active = True
             user.save()
-            LOGGER.info("'%s <%s>' registered with username '%s'%s%s",
-                user.get_full_name(), user.email, user,
-                (" and phone %s" % str(phone)) if phone else "",
-                (" and preferred language %s" % str(lang)) if lang else "",
-                extra={'event': 'register', 'user': user})
-            signals.user_registered.send(sender=__name__, user=user)
         return user
 
     def find_user(self, username):

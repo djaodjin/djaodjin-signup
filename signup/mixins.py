@@ -472,6 +472,14 @@ class RegisterMixin(AuthMixin):
             email=email, password=password, phone=phone,
             first_name=first_name, last_name=last_name,
             lang=lang, extra=user_extra)
+
+        LOGGER.info("'%s <%s>' registered with username '%s'%s%s",
+            user.get_full_name(), user.email, user,
+            (" and phone %s" % str(phone)) if phone else "",
+            (" and preferred language %s" % str(lang)) if lang else "",
+            extra={'event': 'register', 'user': user})
+        signals.user_registered.send(sender=__name__, user=user)
+
         # Bypassing authentication here, we are doing frictionless registration
         # the first time around.
         user.backend = self.backend_path
@@ -543,14 +551,17 @@ class VerifyCompleteMixin(AuthMixin):
 
         if user:
             if not user.last_login:
-                # XXX copy/paste from models.ActivatedUserManager.create_user
-                LOGGER.info("'%s %s <%s>' registered with username '%s'",
-                    user.first_name, user.last_name, user.email, user,
+                phone = user.get_phone()
+                lang = user.get_lang()
+                LOGGER.info("'%s <%s>' registered with username '%s'%s%s",
+                    user.get_full_name(), user.email, user,
+                    (" and phone %s" % str(phone)) if phone else "",
+                    (" and preferred language %s" % str(lang)) if lang else "",
                     extra={'event': 'register', 'user': user})
                 signals.user_registered.send(sender=__name__, user=user)
             elif previously_inactive:
-                LOGGER.info("'%s %s <%s>' activated with username '%s'",
-                    user.first_name, user.last_name, user.email, user,
+                LOGGER.info("'%s <%s>' activated with username '%s'",
+                    user.get_full_name(), user.email, user,
                     extra={'event': 'activate', 'user': user})
                 signals.user_activated.send(sender=__name__, user=user,
                     verification_key=self.kwargs.get(self.key_url_kwarg),

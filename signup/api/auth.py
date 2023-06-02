@@ -204,7 +204,7 @@ JwcBUUMECj8AKxsHtRHUSypco"
         raise serializers.ValidationError({'detail': "invalid request"})
 
 
-class JWTActivate(VerifyCompleteMixin, JWTRegister):
+class JWTActivate(VerifyCompleteMixin, JWTBase):
     """
     Retrieves an activation key
 
@@ -237,6 +237,7 @@ class JWTActivate(VerifyCompleteMixin, JWTRegister):
           "created_at": "2020-05-30T00:00:00Z"
         }
     """
+    model = get_user_model()
     serializer_class = UserActivateSerializer
 
     def get_serializer_class(self):
@@ -291,7 +292,17 @@ class JWTActivate(VerifyCompleteMixin, JWTRegister):
     JwcBUUMECj8AKxsHtRHUSypco"
             }
         """
-        return super(JWTActivate, self).post(request, *args, **kwargs)
+        try:
+            user_with_backend = self.run_pipeline()
+            return self.create_token(user_with_backend)
+        except SSORequired as err:
+            raise serializers.ValidationError({'detail': _(
+                "SSO required through %(provider)s") % {
+                    'provider': err.printable_name},
+                    'provider': err.delegate_auth.provider,
+                    'url': self.request.build_absolute_uri(err.url)})
+
+        raise serializers.ValidationError({'detail': "invalid request"})
 
 
 class JWTLogout(JWTBase):
