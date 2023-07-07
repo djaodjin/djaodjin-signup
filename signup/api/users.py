@@ -49,7 +49,7 @@ from ..serializers_overrides import UserSerializer, UserDetailSerializer
 from ..serializers import (OTPSerializer, OTPUpdateSerializer,
     PasswordChangeSerializer, NotificationsSerializer, UploadBlobSerializer,
     UserCreateSerializer, ValidationErrorSerializer)
-from ..utils import generate_random_code, get_picture_storage, handle_uniq_error
+from ..utils import get_picture_storage, handle_uniq_error
 
 
 LOGGER = logging.getLogger(__name__)
@@ -278,47 +278,25 @@ class UserDetailAPIView(UserMixin, generics.RetrieveUpdateDestroyAPIView):
 
     def perform_destroy(self, instance):
         user = instance
-        pkid = user.pk if user.pk else generate_random_code()
         email = user.email
         username = user.username
-
-        # We mark the user as inactive and scramble personal information
-        # such that we don't remove audit records (ex: billing transactions)
-        # from the database.
-        slug = '_archive_%d' % pkid
-        LOGGER.info("%s deleted user profile for '%s <%s>' (%s).",
-            self.request.user, username, email, slug, extra={'event': 'delete',
-                'request': self.request, 'username': username, 'email': email,
-                'pk': pkid})
-
-        look = re.match(r'.*(@\S+)', settings.DEFAULT_FROM_EMAIL)
-        if look:
-            email = '%s%s' % (slug, look.group(1))
-
-        with transaction.atomic():
-            contacts = list((user.contacts.all() if user.pk
-                else Contact.objects.filter(
-                        slug=self.kwargs.get(self.lookup_url_kwarg))))
-            if contacts:
-                for contact in contacts:
-                    contact.email = None
-                    contact.phone = None
-                    contact.full_name = ""
-                    contact.nick_name = ""
-                    contact.picture = ""
-                    contact.email_verification_key = None
-                    contact.email_verification_at = None
-                    contact.email_verified_at = None
-                    contact.phone_verification_key = None
-                    contact.phone_verification_at = None
-                    contact.phone_verified_at = None
-                    contact.one_time_code = None
-                Contact.objects.bulk_update(contacts, [
-                    'email', 'phone', 'full_name', 'nick_name', 'picture',
-                    'email_verification_key', 'email_verification_at',
-                    'email_verified_at', 'phone_verification_key',
-                    'phone_verification_at', 'one_time_code'])
-            if user.pk:
+        if user.pk:
+            # We mark the user as inactive and scramble personal information
+            # such that we don't remove audit records (ex: billing transactions)
+            # from the database.
+            pkid = user.pk
+            slug = '_archive_%d' % pkid
+            LOGGER.info("%s deleted user profile for '%s <%s>' (%s).",
+                self.request.user, username, email, slug, extra={
+                    'event': 'delete', 'request': self.request,
+                    'username': username, 'email': email, 'pk': pkid})
+            look = re.match(r'.*(@\S+)', settings.DEFAULT_FROM_EMAIL)
+            if look:
+                email = '%s%s' % (slug, look.group(1))
+            # We are deleting a `User` model. Let's unlink the `Contact`
+            # info but otherwise leave the poor-man's CRM's data intact.
+            with transaction.atomic():
+                user.contacts.all().update(user=None)
                 self.delete_records(user)
                 requires_logout = (self.request.user == user)
                 user.username = slug
@@ -328,6 +306,17 @@ class UserDetailAPIView(UserMixin, generics.RetrieveUpdateDestroyAPIView):
                 user.save()
                 if requires_logout:
                     auth_logout(self.request)
+        else:
+            contacts = Contact.objects.filter(
+                slug=self.kwargs.get(self.lookup_url_kwarg))
+            if contacts:
+                for contact in contacts:
+                    LOGGER.info("%s deleted contact for '%s <%s>'.",
+                        self.request.user, contact.full_name, contact.email,
+                        extra={'event': 'delete', 'request': self.request,
+                            'full_name': contact.full_name,
+                            'email': contact.email, 'pk': contact.pk})
+                contacts.delete()
 
     def delete_records(self, user):
         user.notifications.all().delete()
