@@ -1,3 +1,12 @@
+0.8.3
+
+  * removes connection btw user and contact on delete
+  * fixes activation with e-mail that looks like a bot
+  * verifies and activates contact with no user
+  * restores workflow to recover password from an e-mail
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Fri, 7 Jul 2023 16:20:00 -0700
+
 0.8.2
 
   * disables update of e-mail for SSO workflows

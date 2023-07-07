@@ -66,14 +66,15 @@ Release Notes
 
 Tested with
 
-- **Python:** 3.7, **Django:** 3.2 ([LTS](https://www.djangoproject.com/download/)), **Django Rest Framework:** 3.12
+- **Python:** 3.7, **Django:** 3.2 ([LTS](https://www.djangoproject.com/download/))
 - **Python:** 3.10, **Django:** 4.2 (latest) - see [#55](https://github.com/djaodjin/djaodjin-signup/issues/55)
 - **Python:** 2.7, **Django:** 1.11 (legacy) - use testsite/requirements-legacy.txt
 
-0.8.2
+0.8.3
 
-  * disables update of e-mail for SSO workflows
-  * fixes 500 posting to incorrect /recover/ URL
-  * finds Signup model matching e-mail case insensitive and with user or not
+  * removes connection btw user and contact on delete
+  * fixes activation with e-mail that looks like a bot
+  * verifies and activates contact with no user
+  * restores workflow to recover password from an e-mail
 
 [previous release notes](changelog)
