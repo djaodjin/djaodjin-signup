@@ -202,10 +202,19 @@
     "fields": {
       "slug": "contact-bot-email",
       "created_at": "2023-01-10T00:00:00-00:00",
-      "email": "contact.bot.email@locahost.localdomain",
+      "email": "contact.bot.activate.card15@locahost.localdomain",
       "email_verification_key": "16793aa72a4c7ae94b50b20c2eca52df5b0fe277"
     },
     "model": "signup.Contact", "pk": 10
+},
+{
+    "fields": {
+      "slug": "contact-bot-activate15",
+      "created_at": "2023-01-10T00:00:00-00:00",
+      "email": "contact.bot.activate.api15@locahost.localdomain",
+      "email_verification_key": "16793aa72a4c7ae94b50b20c2eca52df5b0fe278"
+    },
+    "model": "signup.Contact", "pk": 11
 },
 {
     "fields": {
