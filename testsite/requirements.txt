@@ -2,7 +2,7 @@ boto3==1.26.84
 Django==3.2.19
 django-fernet-fields==0.6
 django-phonenumber-field==5.2.0      # latest 7.0.2
-django-recaptcha==2.0.6              # 3.0.0 available
+django-recaptcha==3.0.0              # 2.0.6 requires Django<4.0
 django-storages==1.13.2
 djangorestframework==3.14.0          # Django 2.2 is no longer supported
                                      # Django 4.1 compatibility
@@ -15,8 +15,7 @@ python-ldap==3.4.3
 pytz==2022.7.1
 six==1.16.0
 python3-saml==1.15.0                 # latest 1.15.0
-social-auth-app-django==5.0.0
-social-auth-core==4.3.0
+social-auth-app-django==5.2.0        # drops support for Django<3.2
 
 # testsite-only
 coverage==7.2.1
