@@ -25,14 +25,17 @@
 from ... import settings
 from ...compat import include, path, re_path
 from ...forms import StartAuthenticationForm
-from ...views.auth import (ActivationView, RecoverView, SigninView,
-    SignoutView, SignupView)
+from ...views.auth import (ActivationView, PasswordResetConfirmView,
+    RecoverView, SigninView, SignoutView, SignupView)
 from ...views.saml import saml_metadata_view
 
 urlpatterns = [
     # When the key and/or token are wrong we don't want to give any clue
     # as to why that is so. Less information communicated to an attacker,
     # the better.
+    re_path(r'^reset/(?P<verification_key>%s)/'
+        % settings.EMAIL_VERIFICATION_PAT,
+        PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
     re_path(r'^activate/(?P<verification_key>%s)/'
         % settings.EMAIL_VERIFICATION_PAT,
         ActivationView.as_view(), name='registration_activate'),

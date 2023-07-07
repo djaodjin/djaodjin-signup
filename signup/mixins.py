@@ -25,7 +25,7 @@
 import logging, re
 
 from django.http import Http404
-from django.contrib.auth import (authenticate,
+from django.contrib.auth import (REDIRECT_FIELD_NAME, authenticate,
     get_user_model, login as auth_login)
 from django.db import IntegrityError
 from django.utils import translation
@@ -34,6 +34,7 @@ from rest_framework import exceptions, serializers
 from rest_framework.generics import get_object_or_404
 
 from . import signals, settings
+from .auth import validate_redirect
 from .compat import gettext_lazy as _, is_authenticated, reverse, six
 from .decorators import send_verification_email, send_verification_phone
 from .helpers import (full_name_natural_split, has_invalid_password,
@@ -135,6 +136,7 @@ class AuthMixin(object):
         #    all pattern that might forward the HTTP request.
         # 2. 'login/(?P<extra>.*)' will through a missing argument
         #    exception in `reverse` calls.
+        #pylint:disable=too-many-locals
         try:
             pat = (r'(?P<expected_path>%s)(?P<extra>.*)' %
                 self.request.resolver_match.route)
@@ -164,7 +166,9 @@ class AuthMixin(object):
                     cleaned_data.update({
                         field_name: form.cleaned_data.get(
                             field_name, form.data[field_name])})
-            cleaned_data.update({'next_url': self.get_success_url()})
+            next_url = validate_redirect(self.request)
+            if next_url:
+                cleaned_data.update({'next_url': next_url})
         elif self.serializer_class is not None:
             data = initial_data.copy()
             data.update(self.request.data)
@@ -362,8 +366,32 @@ class LoginMixin(AuthMixin):
 
 class VerifyMixin(AuthMixin):
     """
-    Authenticate by verifying e-mail or phone
+    Authenticate by verifying e-mail address
     """
+    pattern_name = 'registration_activate'
+
+    def get_query_param(self, request, key, default_value=None):
+        try:
+            return request.query_params.get(key, default_value)
+        except AttributeError:
+            pass
+        return request.GET.get(key, default_value)
+
+    def send_notification_email(self, contact, next_url=None):
+        request = self.request
+        if self.get_query_param(request, 'noreset'):
+            send_verification_email(contact, request, next_url=next_url)
+        else:
+            back_url = request.build_absolute_uri(
+                reverse('password_reset_confirm', args=(
+                    contact.email_verification_key,)))
+            if next_url:
+                back_url += '?%s=%s' % (REDIRECT_FIELD_NAME, next_url)
+            signals.user_reset_password.send(
+                sender=__name__, user=contact, request=request,
+                back_url=back_url, expiration_days=settings.KEY_EXPIRATION)
+
+
     def check_password(self, user, **cleaned_data):
         next_url = cleaned_data.get('next_url')
         email = cleaned_data.get('email')
@@ -374,7 +402,7 @@ class VerifyMixin(AuthMixin):
             #pylint:disable=unused-variable
             contact, unused = Contact.objects.prepare_email_verification(
                 email, user=user)
-            send_verification_email(contact, self.request, next_url=next_url)
+            self.send_notification_email(contact, next_url=next_url)
             raise VerifyRequired({'detail': _(
                     "We sent a one-time link to your e-mail address.")})
 
@@ -501,9 +529,10 @@ class VerifyCompleteMixin(AuthMixin):
             elif self.serializer_class is not None:
                 fields = self.serializer_class.Meta.fields
             for field_name in fields:
-                field_value = getattr(contact, field_name, None)
-                if not field_value and contact.user:
+                if contact.user:
                     field_value = getattr(contact.user, field_name, None)
+                if not field_value:
+                    field_value = getattr(contact, field_name, None)
                 if field_value:
                     data.update({field_name: field_value})
         return data
@@ -571,6 +600,20 @@ class VerifyCompleteMixin(AuthMixin):
         # the first time around.
         user.backend = self.backend_path
         return user
+
+
+class PasswordResetConfirmMixin(VerifyCompleteMixin):
+
+    def check_password(self, user, **cleaned_data):
+        #pylint:disable=unused-argument
+        if self.request.method.lower() == 'get':
+            if user:
+                user.password = '!'
+                user.save()
+            if not user or has_invalid_password(user):
+                raise IncorrectUser({'email': _("Not found.")})
+        return super(PasswordResetConfirmMixin, self).check_password(
+            user, **cleaned_data)
 
 
 class ContactMixin(settings.EXTRA_MIXIN):

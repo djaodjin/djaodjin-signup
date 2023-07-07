@@ -36,8 +36,8 @@ from .. import settings
 from ..compat import gettext_lazy as _
 from ..docs import OpenAPIResponse, no_body, swagger_auto_schema
 from ..helpers import as_timestamp, datetime_or_now
-from ..mixins import (LoginMixin, RegisterMixin, VerifyMixin,
-    VerifyCompleteMixin, SSORequired)
+from ..mixins import (LoginMixin, PasswordResetConfirmMixin, RegisterMixin,
+    VerifyMixin, VerifyCompleteMixin, SSORequired)
 from ..models import Contact
 from ..serializers_overrides import UserDetailSerializer
 from ..serializers import (CredentialsSerializer,
@@ -304,6 +304,81 @@ class JWTActivate(VerifyCompleteMixin, JWTBase):
 
         raise serializers.ValidationError({'detail': "invalid request"})
 
+
+class JWTPasswordConfirm(PasswordResetConfirmMixin, JWTActivate):
+    """
+    Resets user password
+
+    This API resets a user password, hence triggering an activation
+    workflow.
+
+    The response is usually presented in an HTML
+    `activate page </docs/guides/themes/#workflow_activate>`_
+    as present in the default theme.
+
+    **Tags: auth, visitor, usermodel
+
+    **Example
+
+    .. code-block:: http
+
+        GET /api/auth/reset/16793aa72a4c7ae94b50b20c2eca52df5b0fe2c6\
+ HTTP/1.1
+
+    responds
+
+    .. code-block:: json
+
+        {
+          "slug": "joe1",
+          "username": "joe1",
+          "email": "joe1@localhost.localdomain",
+          "full_name": "Joe Act",
+          "printable_name": "Joe Act",
+          "created_at": "2020-05-30T00:00:00Z"
+        }
+    """
+
+    @swagger_auto_schema(responses={
+        201: OpenAPIResponse("", TokenSerializer),
+        400: OpenAPIResponse("parameters error", ValidationErrorSerializer)})
+    def post(self, request, *args, **kwargs):#pylint:disable=unused-argument
+        """
+        Enters a new password after a reset
+
+        Activates a new user and returns a JSON Web Token that can subsequently
+        be used to authenticate the new user in HTTP requests.
+
+        **Tags: auth, visitor, usermodel
+
+        **Example
+
+        .. code-block:: http
+
+            POST /api/auth/reset/16793aa72a4c7ae94b50b20c2eca52df5b0fe2c6\
+ HTTP/1.1
+
+        .. code-block:: json
+
+            {
+              "username": "joe1",
+              "email": "joe1@locahost.localdomain",
+              "new_password": "yoyo",
+              "full_name": "Joe Card1"
+            }
+
+        responds
+
+        .. code-block:: json
+
+            {
+                "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VybmFtZSI6\
+    ImpvZTEiLCJlbWFpbCI6ImpvZSsxQGRqYW9kamluLmNvbSIsImZ1bGxfbmFtZ\
+    SI6IkpvZSAgQ2FyZDEiLCJleHAiOjE1Mjk2NTUyMjR9.GFxjU5AvcCQbVylF1P\
+    JwcBUUMECj8AKxsHtRHUSypco"
+            }
+        """
+        return super(JWTPasswordConfirm, self).post(request, *args, **kwargs)
 
 class JWTLogout(JWTBase):
     """

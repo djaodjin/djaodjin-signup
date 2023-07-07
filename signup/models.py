@@ -589,6 +589,10 @@ class Contact(models.Model):
         return self.slug
 
     @property
+    def date_joined(self):
+        return self.created_at
+
+    @property
     def printable_name(self):
         if self.nick_name:
             return self.nick_name
@@ -598,6 +602,19 @@ class Contact(models.Model):
 
     def get_full_name(self):
         return self.full_name
+
+    def get_nick_name(self):
+        if self.nick_name:
+            return self.nick_name
+        if self.user:
+            return self.user.first_name
+        return ""
+
+    def get_phone(self):
+        return self.phone
+
+    def get_lang(self):
+        return self.lang
 
     def get_otc_backend(self):
         if self.otc_backend == self.EMAIL_BACKEND:

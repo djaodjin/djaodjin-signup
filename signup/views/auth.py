@@ -39,11 +39,11 @@ from .. import settings
 from ..auth import validate_redirect
 from ..compat import gettext_lazy as _, reverse
 from ..forms import (ActivationForm, AuthenticationForm, FrictionlessSignupForm,
-    MFACodeForm, PasswordAuthForm, RecoverForm)
-from ..helpers import has_invalid_password, update_context_urls
-from ..mixins import (LoginMixin, RegisterMixin,  VerifyMixin,
-    VerifyCompleteMixin, AuthDisabled, OTPRequired, PasswordRequired,
-    VerifyRequired, SSORequired, RegistrationDisabled)
+    MFACodeForm, PasswordAuthForm, PasswordResetConfirmForm, RecoverForm)
+from ..helpers import update_context_urls
+from ..mixins import (LoginMixin, PasswordResetConfirmMixin,
+    RegisterMixin, VerifyMixin, VerifyCompleteMixin, AuthDisabled, OTPRequired,
+    PasswordRequired, VerifyRequired, SSORequired, RegistrationDisabled)
 from ..models import Contact
 from ..utils import fill_form_errors, get_disabled_registration
 
@@ -190,11 +190,6 @@ class ActivationView(VerifyCompleteMixin, AuthResponseMixin, View):
                 self.kwargs.get(self.key_url_kwarg))
         return self._contact
 
-    @property
-    def is_user_active(self):
-        return (self.contact and self.contact.user and
-            not has_invalid_password(self.contact.user))
-
     def get_context_data(self, **kwargs):
         context = super(ActivationView, self).get_context_data(**kwargs)
         context.update({'object': self.contact})
@@ -228,11 +223,6 @@ class ActivationView(VerifyCompleteMixin, AuthResponseMixin, View):
             if self.contact.phone_verification_key == verification_key:
                 initial.update({'phone_verification': True})
         return initial
-
-    def get_form_class(self):
-        if self.is_user_active:
-            return FrictionlessSignupForm
-        return super(ActivationView, self).get_form_class()
 
     def dispatch(self, request, *args, **kwargs):
         # We put the code inline instead of using method_decorator() otherwise
@@ -306,6 +296,13 @@ class ActivationView(VerifyCompleteMixin, AuthResponseMixin, View):
         if context is None:
             context = self.get_context_data(form=self.get_form())
         return self.render_to_response(context)
+
+
+class PasswordResetConfirmView(PasswordResetConfirmMixin, ActivationView):
+    """
+    Specific view that will first reset a user's password so the form displays.
+    """
+    form_class = PasswordResetConfirmForm
 
 
 class SigninView(LoginMixin, AuthResponseMixin, ProcessFormView):

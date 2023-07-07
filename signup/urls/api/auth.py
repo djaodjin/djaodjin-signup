@@ -24,11 +24,14 @@
 
 from ... import settings
 from ...compat import path, re_path
-from ...api.auth import (JWTActivate, JWTLogin, JWTRegister,
+from ...api.auth import (JWTActivate, JWTLogin, JWTPasswordConfirm, JWTRegister,
     RecoverAPIView)
 
 
 urlpatterns = [
+    re_path(r'^auth/reset/(?P<verification_key>%s)$'
+        % settings.EMAIL_VERIFICATION_PAT,
+        JWTPasswordConfirm.as_view(), name='api_password_confirm'),
     re_path(r'^auth/activate/(?P<verification_key>%s)$'
         % settings.EMAIL_VERIFICATION_PAT,
         JWTActivate.as_view(), name='api_activate'),

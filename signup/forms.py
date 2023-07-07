@@ -215,17 +215,6 @@ class PasswordUpdateForm(PasswordConfirmMixin, forms.ModelForm):
         model = get_user_model()
         fields = ['new_password', 'new_password2']
 
-    def __init__(self, *args, **kwargs):
-        self.user = kwargs.pop('instance')
-        super(PasswordUpdateForm, self).__init__(*args, **kwargs)
-
-    def save(self, commit=True):
-        new_password = self.cleaned_data['new_password']
-        self.user.set_password(new_password)
-        if commit:
-            self.user.save()
-        return self.user
-
 
 class PasswordResetConfirmForm(PasswordUpdateForm):
     """
@@ -243,6 +232,17 @@ class PasswordChangeForm(PasswordUpdateForm):
     class Meta:
         model = get_user_model()
         fields = ['password', 'new_password', 'new_password2']
+
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('instance')
+        super(PasswordUpdateForm, self).__init__(*args, **kwargs)
+
+    def save(self, commit=True):
+        new_password = self.cleaned_data['new_password']
+        self.user.set_password(new_password)
+        if commit:
+            self.user.save()
+        return self.user
 
 
 class RecoverForm(forms.Form):
