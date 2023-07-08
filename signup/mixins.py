@@ -529,6 +529,7 @@ class VerifyCompleteMixin(AuthMixin):
             elif self.serializer_class is not None:
                 fields = self.serializer_class.Meta.fields
             for field_name in fields:
+                field_value = None
                 if contact.user:
                     field_value = getattr(contact.user, field_name, None)
                 if not field_value:
