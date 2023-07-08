@@ -1,3 +1,9 @@
+0.8.4
+
+  * hotfix: field_value is undefined
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Sat, 8 Jul 2023 14:55:00 -0700
+
 0.8.3
 
   * removes connection btw user and contact on delete
