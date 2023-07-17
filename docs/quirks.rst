@@ -27,6 +27,12 @@ export ``PKG_CONFIG_PATH`` to the shell environment beforehand as in:
 
     export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
 
+Python-ldap and native libraries
+--------------------------------
+
+The LDAP authentication backend requires ``python-ldap`` which transitively
+depends on `openldap native libraries <https://www.python-ldap.org/en/python-ldap-3.4.3/installing.html#build-prerequisites>`_.
+
 
 Django Rest Framework
 ---------------------
