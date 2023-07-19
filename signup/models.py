@@ -381,13 +381,17 @@ class ContactManager(models.Manager):
         # XXX The get() needs to be targeted at the write database in order
         # to avoid potential transaction consistency problems.
         contact = None
-        try:
-            if user:
+        if user:
+            try:
                 contact = self.get(phone=phone, user=user)
-            else:
+            except self.model.DoesNotExist:
+                pass
+        if not contact:
+            try:
                 contact = self.get(phone=phone, user__isnull=True)
-        except self.model.DoesNotExist:
-            pass
+                contact.user = user
+            except self.model.DoesNotExist:
+                pass
         if not contact and user:
             contact = self.filter(phone__isnull=True, user=user).first()
 
