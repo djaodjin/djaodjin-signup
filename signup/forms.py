@@ -58,7 +58,7 @@ class CommField(forms.CharField):
     default_validators = [validators.validate_email_or_phone]
     default_label = _("E-mail address or phone number")
     widget = forms.TextInput(
-        attrs={'placeholder': _("E-mail address or phone number"),
+        attrs={'placeholder': _("ex: john@myorganization.com"),
                'maxlength': 75})
 
     def __init__(self, **kwargs):
@@ -72,7 +72,7 @@ class UsernameOrCommField(CommField):
     default_validators = [validators.validate_username_or_email_or_phone]
     default_label = _("Username, e-mail address or phone number")
     widget = forms.TextInput(
-        attrs={'placeholder': _("Username, e-mail address or phone number"),
+        attrs={'placeholder': _("ex: john@myorganization.com"),
                'maxlength': 75})
 
     def __init__(self, **kwargs):
@@ -88,13 +88,15 @@ class FrictionlessSignupForm(forms.Form):
     We will ask for username and password later.
     """
     email = forms.EmailField(label=_("E-mail address"), required=False,
-        widget=forms.TextInput(attrs={'placeholder': _("E-mail")}))
-    phone = PhoneField(required=False)
-    full_name = forms.RegexField(
+        widget=forms.TextInput(attrs={
+            'placeholder': _("ex: john@myorganization.com")}))
+    phone = PhoneField(label=_("Phone number"), required=False,
+        widget=forms.TextInput(attrs={
+            'placeholder': _("ex: +14155555555")}))
+    full_name = forms.RegexField(label=_("Full name"),
         regex=settings.FULL_NAME_PAT, max_length=60,
         widget=forms.TextInput(attrs={
-            'placeholder': 'Ex: first name and last name'}),
-        label=_("Full name"),
+            'placeholder': 'ex: John Smith'}),
         error_messages={'invalid':
             _("Sorry we do not recognize some characters in your full name.")})
 
@@ -264,16 +266,19 @@ class ActivationForm(PasswordConfirmMixin, forms.Form):
         " do not match."),
     }
 
-    email = forms.EmailField(label=_("E-mail address"), required=False)
-    phone = PhoneField(label=_("Phone number"), required=False)
-    full_name = forms.RegexField(
+    email = forms.EmailField(label=_("E-mail address"), required=False,
+        widget=forms.TextInput(attrs={
+            'placeholder': _("ex: john@myorganization.com")}))
+    phone = PhoneField(label=_("Phone number"), required=False,
+        widget=forms.TextInput(attrs={
+            'placeholder': _("ex: +14155555555")}))
+    full_name = forms.RegexField(label=_("Full name"),
         regex=r'^[\w\s]+$', max_length=60,
-        widget=forms.TextInput(attrs={'placeholder':'Full name'}),
-        label=_("Full name"),
+        widget=forms.TextInput(attrs={'placeholder':'ex: John Smith'}),
         error_messages={'invalid':
             _("Sorry we do not recognize some characters in your full name.")})
     username = forms.SlugField(widget=forms.TextInput(
-        attrs={'placeholder': _("Username")}),
+        attrs={'placeholder': _("ex: john")}),
         max_length=30, label=_("Username"),
         error_messages={'invalid': _("Username may only contain letters,"\
             " digits and -/_ characters. Spaces are not allowed.")})
@@ -284,7 +289,7 @@ class ActivationForm(PasswordConfirmMixin, forms.Form):
     new_password2 = forms.CharField(strip=False,
         label=_("Confirm password"),
         widget=forms.PasswordInput(attrs={
-            'placeholder': _("Confirm password")}))
+            'placeholder': _("Type password again")}))
 
     def __init__(self, *args, **kwargs):
         initial = kwargs.get('initial')

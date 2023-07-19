@@ -395,7 +395,7 @@ class VerifyMixin(AuthMixin):
     def check_password(self, user, **cleaned_data):
         next_url = cleaned_data.get('next_url')
         email = cleaned_data.get('email')
-        if not email:
+        if not email and user:
             email = user.email
         # send link through e-mail
         if email:

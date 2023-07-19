@@ -322,6 +322,7 @@ class ContactManager(models.Manager):
         if not contact:
             try:
                 contact = self.get(email__iexact=email, user__isnull=True)
+                contact.user = user
             except self.model.DoesNotExist:
                 pass
         if not contact and user:
