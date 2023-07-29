@@ -322,6 +322,8 @@ class ContactManager(models.Manager):
         if not contact:
             try:
                 contact = self.get(email__iexact=email, user__isnull=True)
+                # We are only going to find a contact where
+                # `contact.user is None` so it is OK to do a direct assignment.
                 contact.user = user
             except self.model.DoesNotExist:
                 pass
@@ -389,6 +391,8 @@ class ContactManager(models.Manager):
         if not contact:
             try:
                 contact = self.get(phone=phone, user__isnull=True)
+                # We are only going to find a contact where
+                # `contact.user is None` so it is OK to do a direct assignment.
                 contact.user = user
             except self.model.DoesNotExist:
                 pass
