@@ -164,6 +164,12 @@ class SignupView(RegisterMixin, AuthResponseMixin, View):
             context.update({'sso_required': err})
         except RegistrationDisabled:
             context = {'disabled_registration': True}
+        except exceptions.AuthenticationFailed as err:
+            # This could be an IncorrectPath or any other forms of
+            # bots activity.
+            form = self.get_form()
+            fill_form_errors(form, err)
+            context = self.get_context_data(form=form)
 
         if context is None:
             context = self.get_context_data()

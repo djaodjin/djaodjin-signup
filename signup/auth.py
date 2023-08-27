@@ -1,4 +1,4 @@
-# Copyright (c) 2020, Djaodjin Inc.
+# Copyright (c) 2023, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -21,12 +21,48 @@
 # WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+import re
 
 from django.conf import settings
 from django.contrib.auth import REDIRECT_FIELD_NAME
 from django.http.request import split_domain_port, validate_host
+from rest_framework import exceptions
 
-from .compat import urlparse, urlunparse
+from .compat import gettext_lazy as _, urlparse, urlunparse
+
+
+class IncorrectPath(exceptions.AuthenticationFailed):
+    """
+    Incorrect path
+    """
+
+
+def validate_path_pattern(request):
+    # The authentication URLs are anonymously accessible, hence
+    # prime candidates for bots. These will POST to '/login/.' for
+    # example because there is a `action="."` in the <form> tag
+    # in login.html.
+    # We cannot catch these by restricting the match pattern.
+    # 1. '^login/$' will not match 'login/.' hence trigger the catch
+    #    all pattern that might forward the HTTP request.
+    # 2. 'login/(?P<extra>.*)' will through a missing argument
+    #    exception in `reverse` calls.
+    try:
+        pat = (r'(?P<expected_path>%s)(?P<extra>.*)' %
+            request.resolver_match.route)
+        look = re.match(pat, request.path.lstrip('/'))
+        if look:
+            expected_path = '/' + look.group('expected_path')
+            extra =  look.group('extra')
+            if extra:
+                raise IncorrectPath(
+                    {'detail': (
+                     _("Incorrect path in URL. Expecting %(path)s") % {
+                    'path': request.build_absolute_uri(expected_path)}
+                )})
+    except AttributeError:
+        pass # Django<=1.11 ResolverMatch does not have
+             # a route attribute.
 
 
 def validate_redirect(request):

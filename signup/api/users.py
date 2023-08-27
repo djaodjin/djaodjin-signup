@@ -861,9 +861,6 @@ class UserNotificationsAPIView(UserMixin, generics.RetrieveUpdateAPIView):
         """
         return self.update(request, *args, **kwargs)
 
-    @staticmethod
-    def get_notifications(user=None):#pylint:disable=unused-argument
-        return {}
 
     def retrieve(self, request, *args, **kwargs):
         notification_slugs = self.user.notifications.values_list(

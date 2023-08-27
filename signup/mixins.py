@@ -22,7 +22,7 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import logging, re
+import logging
 
 from django.http import Http404
 from django.contrib.auth import (REDIRECT_FIELD_NAME, authenticate,
@@ -34,12 +34,12 @@ from rest_framework import exceptions, serializers
 from rest_framework.generics import get_object_or_404
 
 from . import signals, settings
-from .auth import validate_redirect
+from .auth import validate_path_pattern, validate_redirect
 from .compat import gettext_lazy as _, is_authenticated, reverse, six
 from .decorators import send_verification_email, send_verification_phone
 from .helpers import (full_name_natural_split, has_invalid_password,
     update_context_urls)
-from .models import Contact, DelegateAuth, OTPGenerator
+from .models import Contact, DelegateAuth, Notification, OTPGenerator
 from .utils import (get_disabled_authentication, get_disabled_registration,
     get_email_dynamic_validator, get_login_throttle, handle_uniq_error)
 from .validators import as_email_or_phone
@@ -75,11 +75,6 @@ class SSORequired(exceptions.AuthenticationFailed):
     def printable_name(self):
         return self.provider_info.get('name', str(self.delegate_auth.provider))
 
-
-class IncorrectPath(exceptions.AuthenticationFailed):
-    """
-    Incorrect path
-    """
 
 class IncorrectUser(exceptions.AuthenticationFailed):
     """
@@ -131,28 +126,7 @@ class AuthMixin(object):
         # prime candidates for bots. These will POST to '/login/.' for
         # example because there is a `action="."` in the <form> tag
         # in login.html.
-        # We cannot catch these by restricting the match pattern.
-        # 1. '^login/$' will not match 'login/.' hence trigger the catch
-        #    all pattern that might forward the HTTP request.
-        # 2. 'login/(?P<extra>.*)' will through a missing argument
-        #    exception in `reverse` calls.
-        #pylint:disable=too-many-locals
-        try:
-            pat = (r'(?P<expected_path>%s)(?P<extra>.*)' %
-                self.request.resolver_match.route)
-            look = re.match(pat, self.request.path.lstrip('/'))
-            if look:
-                expected_path = '/' + look.group('expected_path')
-                extra =  look.group('extra')
-                if extra:
-                    raise IncorrectPath(
-                        {'detail': (
-                         _("Incorrect path in URL. Expecting %(path)s") % {
-                        'path': self.request.build_absolute_uri(expected_path)}
-                    )})
-        except AttributeError:
-            pass # Django<=1.11 ResolverMatch does not have
-                 # a route attribute.
+        validate_path_pattern(self.request)
 
         cleaned_data = {}
         if initial_data:
@@ -698,6 +672,13 @@ class UserMixin(settings.EXTRA_MIXIN):
                 }
             })
         return context
+
+    @staticmethod
+    def get_notifications(user=None):#pylint:disable=unused-argument
+        return {obj.slug: {
+            'summary': obj.title,
+            'description': obj.description}
+                for obj in Notification.objects.all()}
 
     def get_object(self):
         try:

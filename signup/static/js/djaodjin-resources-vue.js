@@ -106,23 +106,40 @@ var messagesMixin = {
                     toastr[style](messages[i]);
                 }
             } else {
-                var messageBlock = "<div class=\"alert alert-block alert-dismissible fade show";
+                var blockStyle = "";
                 if( style ) {
                     if( style === "error" ) {
                         style = "danger";
                     }
-                    messageBlock += " alert-" + style;
+                    blockStyle = " alert-" + style;
                 }
-                messageBlock += "\">";
+                var messageBlock = messagesElement.find(
+                    ".alert" + blockStyle.replace(' ', '.'));
+                if( messageBlock.length === 0 ) {
+                    const blockText = "<div class=\"alert" + blockStyle
+                        + " alert-dismissible fade show\">"
+                        + "<button type=\"button\" class=\"btn-close\""
+                        + " data-bs-dismiss=\"alert\" aria-label=\"Close\">"
+                        + "</button></div>";
+                    var div = document.createElement('div');
+                    div.innerHTML = blockText;
+                    messageBlock = jQuery(div.firstChild);
+                } else {
+                    messageBlock = jQuery(messageBlock[0].cloneNode(true));
+                    messageBlock.find('div').remove();
+                }
 
+                // insert the actual messages
                 if( typeof messages === "string" ) {
                     messages = [messages];
                 }
                 for( var i = 0; i < messages.length; ++i ) {
-                    messageBlock += "<div>" + messages[i] + "</div>";
+                    messageBlock.append("<div>" + messages[i] + "</div>");
                 }
-                messageBlock += "<button type=\"button\" class=\"btn-close\" data-bs-dismiss=\"alert\" aria-label=\"Close\"></button></div>";
-                vm.getMessagesElement().append(messageBlock);
+                if( messageBlock.css('display') === 'none' ) {
+                    messageBlock.css('display', 'block');
+                }
+                messagesElement.append(messageBlock);
             }
             var messagesContainer = messagesElement.parent();
             if( messagesContainer && messagesContainer.hasClass("hidden") ) {
@@ -940,11 +957,13 @@ var paginationMixin = {
             let element = this.$el;
             if( element.getBoundingClientRect().bottom < window.innerHeight ) {
                 let menubar = vm.$el.querySelector('[role="pagination"]');
-                var style = window.getComputedStyle(menubar);
-                if( style.display == 'none' ) {
-                    // We are not displaying the pagination menubar,
-                    // so let's scroll!
-                    vm.paginationHandler();
+                if( menubar) {
+                    var style = window.getComputedStyle(menubar);
+                    if( style.display == 'none' ) {
+                        // We are not displaying the pagination menubar,
+                        // so let's scroll!
+                        vm.paginationHandler();
+                    }
                 }
             }
         },

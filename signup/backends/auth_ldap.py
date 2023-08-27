@@ -71,7 +71,7 @@ def is_ldap_user(user):
         try:
             ldap_connection = ldap.initialize(
                 settings.LDAP_SERVER_URI, bytes_mode=False)
-            resp = ldap_connection.search_s(
+            ldap_connection.search_s(
                 bind_dn, ldap.SCOPE_BASE) #pylint:disable=no-member
             found = True
         except ldap.LDAPError: #pylint:disable=no-member
