@@ -58,7 +58,7 @@ class PhoneValidator:
         phone = phonenumber.to_python(value, region)
         if phone and not phone.is_valid():
             phone = phonenumber.to_python(value, region='US')
-        if phone and not phone.is_valid():
+        if not phone or not phone.is_valid():
             raise ValidationError(
                 _("The phone number entered is not valid."),
                 code="invalid_phone_number")
