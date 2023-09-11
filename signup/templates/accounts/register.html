@@ -17,7 +17,7 @@ You are required to login through the following Single Sign On (SSO) provider:
       {% csrf_token %}
       {{ form }}
       <input type="hidden" name="terms-of-use" value="False">
-      <button type="submit" name="submit">Submit</button>
+      <button type="submit" name="submit">Sign Up</button>
     </form>
     <div>
       <p>You already have an account? <a id="login" href="{% url 'login' %}">Sign in</a>

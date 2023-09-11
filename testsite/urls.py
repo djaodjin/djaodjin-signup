@@ -59,7 +59,7 @@ urlpatterns = \
     url(r'^register/frictionless/',
         SignupView.as_view(),
         name='registration_frictionless'),
-    url(r'^register/$',
+    url(r'^register/((?P<path>\w+)/)?',
         SignupView.as_view(form_class=SignupWithCaptchaForm),
         name='registration_register'),
     url(r'^', include('signup.urls.views.accounts')),

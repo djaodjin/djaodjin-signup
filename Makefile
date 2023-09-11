@@ -14,7 +14,16 @@ installFiles  ?= install -p -m 644
 NPM           ?= npm
 PYTHON        := $(binDir)/python
 PIP           := $(binDir)/pip
-SQLITE        := sqlite3
+# As of sqlite3 version  3.42.0 (2023-05-16) we need to pass `-unsafe-testing`
+# to make adjustments in the demo database.
+SQLITE_NO_UNSAFE_TESTING := $(shell echo '.schema' | sqlite3 -unsafe-testing > /dev/null 2>&1; echo $$?)
+ifeq ($(SQLITE_NO_UNSAFE_TESTING),0)
+SQLITE        ?= sqlite3
+SQLITE_UNSAFE ?= sqlite3 -unsafe-testing
+else
+SQLITE        ?= sqlite3
+SQLITE_UNSAFE ?= $(SQLITE)
+endif
 TWINE         := $(binDir)/twine
 
 RUN_DIR       ?= $(srcDir)
@@ -76,7 +85,7 @@ $(DESTDIR)$(CONFIG_DIR)/gunicorn.conf: $(srcDir)/testsite/etc/gunicorn.conf
 initdb: clean-dbs install-conf
 	$(installDirs) $(dir $(DB_NAME))
 	cd $(srcDir) && $(MANAGE) migrate $(RUNSYNCDB) --noinput
-	cat $(srcDir)/testsite/migrations/adjustments1-sqlite3.sql | $(SQLITE) $(DB_NAME)
+	cat $(srcDir)/testsite/migrations/adjustments1-sqlite3.sql | $(SQLITE_UNSAFE) $(DB_NAME)
 	cat $(srcDir)/testsite/migrations/adjustments2-sqlite3.sql | $(SQLITE) $(DB_NAME)
 	cd $(srcDir) && $(MANAGE) loaddata testsite/fixtures/default-db.json
 

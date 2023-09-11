@@ -22,7 +22,7 @@ You are about to activate your account. Please set a password to secure it.
     <form method="post" action=".{% if next %}/?next={{next}}{% endif %}">
       {% csrf_token %}
       {{ form }}
-      <button type="submit" name="submit">Submit</button>
+      <button type="submit" name="submit">Sign Up</button>
     </form>
     <p>Already have an account? <a href="{% url 'login' %}">Log in</a></p>
     {% endif %}

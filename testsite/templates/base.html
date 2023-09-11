@@ -20,14 +20,14 @@
   <div id="messages">
     <div id="messages-content">
       {% for message in request|messages %}
-      <div class="alert{% if message.tags %} alert-{{message.tags}}{% endif %}">
+      <div class="alert{% if message.tags %} alert-{{message.tags}}{% endif %} show">
         <button type="button" class="close" data-dismiss="alert">&times;</button>
         <div>{{message|safe}}</div>
       </div>
       {% endfor %}
       {% if form %}
       {% for message in form|messages %}
-      <div class="alert alert-danger">
+      <div class="alert alert-danger show">
         <button type="button" class="close" data-dismiss="alert">&times;</button>
         <div>{{message}}</div>
       </div>
