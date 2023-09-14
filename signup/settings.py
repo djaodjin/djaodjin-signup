@@ -41,9 +41,17 @@ DISABLED_REGISTRATION
 REQUIRE_RECAPTCHA
    Requires to answer a recaptcha in registration
 """
+import sys
 
 import django
 from django.conf import settings
+
+_DEFAULT_ENCRYPTED_FIELD = 'fernet_fields.EncryptedCharField'
+# django-fernet==0.6 is not compatible with Django4+ (``force_text``)
+if django.VERSION[0] >= 4:
+    _DEFAULT_ENCRYPTED_FIELD = None
+    sys.stderr.write("warning: encrypted fields disabled"\
+        " because django-fernet==0.6 is incompatible with Django4+")
 
 _SETTINGS = {
     'ACCOUNT_ACTIVATION_DAYS': getattr(settings, 'ACCOUNT_ACTIVATION_DAYS', 2),
@@ -62,9 +70,7 @@ _SETTINGS = {
     'EMAIL_DYNAMIC_VALIDATOR': None,
     'EMAIL_VERIFICATION_BACKEND':
         'signup.backends.email_verification.base.EmailVerificationBackend',
-    'ENCRYPTED_FIELD': (
-        # django-fernet==0.6 is not compatible with Django4+ (``force_text``)
-        'fernet_fields.EncryptedCharField' if django.VERSION[0] < 4 else None),
+    'ENCRYPTED_FIELD': _DEFAULT_ENCRYPTED_FIELD,
     'EXTRA_FIELD': None,
     'EXTRA_MIXIN': object,
     'JWT_ALGORITHM': 'HS256',
