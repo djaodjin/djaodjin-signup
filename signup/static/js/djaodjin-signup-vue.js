@@ -131,8 +131,8 @@ Vue.component('user-update', {
     data: function () {
         return {
             url: this.$urls.user.api_profile,
-            picture_url: this.$urls.user.api_user_picture,
-            verify_url: this.$urls.user.api_recover + '?noreset=1',
+            picture_url: this.$urls.user.api_profile_picture,
+            verify_url: this.$urls.api_recover + '?noreset=1',
             redirect_url: this.$urls.profile_redirect,
             api_activate_url: this.$urls.user.api_activate,
             formFields: {},
@@ -296,6 +296,8 @@ Vue.component('user-update-password', {
             newPassword: '',
             newPassword2: '',
             otpEnabled: true,
+            emailVerificationEnabled: false,
+            phoneVerificationEnabled: false,
             otpPrivKey: '',
             nextCb: null
         };
@@ -336,7 +338,9 @@ Vue.component('user-update-password', {
             var vm = this;
             vm.reqPut(vm.otp_url, {
                 password: vm.password,
-                enable: true
+                otp_enabled: true,
+                email_verification_enabled: vm.emailVerificationEnabled,
+                phone_verification_enabled: vm.phoneVerificationEnabled,
             }, function(resp){
                 vm.otpEnabled = true;
                 vm.otpPrivKey = resp.priv_key
@@ -351,7 +355,9 @@ Vue.component('user-update-password', {
             var vm = this;
             vm.reqPut(vm.otp_url, {
                 password: vm.password,
-                enable: false
+                otp_enabled: false,
+                email_verification_enabled: vm.emailVerificationEnabled,
+                phone_verification_enabled: vm.phoneVerificationEnabled,
             }, function(resp){
                 vm.otpEnabled = false;
             })

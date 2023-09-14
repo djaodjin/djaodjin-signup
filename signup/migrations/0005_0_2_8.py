@@ -22,7 +22,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='contact',
             name='mfa_nb_attempts',
-            field=models.IntegerField(default=0, verbose_name='Number of attempts to pass the MFA code'),
+            field=models.IntegerField(default=0, verbose_name='Number of attempts to pass the one-time code'),
         ),
         migrations.AddField(
             model_name='contact',

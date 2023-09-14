@@ -22,8 +22,17 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""
-PEP 386-compliant version number for the signup django app.
-"""
+import boto3
 
-__version__ = '0.9.0-dev'
+from ...compat import gettext_lazy as _
+
+
+class PhoneVerificationBackend(object):
+
+    def send(self, phone, code):
+        """
+        Send a text message to the user to verify her phone number.
+        """
+        client = boto3.client("sns")
+        client.publish(PhoneNumber=phone, #E.164 format
+            Message=_("one-time verification code: %(code)s") % {'code': code})

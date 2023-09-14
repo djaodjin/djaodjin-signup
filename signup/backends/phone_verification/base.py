@@ -22,8 +22,25 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""
-PEP 386-compliant version number for the signup django app.
-"""
+from django.contrib.auth import REDIRECT_FIELD_NAME
 
-__version__ = '0.9.0-dev'
+from ... import settings, signals
+from ..base import load_backend
+
+
+def send_verification_phone(contact, request,
+                           next_url=None,
+                           redirect_field_name=REDIRECT_FIELD_NAME):
+    """
+    Send a text message to the user to verify her phone number.
+
+    The email embed a link to a verification url and a redirect to the page
+    the verification email was sent from so that the user stays on her
+    workflow once verification is completed.
+    """
+    #pylint:disable=unused-argument
+    backend = load_backend(settings.PHONE_VERIFICATION_BACKEND)
+    backend.send(contact.phone, contact.phone_code)
+
+    signals.user_phone_verification.send(
+        sender=__name__, user=contact, request=request)

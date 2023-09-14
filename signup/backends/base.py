@@ -22,8 +22,22 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""
-PEP 386-compliant version number for the signup django app.
-"""
+from importlib import import_module
 
-__version__ = '0.9.0-dev'
+from django.core.exceptions import ImproperlyConfigured
+
+
+def load_backend(path):
+    dot_pos = path.rfind('.')
+    module, attr = path[:dot_pos], path[dot_pos + 1:]
+    try:
+        mod = import_module(module)
+    except (ImportError, ValueError) as err:
+        raise ImproperlyConfigured(
+            'Error importing backend %s: "%s"' % (path, err))
+    try:
+        cls = getattr(mod, attr)
+    except AttributeError:
+        raise ImproperlyConfigured('Module "%s" does not define a "%s"'\
+' backend' % (module, attr))
+    return cls()

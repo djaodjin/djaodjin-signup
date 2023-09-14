@@ -60,6 +60,8 @@ _SETTINGS = {
     'DISABLED_AUTHENTICATION': False,
     'DISABLED_REGISTRATION': False,
     'EMAIL_DYNAMIC_VALIDATOR': None,
+    'EMAIL_VERIFICATION_BACKEND':
+        'signup.backends.email_verification.base.EmailVerificationBackend',
     'ENCRYPTED_FIELD': (
         # django-fernet==0.6 is not compatible with Django4+ (``force_text``)
         'fernet_fields.EncryptedCharField' if django.VERSION[0] < 4 else None),
@@ -77,6 +79,7 @@ _SETTINGS = {
     'NOTIFICATION_TYPE': tuple([]),
     'NOTIFICATIONS_OPT_OUT': True,
     'PICTURE_STORAGE_CALLABLE': None,
+    'PHONE_VERIFICATION_BACKEND': None,
     'RANDOM_SEQUENCE': [],
     'REQUIRES_RECAPTCHA': False,
     'SEARCH_FIELDS_PARAM': 'q_f',
@@ -113,6 +116,7 @@ DISABLED_REGISTRATION = _SETTINGS.get('DISABLED_REGISTRATION')
 #: A callable function which is passed an email address and that returns `False`
 #: when the email suspiciously looks like it belongs to a bot.
 EMAIL_DYNAMIC_VALIDATOR = _SETTINGS.get('EMAIL_DYNAMIC_VALIDATOR')
+EMAIL_VERIFICATION_BACKEND = _SETTINGS.get('EMAIL_VERIFICATION_BACKEND')
 
 ENCRYPTED_FIELD = _SETTINGS.get('ENCRYPTED_FIELD')
 EXTRA_FIELD = _SETTINGS.get('EXTRA_FIELD')
@@ -137,6 +141,7 @@ NOTIFICATIONS_OPT_OUT = _SETTINGS.get('NOTIFICATIONS_OPT_OUT')
 #: to upload a contact picture
 PICTURE_STORAGE_CALLABLE = _SETTINGS.get('PICTURE_STORAGE_CALLABLE')
 
+PHONE_VERIFICATION_BACKEND = _SETTINGS.get('PHONE_VERIFICATION_BACKEND')
 RANDOM_SEQUENCE = _SETTINGS.get('RANDOM_SEQUENCE')
 REQUIRES_RECAPTCHA = _SETTINGS.get('REQUIRES_RECAPTCHA')
 SEARCH_FIELDS_PARAM = _SETTINGS.get('SEARCH_FIELDS_PARAM')

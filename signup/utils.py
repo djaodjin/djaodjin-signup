@@ -89,6 +89,7 @@ def get_recaptcha_form_field():
     # The imports are here so catcha is only loaded when
     # `settings.REQUIRE_RECAPTCHA` is True. This is a workaround
     # until django-recaptcha supports Django4.0
+    # pylint:disable=import-outside-toplevel
     from captcha.fields import ReCaptchaField
     from captcha.widgets import ReCaptchaV2Checkbox
     return ReCaptchaField(widget=ReCaptchaV2Checkbox(

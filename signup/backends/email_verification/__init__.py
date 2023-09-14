@@ -22,38 +22,4 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""
-Backends to send one-time authentication codes
-"""
-from __future__ import unicode_literals
-
-from .. import signals
-from ..utils import generate_random_code
-
-
-class EmailOTCBackend(object):
-    """
-    Backend to authenticate a user through a code sent to an email address.
-    """
-
-    def create_token(self, user, request=None):
-        user.one_time_code = generate_random_code()
-        user.otc_backend = user.EMAIL_BACKEND
-        user.save()
-        signals.user_mfa_code.send(
-            sender=__name__, user=user, code=user.one_time_code,
-            request=request)
-
-
-class PhoneOTCBackend(object):
-    """
-    Backend to authenticate a user through a code sent to a phone number.
-    """
-
-    def create_token(self, user, request=None):
-        user.one_time_code = generate_random_code()
-        user.otc_backend = user.PHONE_BACKEND
-        user.save()
-        signals.user_mfa_code.send(
-            sender=__name__, user=user, code=user.one_time_code,
-            request=request)
+from .base import send_verification_email

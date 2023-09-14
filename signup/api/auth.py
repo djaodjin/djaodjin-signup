@@ -40,7 +40,7 @@ from ..mixins import (LoginMixin, PasswordResetConfirmMixin, RegisterMixin,
     VerifyMixin, VerifyCompleteMixin, SSORequired)
 from ..models import Contact
 from ..serializers_overrides import UserDetailSerializer
-from ..serializers import (CredentialsSerializer,
+from ..serializers import (CredentialsSerializer, NoModelSerializer,
     RecoverSerializer, TokenSerializer, UserActivateSerializer,
     UserCreateSerializer, ValidationErrorSerializer)
 from ..utils import get_disabled_registration
@@ -208,6 +208,9 @@ class JWTActivate(VerifyCompleteMixin, JWTBase):
     """
     Retrieves an activation key
 
+    Retrieves information about a contact or user associated
+    to the activation key.
+
     This API is typically used to pre-populate a registration form
     when a user was invited to the site by another user.
 
@@ -305,16 +308,12 @@ class JWTActivate(VerifyCompleteMixin, JWTBase):
         raise serializers.ValidationError({'detail': "invalid request"})
 
 
-class JWTPasswordConfirm(PasswordResetConfirmMixin, JWTActivate):
+class JWTPasswordConfirm(PasswordResetConfirmMixin, JWTBase):
     """
-    Resets user password
+    Resets a user password
 
-    This API resets a user password, hence triggering an activation
-    workflow.
-
-    The response is usually presented in an HTML
-    `activate page </docs/guides/themes/#workflow_activate>`_
-    as present in the default theme.
+    Resets a user password, hence triggering an activation
+    workflow the next time a user attempts to login.
 
     **Tags: auth, visitor, usermodel
 
@@ -322,63 +321,27 @@ class JWTPasswordConfirm(PasswordResetConfirmMixin, JWTActivate):
 
     .. code-block:: http
 
-        GET /api/auth/reset/16793aa72a4c7ae94b50b20c2eca52df5b0fe2c6\
+        POST /api/auth/reset/16793aa72a4c7ae94b50b20c2eca52df5b0fe2c6\
  HTTP/1.1
 
-    responds
-
-    .. code-block:: json
-
-        {
-          "slug": "joe1",
-          "username": "joe1",
-          "email": "joe1@localhost.localdomain",
-          "full_name": "Joe Act",
-          "printable_name": "Joe Act",
-          "created_at": "2020-05-30T00:00:00Z"
-        }
     """
+    serializer_class = NoModelSerializer
 
     @swagger_auto_schema(responses={
-        201: OpenAPIResponse("", TokenSerializer),
         400: OpenAPIResponse("parameters error", ValidationErrorSerializer)})
     def post(self, request, *args, **kwargs):#pylint:disable=unused-argument
-        """
-        Enters a new password after a reset
+        try:
+            self.run_pipeline()
+            return {}
+        except SSORequired as err:
+            raise serializers.ValidationError({'detail': _(
+                "SSO required through %(provider)s") % {
+                    'provider': err.printable_name},
+                    'provider': err.delegate_auth.provider,
+                    'url': self.request.build_absolute_uri(err.url)})
 
-        Activates a new user and returns a JSON Web Token that can subsequently
-        be used to authenticate the new user in HTTP requests.
+        raise serializers.ValidationError({'detail': "invalid request"})
 
-        **Tags: auth, visitor, usermodel
-
-        **Example
-
-        .. code-block:: http
-
-            POST /api/auth/reset/16793aa72a4c7ae94b50b20c2eca52df5b0fe2c6\
- HTTP/1.1
-
-        .. code-block:: json
-
-            {
-              "username": "joe1",
-              "email": "joe1@locahost.localdomain",
-              "new_password": "yoyo",
-              "full_name": "Joe Card1"
-            }
-
-        responds
-
-        .. code-block:: json
-
-            {
-                "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VybmFtZSI6\
-    ImpvZTEiLCJlbWFpbCI6ImpvZSsxQGRqYW9kamluLmNvbSIsImZ1bGxfbmFtZ\
-    SI6IkpvZSAgQ2FyZDEiLCJleHAiOjE1Mjk2NTUyMjR9.GFxjU5AvcCQbVylF1P\
-    JwcBUUMECj8AKxsHtRHUSypco"
-            }
-        """
-        return super(JWTPasswordConfirm, self).post(request, *args, **kwargs)
 
 class JWTLogout(JWTBase):
     """
@@ -412,9 +375,11 @@ class JWTLogout(JWTBase):
 
 class RecoverAPIView(VerifyMixin, JWTBase):
     """
-    Sends a one-time link or code
+    Sends a verification link
 
-    The user is uniquely identified by her email address.
+    Sends a one time code to verify an e-mail or phone number.
+
+    The user is uniquely identified by her email address or phone number.
 
     The API is typically used within an HTML
     `recover credentials page </docs/guides/themes/#workflow_recover>`_

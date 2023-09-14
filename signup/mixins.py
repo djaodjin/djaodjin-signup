@@ -35,8 +35,9 @@ from rest_framework.generics import get_object_or_404
 
 from . import signals, settings
 from .auth import validate_path_pattern, validate_redirect
+from .backends.email_verification import send_verification_email
+from .backends.phone_verification import send_verification_phone
 from .compat import gettext_lazy as _, is_authenticated, reverse, six
-from .decorators import send_verification_email, send_verification_phone
 from .helpers import (full_name_natural_split, has_invalid_password,
     update_context_urls)
 from .models import Contact, DelegateAuth, Notification, OTPGenerator
@@ -470,10 +471,13 @@ class RegisterMixin(AuthMixin):
                     user_extra.update({field_name[5:]: field_value})
         if not user_extra:
             user_extra = None
-        user = self.model.objects.create_user(username,
-            email=email, password=password, phone=phone,
-            first_name=first_name, last_name=last_name,
-            lang=lang, extra=user_extra)
+        try:
+            user = self.model.objects.create_user(username,
+                email=email, password=password, phone=phone,
+                first_name=first_name, last_name=last_name,
+                lang=lang, extra=user_extra)
+        except IntegrityError as err:
+            handle_uniq_error(err)
 
         LOGGER.info("'%s <%s>' registered with username '%s'%s%s",
             user.get_full_name(), user.email, user,
@@ -591,6 +595,14 @@ class PasswordResetConfirmMixin(VerifyCompleteMixin):
             user, **cleaned_data)
 
 
+class AuthenticatedUserPasswordMixin(object):
+
+    def re_auth(self, request, validated_data):
+        password = validated_data.get('password')
+        if not request.user.check_password(password):
+            raise exceptions.AuthenticationFailed()
+
+
 class ContactMixin(settings.EXTRA_MIXIN):
 
     lookup_field = 'slug'
@@ -649,7 +661,16 @@ class UserMixin(settings.EXTRA_MIXIN):
                 self._user = self.request.user
             else:
                 kwargs = {self.user_field: slug}
-                self._user = get_object_or_404(self.user_queryset, **kwargs)
+                try:
+                    self._user = get_object_or_404(self.user_queryset, **kwargs)
+                except Http404:
+                    # We might still have a `User` model that matches.
+                    lookup_url_kwarg = (
+                        self.lookup_url_kwarg or self.lookup_field)
+                    filter_kwargs = {'slug': self.kwargs[lookup_url_kwarg]}
+                    contact = get_object_or_404(Contact.objects.all(),
+                        **filter_kwargs)
+                    self._user = self.as_user(contact)
         return self._user
 
     def as_user(self, contact):
@@ -681,12 +702,4 @@ class UserMixin(settings.EXTRA_MIXIN):
                 for obj in Notification.objects.all()}
 
     def get_object(self):
-        try:
-            obj = super(UserMixin, self).get_object()
-        except Http404:
-            # We might still have a `User` model that matches.
-            lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
-            filter_kwargs = {'slug': self.kwargs[lookup_url_kwarg]}
-            contact = get_object_or_404(Contact.objects.all(), **filter_kwargs)
-            obj = self.as_user(contact)
-        return obj
+        return self.user

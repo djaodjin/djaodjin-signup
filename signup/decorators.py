@@ -34,8 +34,10 @@ from django.contrib.auth import REDIRECT_FIELD_NAME, logout as auth_logout
 from django.contrib.auth.views import redirect_to_login
 from django.core.exceptions import PermissionDenied
 
-from . import settings, signals
+from . import settings
 from .auth import validate_redirect
+from .backends.email_verification import send_verification_email
+from .backends.phone_verification import send_verification_phone
 from .compat import (available_attrs, gettext_lazy as _, is_authenticated,
     reverse, six)
 from .helpers import get_accept_list, has_invalid_password
@@ -70,45 +72,6 @@ def redirect_or_denied(request, inserted_url,
     if descr is None:
         descr = ""
     raise PermissionDenied(descr)
-
-
-def send_verification_email(contact, request,
-                           next_url=None,
-                           redirect_field_name=REDIRECT_FIELD_NAME):
-    """
-    Send an email to the user to verify her email address.
-
-    The email embed a link to a verification url and a redirect to the page
-    the verification email was sent from so that the user stays on her
-    workflow once verification is completed.
-    """
-    back_url = request.build_absolute_uri(reverse('registration_activate',
-        args=(contact.email_verification_key,)))
-    if next_url:
-        back_url += '?%s=%s' % (redirect_field_name, next_url)
-    signals.user_verification.send(
-        sender=__name__, user=contact, request=request,
-        back_url=back_url, expiration_days=settings.KEY_EXPIRATION)
-
-
-def send_verification_phone(contact, request,
-                           next_url=None,
-                           redirect_field_name=REDIRECT_FIELD_NAME):
-    """
-    Send a text message to the user to verify her phone number.
-
-    The email embed a link to a verification url and a redirect to the page
-    the verification email was sent from so that the user stays on her
-    workflow once verification is completed.
-    """
-    # XXX needs to send phone text message instead of e-mail!!!
-    back_url = request.build_absolute_uri(reverse('registration_activate',
-        args=(contact.phone_verification_key,)))
-    if next_url:
-        back_url += '?%s=%s' % (redirect_field_name, next_url)
-    signals.user_phone_verification.send(
-        sender=__name__, user=contact, request=request,
-        back_url=back_url, expiration_days=settings.KEY_EXPIRATION)
 
 
 # The user we are looking to activate might be different from

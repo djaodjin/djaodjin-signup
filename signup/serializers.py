@@ -1,4 +1,4 @@
-# Copyright (c) 2022, DjaoDjin inc.
+# Copyright (c) 2023, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -26,7 +26,7 @@ import logging
 
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import NotAuthenticated, ValidationError
 
 from .compat import gettext_lazy as _
 from .models import Activity, Notification
@@ -99,14 +99,49 @@ class ActivityCreateSerializer(serializers.ModelSerializer):
         fields = ('text', 'account')
 
 
-class AuthenticatedUserPasswordSerializer(NoModelSerializer):
+class AuthenticatedUserSerializer(NoModelSerializer):
+    """
+    All secrets can be optional during authentication such that we are able to
+    raise a `ValidationError` when the authentication should proceed through
+    a SSO provider for a particular user.
+    """
 
-    password = serializers.CharField(write_only=True,
+    # If we define those fields in a Mixin, they don't show up
+    # in the API documentation.
+    password = serializers.CharField(required=False, write_only=True,
         style={'input_type': 'password'},
         help_text=_("Password of the user making the HTTP request"))
+    otp_code = serializers.IntegerField(required=False, write_only=True,
+        style={'input_type': 'password'},
+        help_text=_("One-time code. This field will be checked against"\
+            " an expected code when multi-factor authentication (MFA)"\
+            " is enabled."))
+    email_code = serializers.IntegerField(required=False, write_only=True,
+        style={'input_type': 'password'},
+        help_text=_("Email verification code."))
+    phone_code = serializers.IntegerField(required=False, write_only=True,
+        style={'input_type': 'password'},
+        help_text=_("Phone verification code."))
 
     class Meta:
-        fields = ('password',)
+        fields = ('password', 'otp_code', 'email_code', 'phone_code')
+
+
+class AuthenticatedUserPasswordSerializer(AuthenticatedUserSerializer):
+    """
+    We need at least on secret of the HTTP `request.user` to commit changes.
+    """
+
+    def validate(self, attrs):
+        if not (attrs.get('password') or attrs.get('otp_code') or
+            attrs.get('email_code') or attrs.get('phone_code')):
+            raise NotAuthenticated(
+                {'detail': _("At least one of password, otp_code,"\
+                " email_code or phone_code must be present.")})
+        return super(AuthenticatedUserPasswordSerializer, self).validate(attrs)
+
+    class Meta(AuthenticatedUserSerializer.Meta):
+        fields = ('password', 'otp_code', 'email_code', 'phone_code')
 
 
 class APIKeysSerializer(NoModelSerializer):
@@ -136,33 +171,33 @@ class NotificationsSerializer(serializers.ModelSerializer):
         fields = ('notifications',)
 
 
-class CredentialsSerializer(NoModelSerializer):
+class CredentialsSerializer(AuthenticatedUserSerializer):
     """
     username and password for authentication through API.
     """
     username = UsernameOrCommField(
         help_text=_("Username, e-mail address or phone number to identify"\
         " the account"))
-    password = serializers.CharField(required=False, write_only=True,
-        style={'input_type': 'password'},
-        help_text=_("Secret password for the account"))
-    code = serializers.IntegerField(required=False, write_only=True,
-        style={'input_type': 'password'},
-        help_text=_("One-time code. This field will be checked against"\
-            " an expected code when multi-factor authentication (MFA)"\
-            " is enabled."))
+
+    class Meta(AuthenticatedUserSerializer.Meta):
+        fields = AuthenticatedUserSerializer.Meta.fields + ('username',)
 
 
 class OTPUpdateSerializer(AuthenticatedUserPasswordSerializer):
     """
     Returns sensitive information to setup OTP generator
     """
-    enable = serializers.BooleanField(write_only=True,
+    otp_enabled = serializers.BooleanField(write_only=True,
         help_text=_("Enables/disables OTP"))
+    email_verification_enabled = serializers.BooleanField(write_only=True,
+        help_text=_("Enables/disables E-mail verification"))
+    phone_verification_enabled = serializers.BooleanField(write_only=True,
+        help_text=_("Enables/disables Phone verification"))
 
     class Meta(AuthenticatedUserPasswordSerializer.Meta):
         fields = AuthenticatedUserPasswordSerializer.Meta.fields + (
-            'enable',)
+            'otp_enabled', 'email_verification_enabled',
+            'phone_verification_enabled')
 
 
 class OTPSerializer(NoModelSerializer):
@@ -188,18 +223,15 @@ class PublicKeySerializer(AuthenticatedUserPasswordSerializer):
         help_text=_("New public key for the user referenced in the URL"))
 
 
-class PasswordResetConfirmSerializer(NoModelSerializer):
+class PasswordChangeSerializer(AuthenticatedUserPasswordSerializer):
 
     new_password = serializers.CharField(write_only=True,
         style={'input_type': 'password'},
         help_text=_("New password for the user referenced in the URL"))
 
-
-class PasswordChangeSerializer(PasswordResetConfirmSerializer):
-
-    password = serializers.CharField(write_only=True,
-        style={'input_type': 'password'},
-        help_text=_("Password of the user making the HTTP request"))
+    class Meta(AuthenticatedUserPasswordSerializer.Meta):
+        fields = AuthenticatedUserPasswordSerializer.Meta.fields + (
+            'new_password',)
 
 
 class RecoverSerializer(NoModelSerializer):
@@ -238,14 +270,15 @@ class UserCreateSerializer(UserDetailSerializer):
 
     username = serializers.CharField(required=False,
         help_text=_("Unique identifier for the user, typically used in URLs"))
+    full_name = serializers.CharField(
+        help_text=_("Full name (effectively first name followed by last name)"))
     new_password = serializers.CharField(required=False, write_only=True,
         style={'input_type': 'password'}, help_text=_("Password with which"\
             " a user can authenticate with the service"))
-    full_name = serializers.CharField(
-        help_text=_("Full name (effectively first name followed by last name)"))
 
     class Meta(UserDetailSerializer.Meta):
-        fields = UserDetailSerializer.Meta.fields + ('new_password',)
+        fields = UserDetailSerializer.Meta.fields + (
+            'new_password',)
 
     def validate(self, attrs):
         if not (attrs.get('email') or

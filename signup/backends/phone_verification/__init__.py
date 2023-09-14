@@ -22,8 +22,4 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""
-PEP 386-compliant version number for the signup django app.
-"""
-
-__version__ = '0.9.0-dev'
+from .base import send_verification_phone

@@ -50,6 +50,8 @@ class PhoneField(PhoneNumberField):
             params.update(kwargs)
         else:
             params = kwargs
+        if settings.PHONE_VERIFICATION_BACKEND:
+            self.verification_enabled = True
         super(PhoneField, self).__init__(*args, **params)
 
 
@@ -79,6 +81,26 @@ class UsernameOrCommField(CommField):
         super(UsernameOrCommField, self).__init__(**kwargs)
         if not self.label:
             self.label = self.default_label
+
+
+class AuthenticatedUserPasswordMixin(object):
+
+    password = forms.CharField(
+        label=_("Password"),
+        widget=forms.PasswordInput(attrs={'placeholder': _("Your password")}),
+        strip=False,
+        help_text=password_validation.password_validators_help_text_html())
+    otp_code = forms.IntegerField(required=False,
+        widget=forms.TextInput(attrs={'placeholder': _("OTP code")}),
+        label=_("OTP code"))
+    email_code = forms.IntegerField(required=False,
+        widget=forms.TextInput(
+            attrs={'placeholder': _("Email verification code")}),
+        label=_("Email verification code"))
+    phone_code = forms.IntegerField(required=False,
+        widget=forms.TextInput(
+            attrs={'placeholder': _("Phone verification code")}),
+        label=_("Phone verification code"))
 
 
 class FrictionlessSignupForm(forms.Form):
@@ -224,16 +246,30 @@ class PasswordResetConfirmForm(PasswordUpdateForm):
     """
 
 
-class PasswordChangeForm(PasswordUpdateForm):
+class PasswordChangeForm(AuthenticatedUserPasswordMixin, PasswordUpdateForm):
 
-    password = forms.CharField(strip=False,
-        label=_("Your password"),
-        widget=forms.PasswordInput(
-            attrs={'placeholder': _("Your password")}))
+    # If we don't duplicate those here, `fields = []` raises an error.
+    password = forms.CharField(
+        label=_("Password"),
+        widget=forms.PasswordInput(attrs={'placeholder': _("Your password")}),
+        strip=False,
+        help_text=password_validation.password_validators_help_text_html())
+    otp_code = forms.IntegerField(required=False,
+        widget=forms.TextInput(attrs={'placeholder': _("OTP code")}),
+        label=_("OTP code"))
+    email_code = forms.IntegerField(required=False,
+        widget=forms.TextInput(
+            attrs={'placeholder': _("Email verification code")}),
+        label=_("Email verification code"))
+    phone_code = forms.IntegerField(required=False,
+        widget=forms.TextInput(
+            attrs={'placeholder': _("Phone verification code")}),
+        label=_("Phone verification code"))
 
     class Meta:
         model = get_user_model()
-        fields = ['password', 'new_password', 'new_password2']
+        fields = ['password', 'otp_code', 'email_code', 'phone_code',
+                  'new_password', 'new_password2']
 
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop('instance')
@@ -304,16 +340,11 @@ class ActivationForm(PasswordConfirmMixin, forms.Form):
             self.fields['captcha'] = get_recaptcha_form_field()
 
 
-class PublicKeyForm(forms.Form):
+class PublicKeyForm(AuthenticatedUserPasswordMixin, forms.Form):
 
     submit_title = _("Update")
 
     pubkey = forms.CharField(widget=forms.Textarea)
-    password = forms.CharField(
-        label=_("Password"),
-        widget=forms.PasswordInput(attrs={'placeholder': _("Password")}),
-        strip=False,
-        help_text=password_validation.password_validators_help_text_html())
 
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop('instance')

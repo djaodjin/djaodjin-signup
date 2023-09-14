@@ -36,13 +36,14 @@ from django.shortcuts import redirect
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect
 from django.views.generic.edit import UpdateView
+from rest_framework.exceptions import AuthenticationFailed
 
 from .. import settings
-from ..compat import gettext_lazy as _, is_authenticated, reverse, six
+from ..compat import gettext_lazy as _, reverse, six
 from ..forms import (PasswordChangeForm, PublicKeyForm, UserForm,
     UserNotificationsForm)
 from ..helpers import has_invalid_password, update_context_urls
-from ..mixins import UserMixin
+from ..mixins import AuthenticatedUserPasswordMixin, UserMixin
 from ..models import Contact, Notification, OTPGenerator
 from ..utils import update_db_row
 
@@ -60,17 +61,17 @@ class UserProfileView(UserMixin, UpdateView):
     template_name = 'users/index.html'
 
     def form_valid(self, form):
-        contact = self.object.contacts.filter(
-            email__iexact=self.object.email).first()
+        contact = self.user.contacts.filter(
+            email__iexact=self.user.email).first()
         if not contact:
-            contact = self.object.contacts.order_by('pk').first()
+            contact = self.user.contacts.order_by('pk').first()
         failed = False
         with transaction.atomic():
             # `form.save(commit=False)` will copy the form fields values
             # to the instance without committing to the database.
             # `update_db_row` will commit to the database.
             form.save(commit=False)
-            if update_db_row(self.object, form):
+            if update_db_row(self.user, form):
                 failed = True
             else:
                 if form.cleaned_data['phone']:
@@ -92,7 +93,7 @@ class UserProfileView(UserMixin, UpdateView):
                         failed = True
                 else:
                     contact = Contact.objects.create(
-                        user=self.object,
+                        user=self.user,
                         slug=form.cleaned_data['username'],
                         full_name=form.cleaned_data['full_name'],
                         nick_name=form.cleaned_data['nick_name'],
@@ -105,61 +106,64 @@ class UserProfileView(UserMixin, UpdateView):
 
     def get_initial(self):
         initial = super(UserProfileView, self).get_initial()
-        if self.object:
-            initial.update({'full_name': self.object.get_full_name()})
+        if self.user:
+            initial.update({'full_name': self.user.get_full_name()})
         return initial
 
 
     def get_context_data(self, **kwargs):
         context = super(UserProfileView, self).get_context_data(**kwargs)
-        setattr(context['user'], 'full_name', context['user'].get_full_name())
-        contact = context['user'].contacts.filter(
-            picture__isnull=False).order_by('created_at').first()
-        if contact:
-            setattr(context['user'], 'picture', contact.picture)
-        # URLs for user
-        if is_authenticated(self.request):
-            update_context_urls(context, {'user': {
-                'api_recover': reverse('api_recover'),
-                'api_generate_keys': reverse(
-                    'api_generate_keys', args=(self.object,)),
-                'api_profile': reverse(
-                    'api_user_profile', args=(self.object,)),
-                'api_password_change': reverse(
-                    'api_user_password_change', args=(self.object,)),
-                'api_otp_change': reverse(
-                    'api_user_otp_change', args=(self.object,)),
-                'api_user_picture': reverse(
-                    'api_user_picture', args=(self.object,)),
-                'api_contact': reverse(
-                    'api_contact', args=(self.object.username,)), #XXX
-                'api_pubkey': reverse(
-                    'api_pubkey', args=(self.object,)),
-                'password_change': reverse(
-                    'password_change', args=(self.object,)),
-                'keys_update': reverse(
-                    'pubkey_update', args=(self.object,)),
-            }})
-            if has_invalid_password(self.object):
-                update_context_urls(context, {'user': {
-                    'api_activate': reverse(
-                        'api_user_activate', args=(self.object,)),
-                }})
-            contact = context['user'].contacts.filter(
-                email__iexact=self.object.email).order_by('created_at').first()
-            if contact:
-                context.update({
-                    'email_verified_at': contact.email_verified_at,
-                    'phone_verified_at': contact.phone_verified_at
-                })
+        setattr(self.user, 'full_name', self.user.get_full_name())
+        primary_contact = self.user.contacts.filter(
+            email__iexact=self.user.email).order_by('created_at').first()
+        if primary_contact:
             context.update({
-                'otp_enabled': OTPGenerator.objects.filter(
-                    user=self.object).exists()})
+                'email_verified_at': primary_contact.email_verified_at,
+                'phone_verified_at': primary_contact.phone_verified_at
+            })
+        if primary_contact and primary_contact.picture:
+            setattr(self.user, 'picture', primary_contact.picture)
+        else:
+            picture_candidate = self.user.contacts.filter(
+                picture__isnull=False).order_by('created_at').first()
+            if picture_candidate:
+                setattr(self.user, 'picture', picture_candidate.picture)
+        # URLs for user
+        update_context_urls(context, {
+            'api_recover': reverse('api_recover'),
+            'user': {
+                'api_generate_keys': reverse(
+                    'api_generate_keys', args=(self.user,)),
+                'api_profile': reverse(
+                    'api_user_profile', args=(self.user,)),
+                'api_password_change': reverse(
+                    'api_user_password_change', args=(self.user,)),
+                'api_otp_change': reverse(
+                    'api_user_otp_change', args=(self.user,)),
+                'api_profile_picture': reverse(
+                    'api_user_picture', args=(self.user,)),
+                'api_contact': reverse(
+                    'api_contact', args=(self.user.username,)), #XXX
+                'api_pubkey': reverse(
+                    'api_pubkey', args=(self.user,)),
+                'password_change': reverse(
+                    'password_change', args=(self.user,)),
+                'keys_update': reverse(
+                    'pubkey_update', args=(self.user,)),
+        }})
+        if has_invalid_password(self.user):
+            update_context_urls(context, {'user': {
+                'api_activate': reverse(
+                    'api_user_activate', args=(self.user,)),
+            }})
+        context.update({
+            'otp_enabled': OTPGenerator.objects.filter(
+                user=self.user).exists()})
         return context
 
     def get_success_url(self):
         messages.info(self.request, _("Profile updated."))
-        return reverse('users_profile', args=(self.object,))
+        return reverse('users_profile', args=(self.user,))
 
 
 class UserNotificationsView(UserMixin, UpdateView):
@@ -172,7 +176,7 @@ class UserNotificationsView(UserMixin, UpdateView):
     def form_valid(self, form):
         with transaction.atomic():
             notifications = self.get_initial().get('notifications')
-            self.object.notifications.clear()
+            self.user.notifications.clear()
             for notification_slug, enabled in six.iteritems(form.cleaned_data):
                 if not notification_slug in notifications:
                     continue
@@ -181,10 +185,10 @@ class UserNotificationsView(UserMixin, UpdateView):
                     slug=notification_slug)
                 if settings.NOTIFICATIONS_OPT_OUT:
                     if not enabled:
-                        self.object.notifications.add(notification)
+                        self.user.notifications.add(notification)
                 else:
                     if enabled:
-                        self.object.notifications.add(notification)
+                        self.user.notifications.add(notification)
         return HttpResponseRedirect(self.get_success_url())
 
     def get_initial(self):
@@ -207,10 +211,10 @@ class UserNotificationsView(UserMixin, UpdateView):
 
     def get_success_url(self):
         messages.info(self.request, _("Notifications updated."))
-        return reverse('users_notifications', args=(self.object,))
+        return reverse('users_notifications', args=(self.user,))
 
 
-class PasswordChangeView(UserProfileView):
+class PasswordChangeView(AuthenticatedUserPasswordMixin, UserProfileView):
     """
     Update password for a User
     """
@@ -223,27 +227,27 @@ class PasswordChangeView(UserProfileView):
             request, *args, **kwargs)
 
     def form_valid(self, form):
-        password = form.cleaned_data['password']
-        pwd_correct = self.request.user.check_password(password)
-        if not pwd_correct:
+        try:
+            self.re_auth(self.request, form.cleaned_data)
+        except AuthenticationFailed:
             form.add_error(None, _("Your password is incorrect."))
             return self.form_invalid(form)
         return super(PasswordChangeView, self).form_valid(form)
 
     def get_success_url(self):
         LOGGER.info("%s updated password for %s.",
-            self.request.user, self.object, extra={
+            self.request.user, self.user, extra={
             'event': 'update-password', 'request': self.request,
-            'modified': self.object.username})
-        if self.request.user == self.object:
+            'modified': self.user.username})
+        if self.request.user == self.user:
             # Updating the password logs out all other sessions for the user
             # except the current one.
-            update_session_auth_hash(self.request, self.object)
+            update_session_auth_hash(self.request, self.user)
         messages.info(self.request, _("Password has been updated successfuly."))
-        return reverse('users_profile', args=(self.object,))
+        return reverse('users_profile', args=(self.user,))
 
 
-class UserPublicKeyUpdateView(UserProfileView):
+class UserPublicKeyUpdateView(AuthenticatedUserPasswordMixin, UserProfileView):
     """
     Update password for a User
     """
@@ -254,18 +258,18 @@ class UserPublicKeyUpdateView(UserProfileView):
         """
         If the form is valid, save the associated model.
         """
-        password = form.cleaned_data['password']
-        pwd_correct = self.request.user.check_password(password)
-        if not pwd_correct:
+        try:
+            self.re_auth(self.request, form.cleaned_data)
+        except AuthenticationFailed:
             form.add_error(None, _("Your password is incorrect."))
             return self.form_invalid(form)
         try:
             self.user.set_pubkey(form.cleaned_data['pubkey'],
                 bind_password=form.cleaned_data['password'])
             LOGGER.info("%s updated pubkey for %s.",
-                self.request.user, self.object, extra={
+                self.request.user, self.user, extra={
                 'event': 'update-pubkey', 'request': self.request,
-                'modified': self.object.username})
+                'modified': self.user.username})
             #pylint:disable=attribute-defined-outside-init
             self.object = self.user
         except AttributeError:

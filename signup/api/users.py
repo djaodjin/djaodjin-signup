@@ -27,7 +27,6 @@ import hashlib, logging, os, re
 import pyotp
 from django.contrib.auth import logout as auth_logout
 from django.db import transaction, IntegrityError
-from django.core.exceptions import PermissionDenied
 from django.contrib.auth import update_session_auth_hash, get_user_model
 from rest_framework import generics, parsers, status
 from rest_framework.exceptions import ValidationError
@@ -42,7 +41,7 @@ from ..compat import (force_str, gettext_lazy as _, reverse, six,
 from ..decorators import check_has_credentials
 from ..docs import OpenAPIResponse, no_body, swagger_auto_schema
 from ..helpers import full_name_natural_split
-from ..mixins import ContactMixin, UserMixin
+from ..mixins import AuthenticatedUserPasswordMixin, ContactMixin, UserMixin
 from ..models import (Contact, Credentials, Notification, OTPGenerator,
     get_disabled_email_update)
 from ..serializers_overrides import UserSerializer, UserDetailSerializer
@@ -658,7 +657,8 @@ class ActivityByAccountContactAPIView(UserListMixin, generics.ListAPIView):
             self.account_url_kwarg)).select_related('user')
 
 
-class OTPChangeAPIView(UserMixin, generics.GenericAPIView):
+class OTPChangeAPIView(AuthenticatedUserPasswordMixin,
+                       UserMixin, generics.GenericAPIView):
 
     serializer_class = OTPUpdateSerializer
 
@@ -674,7 +674,14 @@ class OTPChangeAPIView(UserMixin, generics.GenericAPIView):
         400: OpenAPIResponse("parameters error", ValidationErrorSerializer)})
     def put(self, request, *args, **kwargs):
         """
-        Enables or disables OTP
+        Enables multi-factor authentication
+
+        Enables multi-factor authentication, through either an OTP one-time
+        code, email verification, phone verification or any combination
+        of the above.
+
+        To disable any of the MFA requirements, pass a `false` value for
+        its respective field.
 
         The API is typically used within an HTML
         `update password page </docs/guides/themes/#dashboard_users_password>`_
@@ -692,7 +699,9 @@ class OTPChangeAPIView(UserMixin, generics.GenericAPIView):
 
             {
               "password": "yoyo",
-              "enable": true
+              "otp_enabled": true,
+              "email_verification_enabled": false,
+              "phone_verification_enabled": false
             }
 
         responds
@@ -707,12 +716,9 @@ class OTPChangeAPIView(UserMixin, generics.GenericAPIView):
         #pylint:disable=unused-argument
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        self.re_auth(request, serializer.validated_data)
 
-        password = serializer.validated_data['password']
-        if not self.request.user.check_password(password):
-            raise PermissionDenied(_("Incorrect credentials"))
-
-        if serializer.validated_data.get('enable'):
+        if serializer.validated_data.get('otp_enabled'):
             otp, created = OTPGenerator.objects.get_or_create(
                 user=self.user, defaults={
                     'priv_key': pyotp.random_base32()
@@ -733,7 +739,8 @@ class OTPChangeAPIView(UserMixin, generics.GenericAPIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class PasswordChangeAPIView(generics.GenericAPIView):
+class PasswordChangeAPIView(AuthenticatedUserPasswordMixin,
+                            generics.GenericAPIView):
     """
     Updates a user password
     """
@@ -747,6 +754,9 @@ class PasswordChangeAPIView(generics.GenericAPIView):
     def put(self, request, *args, **kwargs):
         """
         Updates a user password
+
+        Sets a new password for a user. Any or a combination of
+        the HTTP request user secrets must be passed along for authorization.
 
         The API is typically used within an HTML
         `update password page </docs/guides/themes/#dashboard_users_password>`_
@@ -787,8 +797,8 @@ class PasswordChangeAPIView(generics.GenericAPIView):
                 set_ldap_password(serializer.instance, new_password,
                     bind_password=password)
             else:
-                if not self.request.user.check_password(password):
-                    raise PermissionDenied(_("Incorrect credentials"))
+                self.re_auth(request, serializer.validated_data)
+
                 serializer.instance.set_password(new_password)
                 serializer.instance.save()
             # Updating the password logs out all other sessions for the user

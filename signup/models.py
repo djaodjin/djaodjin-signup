@@ -44,12 +44,11 @@ from rest_framework.exceptions import ValidationError as DRFValidationError
 
 from . import settings
 from .backends.auth_ldap import is_ldap_user
-from .backends.mfa import EmailOTCBackend, PhoneOTCBackend
 from .compat import (gettext_lazy as _, import_string,
     python_2_unicode_compatible, six)
 from .helpers import (datetime_or_now, full_name_natural_split,
     has_invalid_password)
-from .utils import generate_random_slug, handle_uniq_error
+from .utils import generate_random_code, generate_random_slug, handle_uniq_error
 from .validators import validate_phone
 
 LOGGER = logging.getLogger(__name__)
@@ -342,6 +341,7 @@ class ContactManager(models.Manager):
                     # that will trigger an activate url, then filling the first
                     # form that showed up.
                     contact.email_verification_key = verification_key
+                    contact.email_code = generate_random_code()
                 contact.email_verification_at = at_time
                 # XXX It is possible a 'reason' field would be a better
                 # implementation.
@@ -411,6 +411,7 @@ class ContactManager(models.Manager):
                     # that will trigger an activate url, then filling the first
                     # form that showed up.
                     contact.phone_verification_key = verification_key
+                contact.phone_code = generate_random_code()
                 contact.phone_verification_at = at_time
                 # XXX It is possible a 'reason' field would be a better
                 # implementation.
@@ -527,16 +528,6 @@ class Contact(models.Model):
     """
     Used in workflow to verify the email address of a ``User``.
     """
-    NO_OTC = 0
-    EMAIL_BACKEND = 1
-    PHONE_BACKEND = 2
-
-    OTC_BACKEND_TYPE = (
-        (NO_OTC, "send link instead of one-time code"),
-        (EMAIL_BACKEND, "send one-time authentication code through email"),
-        (PHONE_BACKEND, "send one-time authentication code through phone"),
-    )
-
     objects = ContactManager()
 
     slug = models.SlugField(unique=True,
@@ -567,6 +558,8 @@ class Contact(models.Model):
          null=True, max_length=40)
     email_verification_at = models.DateTimeField(null=True,
         help_text=_("Date/time when the e-mail verification key was sent"))
+    email_code = models.IntegerField(
+        _("Email verification code"), null=True)
     email_verified_at = models.DateTimeField(null=True,
         help_text=_("Date/time when the e-mail was last verified"))
     phone_verification_key = models.CharField(
@@ -574,15 +567,14 @@ class Contact(models.Model):
         null=True, max_length=40)
     phone_verification_at = models.DateTimeField(null=True,
         help_text=_("Date/time when the phone verification key was sent"))
+    phone_code = models.IntegerField(
+        _("Phone verification code"), null=True)
     phone_verified_at = models.DateTimeField(null=True,
         help_text=_("Date/time when the phone number was last verified"))
     lang = models.CharField(_("Preferred communication language"),
          default=settings.LANGUAGE_CODE, max_length=8,
         help_text=_("Two-letter ISO 639 code for the preferred"\
         " communication language (ex: en)"))
-    otc_backend = models.PositiveSmallIntegerField(
-        choices=OTC_BACKEND_TYPE, default=NO_OTC,
-        help_text=_("Backend to use for multi-factor authentication"))
     one_time_code = models.IntegerField(
         _("One-time authentication code"), null=True)
     otc_nb_attempts = models.IntegerField(
@@ -624,21 +616,6 @@ class Contact(models.Model):
 
     def get_lang(self):
         return self.lang
-
-    def get_otc_backend(self):
-        if self.otc_backend == self.EMAIL_BACKEND:
-            return EmailOTCBackend()
-        if self.otc_backend == self.PHONE_BACKEND:
-            return PhoneOTCBackend()
-        return None
-
-    def create_otc_token(self):
-        return self.get_otc_backend().create_token(self)
-
-    def clear_otc_token(self):
-        self.one_time_code = None
-        self.otc_nb_attempts = 0
-        self.save()
 
     def save(self, force_insert=False, force_update=False,
              using=None, update_fields=None):

@@ -34,7 +34,7 @@ from rest_framework.exceptions import ValidationError
 from ..backends.auth_ldap import is_ldap_user, set_ldap_pubkey
 from ..compat import gettext_lazy as _
 from ..docs import OpenAPIResponse, swagger_auto_schema
-from ..mixins import UserMixin
+from ..mixins import AuthenticatedUserPasswordMixin, UserMixin
 from ..models import Credentials
 from ..serializers import (AuthenticatedUserPasswordSerializer,
     APIKeysSerializer, PublicKeySerializer, ValidationErrorSerializer)
@@ -44,7 +44,8 @@ from ..utils import generate_random_slug
 LOGGER = logging.getLogger(__name__)
 
 
-class ResetAPIKeysAPIView(UserMixin, GenericAPIView):
+class ResetAPIKeysAPIView(AuthenticatedUserPasswordMixin,
+                          UserMixin, GenericAPIView):
     """
     Resets a user secret API key
     """
@@ -90,9 +91,8 @@ class ResetAPIKeysAPIView(UserMixin, GenericAPIView):
         """
         serializer = AuthenticatedUserPasswordSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        password = serializer.validated_data.get('password')
-        if not request.user.check_password(password):
-            raise PermissionDenied(_("Incorrect credentials"))
+        self.re_auth(request, serializer.validated_data)
+
         allowed_chars = 'abcdefghjkmnpqrstuvwxyz'\
             'ABCDEFGHJKLMNPQRSTUVWXYZ'\
             '23456789'
@@ -113,7 +113,8 @@ class ResetAPIKeysAPIView(UserMixin, GenericAPIView):
         }), status=status.HTTP_201_CREATED)
 
 
-class PublicKeyAPIView(UserMixin, GenericAPIView):
+class PublicKeyAPIView(AuthenticatedUserPasswordMixin,
+                       UserMixin, GenericAPIView):
     """
     Updates a user public RSA key
     """
@@ -124,6 +125,9 @@ class PublicKeyAPIView(UserMixin, GenericAPIView):
     def put(self, request, *args, **kwargs):
         """
         Updates a user public RSA key
+
+        Sets a new public RSA key for a user. Any or a combination of
+        the HTTP request user secrets must be passed along for authorization.
 
         **Tags: auth, user, usermodel
 
@@ -162,8 +166,7 @@ class PublicKeyAPIView(UserMixin, GenericAPIView):
                     'event': 'update-pubkey', 'request': self.request,
                     'modified': self.user.username})
             else:
-                if not request.user.check_password(password):
-                    raise PermissionDenied(_("Incorrect credentials"))
+                self.re_auth(request, serializer.validated_data)
         except AttributeError:
             raise ValidationError(
                 'Cannot store public key in the User model.')
