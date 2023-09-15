@@ -1,4 +1,9 @@
-This code a frictionless signup Django app.
+DjaoDjin-Signup
+===============
+
+[![PyPI version](https://badge.fury.io/py/djaodjin-signup.svg)](https://badge.fury.io/py/djaodjin-signup)
+
+This repository contains a Django App for frictionless signup.
 
 The app will register and login a user with as little as only an email address.
 
@@ -70,15 +75,12 @@ Tested with
 - **Python:** 3.10, **Django:** 4.2 (latest) - see [#55](https://github.com/djaodjin/djaodjin-signup/issues/55)
 - **Python:** 2.7, **Django:** 1.11 (legacy) - use testsite/requirements-legacy.txt
 
-0.8.4
+0.9.0
 
-  * hotfix: field_value is undefined
-
-0.8.3
-
-  * removes connection btw user and contact on delete
-  * fixes activation with e-mail that looks like a bot
-  * verifies and activates contact with no user
-  * restores workflow to recover password from an e-mail
+  * introduces phone verification backend
+  * compatibles with Bootstrap5
+  * silences bots POSTing to `regsiter/.`
+  * fixes `phonenumber.to_python` may return `None`
+  * fixes forgot password when a `User` is deleted but not `Contact`
 
 [previous release notes](changelog)
