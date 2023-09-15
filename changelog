@@ -1,3 +1,13 @@
+0.9.0
+
+  * introduces phone verification backend
+  * compatibles with Bootstrap5
+  * silences bots POSTing to `regsiter/.`
+  * fixes `phonenumber.to_python` may return `None`
+  * fixes forgot password when a `User` is deleted but not `Contact`
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Fri, 15 Sep 2023 13:35:00 -0700
+
 0.8.4
 
   * hotfix: field_value is undefined
