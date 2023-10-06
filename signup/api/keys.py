@@ -28,8 +28,8 @@ from dateutil.relativedelta import relativedelta
 from django.contrib.auth.hashers import make_password
 from django.core.exceptions import PermissionDenied
 from rest_framework import status
-from rest_framework.generics import GenericAPIView, ListAPIView
-from rest_framework.mixins import DestroyModelMixin
+from rest_framework.generics import (GenericAPIView, ListAPIView,
+    get_object_or_404)
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
 
@@ -124,16 +124,11 @@ class ListCreateAPIKeysAPIView(AuthenticatedUserPasswordMixin,
 
 
 class DestroyAPIKeyAPIView(AuthenticatedUserPasswordMixin,
-                            DestroyModelMixin, GenericAPIView):
+                            UserMixin, GenericAPIView):
     """
     Deletes a user secret API key
     """
-    lookup_field = 'api_pub_key'
-    lookup_url_kwarg = 'key'
     serializer_class = AuthenticatedUserPasswordSerializer
-
-    def get_queryset(self):
-        return Credentials.objects.filter(user=self.request.user)
 
     @swagger_auto_schema(responses={
         204: OpenAPIResponse("Delete successful", None)})
@@ -167,7 +162,11 @@ class DestroyAPIKeyAPIView(AuthenticatedUserPasswordMixin,
         serializer.is_valid(raise_exception=True)
         self.re_auth(request, serializer.validated_data)
 
-        return self.destroy(request, *args, **kwargs)
+        obj = get_object_or_404(Credentials.objects.filter(
+            user=self.user), api_pub_key=kwargs['key'])
+        obj.delete()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class PublicKeyAPIView(AuthenticatedUserPasswordMixin,
