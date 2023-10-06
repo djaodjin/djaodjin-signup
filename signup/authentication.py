@@ -48,6 +48,9 @@ class APIKeyAuthentication(BasicAuthentication):
         if not token.check_priv_key(priv_key):
             raise exceptions.AuthenticationFailed(_('Invalid token'))
 
+        if token.is_expired():
+            raise exceptions.AuthenticationFailed(_('Invalid token'))
+
         is_active = getattr(token.user, 'is_active', None)
         if not (is_active or is_active is None):
             raise exceptions.AuthenticationFailed(

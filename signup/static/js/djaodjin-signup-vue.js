@@ -373,7 +373,7 @@ Vue.component('user-update-password', {
 
 Vue.component('user-rotate-api-keys', {
     mixins: [
-        httpRequestMixin,
+        itemListMixin,
         userPasswordModalMixin
     ],
     data: function () {
@@ -381,16 +381,21 @@ Vue.component('user-rotate-api-keys', {
             url: this.$urls.user.api_generate_keys,
             modalSelector: '.user-password-modal',
             apiKey: '',
+            title: '',
+            deleteKeyPending: null,
         };
     },
     methods: {
         generateKey: function() {
             var vm = this;
             vm.reqPost(vm.url,
-                { password: vm.password },
+                { password: vm.password, title: vm.title },
             function(resp) {
                 vm.apiKey = resp.secret;
+                vm.password = '';
+                vm.title = '';
                 vm.modalHide();
+                vm.get();
                 if( resp.detail ) {
                     vm.showMessages([resp.detail], "success");
                 }
@@ -408,7 +413,24 @@ Vue.component('user-rotate-api-keys', {
             var vm = this;
             vm.generateKey();
         },
+        deleteKey: function(key) {
+            var vm = this;
+            if (vm.deleteKeyPending && vm.password) {
+                vm.reqPost(`${vm.url}/${vm.deleteKeyPending}/`, {
+                    password: vm.password
+                }, function() {
+                    vm.deleteKeyPending = null;
+                    vm.password = '';
+                    vm.get();
+                });
+            }
+        }
     },
+
+    mounted: function(){
+        this.get()
+    }
+
 });
 
 
