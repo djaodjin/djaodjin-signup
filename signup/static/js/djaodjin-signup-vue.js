@@ -392,7 +392,6 @@ Vue.component('user-rotate-api-keys', {
                 { password: vm.password, title: vm.title },
             function(resp) {
                 vm.apiKey = resp.secret;
-                vm.password = '';
                 vm.title = '';
                 vm.modalHide();
                 vm.get();
@@ -411,16 +410,25 @@ Vue.component('user-rotate-api-keys', {
         },
         submitPassword: function(){
             var vm = this;
-            vm.generateKey();
+            if( vm.deleteKeyPending ) {
+                vm.deleteKey();
+            } else {
+                vm.generateKey();
+            }
         },
-        deleteKey: function(key) {
+        confirmDelete: function(key) {
+            var vm = this;
+            vm.deleteKeyPending = key.api_pub_key;
+            vm.modalShow();
+        },
+        deleteKey: function() {
             var vm = this;
             if (vm.deleteKeyPending && vm.password) {
                 vm.reqPost(`${vm.url}/${vm.deleteKeyPending}/`, {
                     password: vm.password
                 }, function() {
                     vm.deleteKeyPending = null;
-                    vm.password = '';
+                    vm.modalHide();
                     vm.get();
                 });
             }

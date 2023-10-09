@@ -9,7 +9,6 @@
       <div v-show="deleteKeyPending">
         <form @submit.prevent="deleteKey">
           <input type="hidden" name="csrfmiddlewaretoken" value="{{csrf_token}}">
-          <input type="hidden" name="keyId" v-model="deleteKeyPending">
           <label>Enter your password to delete the API key</label>
           <div>
             <label for="id_password">Password:</label>
