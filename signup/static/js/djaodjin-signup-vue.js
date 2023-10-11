@@ -424,7 +424,7 @@ Vue.component('user-rotate-api-keys', {
         deleteKey: function() {
             var vm = this;
             if (vm.deleteKeyPending && vm.password) {
-                vm.reqPost(`${vm.url}/${vm.deleteKeyPending}/`, {
+                vm.reqPost(`${vm.url}/${vm.deleteKeyPending}`, {
                     password: vm.password
                 }, function() {
                     vm.deleteKeyPending = null;

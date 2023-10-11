@@ -31,6 +31,6 @@ urlpatterns = [
         PublicKeyAPIView.as_view(), name='api_pubkey'),
     path('users/<slug:user>/api-keys',
         ListCreateAPIKeysAPIView.as_view(), name='api_generate_keys'),
-    path('users/<slug:user>/api-keys/<slug:key>/',
+    path('users/<slug:user>/api-keys/<slug:key>',
         DestroyAPIKeyAPIView.as_view(), name='api_destroy_key')
 ]

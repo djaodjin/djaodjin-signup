@@ -145,7 +145,7 @@ class DestroyAPIKeyAPIView(AuthenticatedUserPasswordMixin,
 
         .. code-block:: http
 
-            DELETE /api/users/xia/api-keys/k9Q9YppQMnZ7Yh5bDkx2wsQvDfL4U3TM/  HTTP/1.1
+            DELETE /api/users/xia/api-keys/k9Q9YppQMnZ7Yh5bDkx2wsQvDfL4U3TM  HTTP/1.1
 
         .. code-block:: json
 
