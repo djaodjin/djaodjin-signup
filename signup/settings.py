@@ -96,6 +96,7 @@ _SETTINGS = {
     },
     'USER_CONTACT_CALLABLE': None,  # XXX deprecated?
     'USER_SERIALIZER': 'signup.serializers_overrides.UserSerializer',
+    'USER_API_KEY_LIFETIME_DAYS': getattr(settings, 'USER_API_KEY_LIFETIME_DAYS', 365),
 }
 _SETTINGS.update(getattr(settings, 'SIGNUP', {}))
 
@@ -162,5 +163,6 @@ LOGIN_REDIRECT_URL = getattr(settings, 'LOGIN_REDIRECT_URL')
 EMAIL_VERIFICATION_PAT = r'[a-f0-9]{40}'
 FULL_NAME_PAT = r"^([^\W\d_]|[ \.\'\-])+$"
 USERNAME_PAT = r'[\w.@+-]+'
+USER_API_KEY_LIFETIME_DAYS = _SETTINGS.get('USER_API_KEY_LIFETIME_DAYS')
 
 RANDOM_SEQUENCE_IDX = 0

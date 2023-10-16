@@ -373,7 +373,7 @@ Vue.component('user-update-password', {
 
 Vue.component('user-rotate-api-keys', {
     mixins: [
-        httpRequestMixin,
+        itemListMixin,
         userPasswordModalMixin
     ],
     data: function () {
@@ -381,16 +381,20 @@ Vue.component('user-rotate-api-keys', {
             url: this.$urls.user.api_generate_keys,
             modalSelector: '.user-password-modal',
             apiKey: '',
+            title: '',
+            deleteKeyPending: null,
         };
     },
     methods: {
         generateKey: function() {
             var vm = this;
             vm.reqPost(vm.url,
-                { password: vm.password },
+                { password: vm.password, title: vm.title },
             function(resp) {
                 vm.apiKey = resp.secret;
+                vm.title = '';
                 vm.modalHide();
+                vm.get();
                 if( resp.detail ) {
                     vm.showMessages([resp.detail], "success");
                 }
@@ -406,9 +410,35 @@ Vue.component('user-rotate-api-keys', {
         },
         submitPassword: function(){
             var vm = this;
-            vm.generateKey();
+            if( vm.deleteKeyPending ) {
+                vm.deleteKey();
+            } else {
+                vm.generateKey();
+            }
         },
+        confirmDelete: function(key) {
+            var vm = this;
+            vm.deleteKeyPending = key.api_pub_key;
+            vm.modalShow();
+        },
+        deleteKey: function() {
+            var vm = this;
+            if (vm.deleteKeyPending && vm.password) {
+                vm.reqPost(`${vm.url}/${vm.deleteKeyPending}`, {
+                    password: vm.password
+                }, function() {
+                    vm.deleteKeyPending = null;
+                    vm.modalHide();
+                    vm.get();
+                });
+            }
+        }
     },
+
+    mounted: function(){
+        this.get()
+    }
+
 });
 
 

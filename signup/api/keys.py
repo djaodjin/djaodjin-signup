@@ -24,40 +24,48 @@
 
 import logging
 
+from dateutil.relativedelta import relativedelta
 from django.contrib.auth.hashers import make_password
 from django.core.exceptions import PermissionDenied
 from rest_framework import status
-from rest_framework.generics import GenericAPIView
+from rest_framework.generics import (GenericAPIView, ListAPIView,
+    get_object_or_404)
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
 
 from ..backends.auth_ldap import is_ldap_user, set_ldap_pubkey
 from ..compat import gettext_lazy as _
 from ..docs import OpenAPIResponse, swagger_auto_schema
+from ..helpers import datetime_or_now
 from ..mixins import AuthenticatedUserPasswordMixin, UserMixin
 from ..models import Credentials
 from ..serializers import (AuthenticatedUserPasswordSerializer,
-    APIKeysSerializer, PublicKeySerializer, ValidationErrorSerializer)
+    APIKeypairSerializer, PublicKeySerializer, APIKeySeralizer,
+    ValidationErrorSerializer, NewKeypairSerializer)
 from ..utils import generate_random_slug
+from .. import settings
 
 
 LOGGER = logging.getLogger(__name__)
 
 
-class ResetAPIKeysAPIView(AuthenticatedUserPasswordMixin,
-                          UserMixin, GenericAPIView):
+class ListCreateAPIKeysAPIView(AuthenticatedUserPasswordMixin,
+                          UserMixin, ListAPIView):
     """
     Resets a user secret API key
     """
-    serializer_class = APIKeysSerializer
+    serializer_class = APIKeySeralizer
 
     def get_serializer_class(self):
         if self.request.method.lower() == 'post':
-            return AuthenticatedUserPasswordSerializer
-        return super(ResetAPIKeysAPIView, self).get_serializer_class()
+            return NewKeypairSerializer
+        return super(ListCreateAPIKeysAPIView, self).get_serializer_class()
+
+    def get_queryset(self):
+        return Credentials.objects.filter(user=self.user)
 
     @swagger_auto_schema(responses={
-        201: OpenAPIResponse("Reset successful", APIKeysSerializer)})
+        201: OpenAPIResponse("Reset successful", APIKeypairSerializer)})
     def post(self, request, *args, **kwargs):#pylint:disable=unused-argument
         """
         Resets a user secret API key
@@ -89,7 +97,7 @@ class ResetAPIKeysAPIView(AuthenticatedUserPasswordMixin,
             }
 
         """
-        serializer = AuthenticatedUserPasswordSerializer(data=request.data)
+        serializer = NewKeypairSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         self.re_auth(request, serializer.validated_data)
 
@@ -102,15 +110,63 @@ class ResetAPIKeysAPIView(AuthenticatedUserPasswordMixin,
         api_password = generate_random_slug(
             length=Credentials.API_PASSWORD_LENGTH,
             allowed_chars=allowed_chars)
-        Credentials.objects.update_or_create(
+        Credentials.objects.create(
             user=self.user,
-            defaults={
-                'api_pub_key': api_pub_key,
-                'api_password': make_password(api_password)
-            })
-        return Response(APIKeysSerializer().to_representation({
+            api_pub_key=api_pub_key,
+            api_password=make_password(api_password),
+            ends_at=datetime_or_now() + relativedelta(
+                settings.USER_API_KEY_LIFETIME_DAYS),
+            title=serializer.validated_data['title']
+        )
+        return Response(APIKeypairSerializer().to_representation({
             'secret': api_pub_key + api_password
         }), status=status.HTTP_201_CREATED)
+
+
+class DestroyAPIKeyAPIView(AuthenticatedUserPasswordMixin,
+                            UserMixin, GenericAPIView):
+    """
+    Deletes a user secret API key
+    """
+    serializer_class = AuthenticatedUserPasswordSerializer
+
+    @swagger_auto_schema(responses={
+        204: OpenAPIResponse("Delete successful", None)})
+    def post(self, request, *args, **kwargs):#pylint:disable=unused-argument
+        """
+        Deletes a user API key
+
+        Deletes the API key which user used to authenticate
+        with the service.
+
+        **Tags: auth, user, usermodel
+
+        **Example
+
+        .. code-block:: http
+
+            DELETE /api/users/xia/api-keys/k9Q9YppQMnZ7Yh5bDkx2wsQvDfL4U3TM  HTTP/1.1
+
+        .. code-block:: json
+
+            {
+              "password": "yoyo"
+            }
+
+        .. code-block:: http
+
+            HTTP/1.1 204 OK
+
+        """
+        serializer = AuthenticatedUserPasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.re_auth(request, serializer.validated_data)
+
+        obj = get_object_or_404(Credentials.objects.filter(
+            user=self.user), api_pub_key=kwargs['key'])
+        obj.delete()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class PublicKeyAPIView(AuthenticatedUserPasswordMixin,

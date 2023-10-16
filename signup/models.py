@@ -729,9 +729,11 @@ class Credentials(models.Model):
     API_PUB_KEY_LENGTH = 32
     API_PASSWORD_LENGTH = 32
 
+    title = models.CharField(max_length=100, blank=True)
     api_pub_key = models.SlugField(unique=True, max_length=API_PUB_KEY_LENGTH)
     api_password = models.CharField(max_length=128)
-    user = models.OneToOneField(settings.AUTH_USER_MODEL,
+    ends_at = models.DateTimeField(null=True, blank=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE, related_name='credentials')
     extra = _get_extra_field_class()(null=True)
 
@@ -755,6 +757,9 @@ class Credentials(models.Model):
             self._api_password = None
             self.save(update_fields=["api_password"])
         return check_password(raw_api_password, self.api_password, setter)
+
+    def is_expired(self):
+        return self.ends_at and self.ends_at < datetime_or_now()
 
 
 class OTPGenerator(models.Model):

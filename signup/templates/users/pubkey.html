@@ -5,9 +5,47 @@
 
   <user-rotate-api-keys inline-template id="rotate-api-keys">
     <div>
+    <div>
+      <div v-show="deleteKeyPending">
+        <form @submit.prevent="deleteKey">
+          <input type="hidden" name="csrfmiddlewaretoken" value="{{csrf_token}}">
+          <label>Enter your password to delete the API key</label>
+          <div>
+            <label for="id_password">Password:</label>
+            <input type="password" name="password" required="" id="id_password"
+                  v-model="password">
+          </div>
+          <button type="submit">Delete</button>
+          <button @click="deleteKeyPending = null">Cancel</button>
+        </form>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Expires</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="key in items.results">
+            <td>[[ key.title ]]</td>
+            <td>[[ key.ends_at ]]</td>
+            <td>
+              <button @click="deleteKeyPending = key.api_pub_key">Delete</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <br />
+
+    <div>
       <form @submit.prevent="generateKey">
         <input type="hidden" name="csrfmiddlewaretoken" value="{{csrf_token}}">
-        <div>
+        <label>Generate a new API key</label>
+        <div v-show="apiKey">
           <label>API Key</label>
           <input type="text"
                  name="apiKey" placeholder="********" disabled
@@ -17,13 +55,18 @@
           </div>
         </div>
         <div>
+          <label for="id_title">Key Title:</label>
+          <input type="text" id="id_title"
+                 name="title" v-model="title">
+        </div>
+        <div>
           <label for="id_password">Password:</label>
           <input type="password" name="password" required="" id="id_password"
                  v-model="password">
-          <div v-show="passwordIncorrect">Incorrect password</div>
         </div>
-        <button id="generate-key-open" type="submit">Reset API Key</button>
+        <button id="generate-key-open" type="submit">Generate API Key</button>
       </form>
+    </div>
     </div>
   </user-rotate-api-keys>
 

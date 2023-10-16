@@ -29,7 +29,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import NotAuthenticated, ValidationError
 
 from .compat import gettext_lazy as _
-from .models import Activity, Notification
+from .models import Activity, Notification, Credentials
 from .serializers_overrides import UserDetailSerializer
 from .utils import (get_account_model, get_account_serializer,
     get_user_serializer)
@@ -144,7 +144,7 @@ class AuthenticatedUserPasswordSerializer(AuthenticatedUserSerializer):
         fields = ('password', 'otp_code', 'email_code', 'phone_code')
 
 
-class APIKeysSerializer(NoModelSerializer):
+class APIKeypairSerializer(NoModelSerializer):
     """
     username and password for authentication through API.
     """
@@ -296,3 +296,22 @@ class UserActivateSerializer(UserCreateSerializer):
             " a user can authenticate with the service"))
     full_name = serializers.CharField(required=False,
         help_text=_("Full name (effectively first name followed by last name)"))
+
+
+class NewKeypairSerializer(AuthenticatedUserPasswordSerializer):
+    """
+    Creates a new API key with a title
+    """
+
+    title = serializers.CharField(max_length=100,
+        help_text=_("Title of the new keypair"))
+
+
+class APIKeySeralizer(serializers.ModelSerializer):
+    """
+    Returns a list of API pub keys and their expiration dates
+    """
+
+    class Meta:
+        model = Credentials
+        fields = ('title', 'api_pub_key', 'ends_at')

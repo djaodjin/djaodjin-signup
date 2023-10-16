@@ -23,11 +23,14 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from ...compat import path
-from ...api.keys import ResetAPIKeysAPIView, PublicKeyAPIView
+from ...api.keys import (ListCreateAPIKeysAPIView, PublicKeyAPIView,
+    DestroyAPIKeyAPIView)
 
 urlpatterns = [
     path('users/<slug:user>/ssh-keys',
         PublicKeyAPIView.as_view(), name='api_pubkey'),
     path('users/<slug:user>/api-keys',
-        ResetAPIKeysAPIView.as_view(), name='api_generate_keys')
+        ListCreateAPIKeysAPIView.as_view(), name='api_generate_keys'),
+    path('users/<slug:user>/api-keys/<slug:key>',
+        DestroyAPIKeyAPIView.as_view(), name='api_destroy_key')
 ]
