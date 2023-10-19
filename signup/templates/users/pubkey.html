@@ -5,20 +5,6 @@
 
   <user-rotate-api-keys inline-template id="rotate-api-keys">
     <div>
-    <div>
-      <div v-show="deleteKeyPending">
-        <form @submit.prevent="deleteKey">
-          <input type="hidden" name="csrfmiddlewaretoken" value="{{csrf_token}}">
-          <label>Enter your password to delete the API key</label>
-          <div>
-            <label for="id_password">Password:</label>
-            <input type="password" name="password" required="" id="id_password"
-                  v-model="password">
-          </div>
-          <button type="submit">Delete</button>
-          <button @click="deleteKeyPending = null">Cancel</button>
-        </form>
-      </div>
       <table>
         <thead>
           <tr>
@@ -35,38 +21,52 @@
               <button @click="deleteKeyPending = key.api_pub_key">Delete</button>
             </td>
           </tr>
-        </tbody>
+          </tbody>
       </table>
-    </div>
 
-    <br />
+      <br />
 
-    <div>
-      <form @submit.prevent="generateKey">
-        <input type="hidden" name="csrfmiddlewaretoken" value="{{csrf_token}}">
-        <label>Generate a new API key</label>
-        <div v-show="apiKey">
-          <label>API Key</label>
-          <input type="text"
-                 name="apiKey" placeholder="********" disabled
-                 v-model="apiKey">
-          <div class="help-block" v-show="apiKey">
+      <!-- modals -->
+      <div>
+        <form id="generate-key" @submit.prevent="generateKey">
+          <input type="hidden" name="csrfmiddlewaretoken" value="{{csrf_token}}">
+          <label>Generate a new API key</label>
+          <div v-show="apiKey">
+            <label>API Key</label>
+            <input type="text"
+                   name="apiKey" placeholder="********" disabled
+                   v-model="apiKey">
+            <div class="help-block" v-show="apiKey">
               This is the only time the API Key will be displayed. Copy it before you reload this page or browse to another page.
+            </div>
           </div>
-        </div>
-        <div>
-          <label for="id_title">Key Title:</label>
+          <div>
+          <label for="id_title">Key Title</label>
           <input type="text" id="id_title"
                  name="title" v-model="title">
-        </div>
-        <div>
-          <label for="id_password">Password:</label>
-          <input type="password" name="password" required="" id="id_password"
-                 v-model="password">
-        </div>
+          </div>
+          <div>
+            <label for="generate-key-password">Password</label>
+            <input id="generate-key-password" name="password" type="password"
+                   required v-model="password">
+          </div>
         <button id="generate-key-open" type="submit">Generate API Key</button>
-      </form>
-    </div>
+        </form>
+      </div>
+
+      <div v-show="deleteKeyPending">
+        <form @submit.prevent="deleteKey">
+          <input type="hidden" name="csrfmiddlewaretoken" value="{{csrf_token}}">
+          <label>Enter your password to delete the API key</label>
+          <div>
+            <label for="id_password">Password:</label>
+            <input type="password" name="password" required="" id="id_password"
+                     v-model="password">
+          </div>
+          <button type="submit">Delete</button>
+          <button @click="deleteKeyPending = null">Cancel</button>
+        </form>
+      </div>
     </div>
   </user-rotate-api-keys>
 
