@@ -247,7 +247,8 @@ class ActivatedUserManager(UserManager):
 
         if user_kwargs:
             try:
-                return self.filter(is_active=True).get(**user_kwargs)
+                queryset = self.filter(is_active=True, **user_kwargs)
+                return queryset.get()
             except self.model.DoesNotExist:
                 pass
         try:

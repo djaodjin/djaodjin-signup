@@ -289,6 +289,9 @@ class AuthMixin(object):
         #        Else check password
         #pylint:disable=assignment-from-none
         user_with_backend = self.check_password(user, **cleaned_data)
+        LOGGER.debug(
+            "[run_pipeline] check_password(%s) returned user_with_backend=%s",
+            user, user_with_backend)
 
         # Login, Verify: If required, check 2FA
         self.auth_check_mfa(user, **cleaned_data)
@@ -297,9 +300,19 @@ class AuthMixin(object):
         self.register_check_data(**cleaned_data)
         # Verify: If does not exist, create User from Contact
         # Register: Create User
-        if not user_with_backend:
+        if not user_with_backend and self.request.method.lower() in ['post']:
+            # Some e-mail spam prevention tools like 'Barracuda Sentinel (EE)'
+            # will generate HEAD requests on one-time e-mail links. We don't
+            # want those to fall through `check_password`, end up here
+            # and render the link unusable before someone can click on it.
             #pylint:disable=assignment-from-none
             user_with_backend = self.create_user(**cleaned_data)
+
+        if not user_with_backend:
+            # If for any reasons we don't have a user with an auth backend
+            # at this point, we can't continue.
+            raise exceptions.AuthenticationFailed()
+
         # Login, Verify, Register: Create session
         LOGGER.debug("[run_pipeline] create session for user_with_backend=%s",
             user_with_backend)
@@ -493,8 +506,13 @@ class RegisterMixin(AuthMixin):
 
 
 class VerifyCompleteMixin(AuthMixin):
-
+    """
+    Overrides the `check_password` step in URL `/activate/{verification_key}/`
+    and `/api/auth/activate/{verification_key}` to raise `IncorrectUser`
+    if the user has no password set.
+    """
     key_url_kwarg = 'verification_key'
+    reset_method = 'get'
 
     def prefetch_contact_info(self):
         data = {}
@@ -504,7 +522,8 @@ class VerifyCompleteMixin(AuthMixin):
             fields = []
             if self.form_class is not None:
                 fields = six.iterkeys(self.get_initial())
-            elif self.serializer_class is not None:
+            elif self.serializer_class is not None and hasattr(
+                    self.serializer_class, 'Meta'):
                 fields = self.serializer_class.Meta.fields
             for field_name in fields:
                 field_value = None
@@ -532,10 +551,10 @@ class VerifyCompleteMixin(AuthMixin):
 
 
     def check_password(self, user, **cleaned_data):
-        #pylint:disable=unused-argument
-        if (self.request.method.lower() == 'get' and
+        if (self.request.method.lower() == self.reset_method and
             (not user or has_invalid_password(user))):
             raise IncorrectUser({'email': _("Not found.")})
+        # call `AuthMixin.check_password` up the chain (i.e. returns `None`)
         return super(VerifyCompleteMixin, self).check_password(
             user, **cleaned_data)
 
@@ -582,15 +601,22 @@ class VerifyCompleteMixin(AuthMixin):
 
 
 class PasswordResetConfirmMixin(VerifyCompleteMixin):
+    """
+    Overrides the `check_password` step in URL `/reset/{verification_key}/`
+    and `/api/auth/reset/{verification_key}/` such that it resets the password
+    for the identified user.
+    """
 
     def check_password(self, user, **cleaned_data):
         #pylint:disable=unused-argument
-        if self.request.method.lower() == 'get':
+        if self.request.method.lower() == self.reset_method:
             if user:
                 user.password = '!'
                 user.save()
             if not user or has_invalid_password(user):
                 raise IncorrectUser({'email': _("Not found.")})
+        # This will call `VerifyCompleteMixin.check_password` which also
+        # look at the request get step.
         return super(PasswordResetConfirmMixin, self).check_password(
             user, **cleaned_data)
 

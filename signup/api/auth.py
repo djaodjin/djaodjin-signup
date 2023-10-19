@@ -37,7 +37,7 @@ from ..compat import gettext_lazy as _
 from ..docs import OpenAPIResponse, no_body, swagger_auto_schema
 from ..helpers import as_timestamp, datetime_or_now
 from ..mixins import (LoginMixin, PasswordResetConfirmMixin, RegisterMixin,
-    VerifyMixin, VerifyCompleteMixin, SSORequired)
+    VerifyMixin, VerifyCompleteMixin, SSORequired, IncorrectUser)
 from ..models import Contact
 from ..serializers_overrides import UserDetailSerializer
 from ..serializers import (CredentialsSerializer, NoModelSerializer,
@@ -62,6 +62,22 @@ class AllowRegistrationEnabled(permissions.BasePermission):
 class JWTBase(GenericAPIView):
 
     serializer_class = TokenSerializer
+
+    @swagger_auto_schema(responses={
+        201: OpenAPIResponse("", TokenSerializer),
+        400: OpenAPIResponse("parameters error", ValidationErrorSerializer)})
+    def post(self, request, *args, **kwargs):#pylint:disable=unused-argument
+        try:
+            user_with_backend = self.run_pipeline()
+            return self.create_token(user_with_backend)
+        except SSORequired as err:
+            raise serializers.ValidationError({'detail': _(
+                "SSO required through %(provider)s") % {
+                    'provider': err.printable_name},
+                    'provider': err.delegate_auth.provider,
+                    'url': self.request.build_absolute_uri(err.url)})
+
+        raise serializers.ValidationError({'detail': "invalid request"})
 
     def create_token(self, user, expires_at=None):
         if not expires_at:
@@ -131,17 +147,7 @@ sbF9uYW1lIjoiRG9ubnkgQ29vcGVyIiwiZXhwIjoxNTI5NjU4NzEwfQ.F2y\
         201: OpenAPIResponse("", TokenSerializer),
         400: OpenAPIResponse("parameters error", ValidationErrorSerializer)})
     def post(self, request, *args, **kwargs):
-        try:
-            user_with_backend = self.run_pipeline()
-            return self.create_token(user_with_backend)
-        except SSORequired as err:
-            raise serializers.ValidationError({'detail': _(
-                "SSO required through %(provider)s") % {
-                    'provider': err.printable_name},
-                    'provider': err.delegate_auth.provider,
-                    'url': self.request.build_absolute_uri(err.url)})
-
-        raise exceptions.PermissionDenied()
+        return super(JWTLogin, self).post(request, *args, **kwargs)
 
 
 class JWTRegister(RegisterMixin, JWTBase):
@@ -191,22 +197,12 @@ JwcBUUMECj8AKxsHtRHUSypco"
         201: OpenAPIResponse("", TokenSerializer),
         400: OpenAPIResponse("parameters error", ValidationErrorSerializer)})
     def post(self, request, *args, **kwargs):#pylint:disable=unused-argument
-        try:
-            user_with_backend = self.run_pipeline()
-            return self.create_token(user_with_backend)
-        except SSORequired as err:
-            raise serializers.ValidationError({'detail': _(
-                "SSO required through %(provider)s") % {
-                    'provider': err.printable_name},
-                    'provider': err.delegate_auth.provider,
-                    'url': self.request.build_absolute_uri(err.url)})
-
-        raise serializers.ValidationError({'detail': "invalid request"})
+        return super(JWTRegister, self).post(request, *args, **kwargs)
 
 
 class JWTActivate(VerifyCompleteMixin, JWTBase):
     """
-    Retrieves an activation key
+    Retrieves contact from an activation key
 
     Retrieves information about a contact or user associated
     to the activation key.
@@ -295,17 +291,7 @@ class JWTActivate(VerifyCompleteMixin, JWTBase):
     JwcBUUMECj8AKxsHtRHUSypco"
             }
         """
-        try:
-            user_with_backend = self.run_pipeline()
-            return self.create_token(user_with_backend)
-        except SSORequired as err:
-            raise serializers.ValidationError({'detail': _(
-                "SSO required through %(provider)s") % {
-                    'provider': err.printable_name},
-                    'provider': err.delegate_auth.provider,
-                    'url': self.request.build_absolute_uri(err.url)})
-
-        raise serializers.ValidationError({'detail': "invalid request"})
+        return super(JWTActivate, self).post(request, *args, **kwargs)
 
 
 class JWTPasswordConfirm(PasswordResetConfirmMixin, JWTBase):
@@ -326,21 +312,21 @@ class JWTPasswordConfirm(PasswordResetConfirmMixin, JWTBase):
 
     """
     serializer_class = NoModelSerializer
+    reset_method = 'post'
 
     @swagger_auto_schema(responses={
+        201: OpenAPIResponse("", TokenSerializer),
         400: OpenAPIResponse("parameters error", ValidationErrorSerializer)})
     def post(self, request, *args, **kwargs):#pylint:disable=unused-argument
         try:
-            self.run_pipeline()
-            return {}
-        except SSORequired as err:
-            raise serializers.ValidationError({'detail': _(
-                "SSO required through %(provider)s") % {
-                    'provider': err.printable_name},
-                    'provider': err.delegate_auth.provider,
-                    'url': self.request.build_absolute_uri(err.url)})
-
-        raise serializers.ValidationError({'detail': "invalid request"})
+            return super(JWTPasswordConfirm, self).post(
+                request, *args, **kwargs)
+        except IncorrectUser:
+            # We want reset password to return a success status code
+            # even if technically the user will need to set a password
+            # through an active API call.
+            pass
+        return Response({}, status=status.HTTP_201_CREATED)
 
 
 class JWTLogout(JWTBase):
@@ -411,15 +397,6 @@ class RecoverAPIView(VerifyMixin, JWTBase):
     serializer_class = RecoverSerializer
     token_generator = default_token_generator
 
-    def post(self, request, *args, **kwargs):#pylint:disable=unused-argument
-        try:
-            user_with_backend = self.run_pipeline()
-            return self.create_token(user_with_backend)
-        except SSORequired as err:
-            raise serializers.ValidationError({'detail': _(
-                "SSO required through %(provider)s") % {
-                    'provider': err.printable_name},
-                    'provider': err.delegate_auth.provider,
-                    'url': self.request.build_absolute_uri(err.url)})
-
-        raise exceptions.PermissionDenied()
+    def post(self, request, *args, **kwargs):
+        #pylint:disable=unused-argument,useless-parent-delegation
+        return super(RecoverAPIView, self).post(request, *args, **kwargs)

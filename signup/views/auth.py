@@ -267,9 +267,8 @@ class ActivationView(VerifyCompleteMixin, AuthResponseMixin, View):
             context = {'disabled_authentication': True}
         except RegistrationDisabled:
             context = {'disabled_registration': True}
-        except serializers.ValidationError:
-            pass
-        except exceptions.AuthenticationFailed:
+        except (exceptions.AuthenticationFailed,
+                serializers.ValidationError):
             # Force registration
             pass
 
@@ -283,21 +282,22 @@ class ActivationView(VerifyCompleteMixin, AuthResponseMixin, View):
         try:
             self.run_pipeline()
             return HttpResponseRedirect(self.get_success_url())
-        except serializers.ValidationError as err:
-            form = self.get_form()
-            fill_form_errors(form, err)
-            context = self.get_context_data(form=form)
         except SSORequired as err:
             form = self.get_form()
             context = self.get_context_data(form=form)
             context.update({'sso_required': err})
-        except OTPRequired as err:
+        except OTPRequired:
             form = self.get_mfa_form()
             context = self.get_context_data(form=form)
         except AuthDisabled:
             context = {'disabled_authentication': True}
         except RegistrationDisabled:
             context = {'disabled_registration': True}
+        except (exceptions.AuthenticationFailed,
+                serializers.ValidationError) as err:
+            form = self.get_form()
+            fill_form_errors(form, err)
+            context = self.get_context_data(form=form)
 
         if context is None:
             context = self.get_context_data(form=self.get_form())

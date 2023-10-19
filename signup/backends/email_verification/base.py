@@ -69,4 +69,5 @@ def send_verification_email(contact, request,
         backend.send(contact.email, contact.email_code, back_url=back_url)
 
     signals.user_verification.send(
-        sender=__name__, user=contact, request=request, back_url=back_url)
+        sender=__name__, user=contact, request=request, back_url=back_url,
+        expiration_days=settings.KEY_EXPIRATION)
