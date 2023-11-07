@@ -303,7 +303,7 @@ class NewKeypairSerializer(AuthenticatedUserPasswordSerializer):
     Creates a new API key with a title
     """
 
-    title = serializers.CharField(max_length=100,
+    title = serializers.CharField(max_length=100, required=False,
         help_text=_("Title of the new keypair"))
 
 

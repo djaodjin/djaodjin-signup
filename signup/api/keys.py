@@ -110,13 +110,14 @@ class ListCreateAPIKeysAPIView(AuthenticatedUserPasswordMixin,
         api_password = generate_random_slug(
             length=Credentials.API_PASSWORD_LENGTH,
             allowed_chars=allowed_chars)
+        title = serializer.validated_data.get('title', "")
         Credentials.objects.create(
             user=self.user,
             api_pub_key=api_pub_key,
             api_password=make_password(api_password),
             ends_at=datetime_or_now() + relativedelta(
                 settings.USER_API_KEY_LIFETIME_DAYS),
-            title=serializer.validated_data['title']
+            title=title
         )
         return Response(APIKeypairSerializer().to_representation({
             'secret': api_pub_key + api_password
