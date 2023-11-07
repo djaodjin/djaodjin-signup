@@ -116,7 +116,7 @@ class ListCreateAPIKeysAPIView(AuthenticatedUserPasswordMixin,
             api_pub_key=api_pub_key,
             api_password=make_password(api_password),
             ends_at=datetime_or_now() + relativedelta(
-                settings.USER_API_KEY_LIFETIME_DAYS),
+                days=settings.USER_API_KEY_LIFETIME_DAYS),
             title=title
         )
         return Response(APIKeypairSerializer().to_representation({
