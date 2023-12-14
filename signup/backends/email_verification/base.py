@@ -27,23 +27,23 @@ from django.core.mail import send_mail
 from django.utils import translation
 
 from ..base import load_backend
-from ... import settings, signals
+from ... import settings
 from ...compat import reverse, gettext_lazy as _
 
 
 class EmailVerificationBackend(object):
 
-    def send(self, email, code,
+    def send(self, email, email_code,
              back_url=None, expiration_days=settings.KEY_EXPIRATION):
         """
         Send an e-mail message to the user to verify her e-mail address.
         """
         send_mail(
             _("E-mail verification code"),
-            _("%(back_url)s\nE-mail verification code: %(code)s.\n"\
+            _("%(back_url)s\nE-mail verification code: %(code)s\n"\
               "Expires in %(expiration_days)d days.") % {
                   'back_url': back_url,
-                  'code': code,
+                  'code': email_code,
                   'expiration_days': expiration_days
               },
             settings.DEFAULT_FROM_EMAIL, [email])
@@ -67,7 +67,3 @@ def send_verification_email(contact, request,
     backend = load_backend(settings.EMAIL_VERIFICATION_BACKEND)
     with translation.override(contact.lang):
         backend.send(contact.email, contact.email_code, back_url=back_url)
-
-    signals.user_verification.send(
-        sender=__name__, user=contact, request=request, back_url=back_url,
-        expiration_days=settings.KEY_EXPIRATION)

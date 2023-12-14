@@ -40,8 +40,8 @@ from ..helpers import datetime_or_now
 from ..mixins import AuthenticatedUserPasswordMixin, UserMixin
 from ..models import Credentials
 from ..serializers import (AuthenticatedUserPasswordSerializer,
-    APIKeypairSerializer, PublicKeySerializer, APIKeySeralizer,
-    ValidationErrorSerializer, NewKeypairSerializer)
+    APIKeypairSerializer, APIKeySeralizer, NewKeypairSerializer,
+    PublicKeySerializer, ValidationErrorSerializer)
 from ..utils import generate_random_slug
 from .. import settings
 
@@ -52,7 +52,34 @@ LOGGER = logging.getLogger(__name__)
 class ListCreateAPIKeysAPIView(AuthenticatedUserPasswordMixin,
                           UserMixin, ListAPIView):
     """
-    Resets a user secret API key
+    Lists user API keys
+
+    Lists the API keys with which a user can authenticate
+    with the service.
+
+    **Tags: auth, user, usermodel
+
+    **Example
+
+    .. code-block:: http
+
+        GET /api/users/xia/api-keys  HTTP/1.1
+
+    responds
+
+    .. code-block:: json
+
+        {
+            "count": 1,
+            "next": null,
+            "previous": null,
+            "results": [
+                {
+                  "api_pub_key": "k9Q9YppQMnZ7Yh5bDkx2wsQvDfL4U3TM",
+                  "title": "production"
+                }
+            ]
+        }
     """
     serializer_class = APIKeySeralizer
 
@@ -95,7 +122,6 @@ class ListCreateAPIKeysAPIView(AuthenticatedUserPasswordMixin,
                 "secret": "tgLwDw5ErQ2pQr5TTdAzSYjvZenHC9pSy7fB3sXWERzynbG5zG6h\
     67pTN4dh7fpy"
             }
-
         """
         serializer = NewKeypairSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -132,7 +158,7 @@ class DestroyAPIKeyAPIView(AuthenticatedUserPasswordMixin,
     serializer_class = AuthenticatedUserPasswordSerializer
 
     @swagger_auto_schema(responses={
-        204: OpenAPIResponse("Delete successful", None)})
+        200: OpenAPIResponse("Delete successful", ValidationErrorSerializer)})
     def post(self, request, *args, **kwargs):#pylint:disable=unused-argument
         """
         Deletes a user API key
@@ -146,7 +172,8 @@ class DestroyAPIKeyAPIView(AuthenticatedUserPasswordMixin,
 
         .. code-block:: http
 
-            DELETE /api/users/xia/api-keys/k9Q9YppQMnZ7Yh5bDkx2wsQvDfL4U3TM  HTTP/1.1
+            POST /api/users/xia/api-keys/k9Q9YppQMnZ7Yh5bDkx2wsQvDfL4U3TM \
+ HTTP/1.1
 
         .. code-block:: json
 
@@ -154,9 +181,13 @@ class DestroyAPIKeyAPIView(AuthenticatedUserPasswordMixin,
               "password": "yoyo"
             }
 
-        .. code-block:: http
+        responds
 
-            HTTP/1.1 204 OK
+        .. code-block:: json
+
+            {
+              "detail": "API key deleted successfully."
+            }
 
         """
         serializer = AuthenticatedUserPasswordSerializer(data=request.data)
@@ -167,7 +198,7 @@ class DestroyAPIKeyAPIView(AuthenticatedUserPasswordMixin,
             user=self.user), api_pub_key=kwargs['key'])
         obj.delete()
 
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response({"detail": _("API key deleted successfully.")})
 
 
 class PublicKeyAPIView(AuthenticatedUserPasswordMixin,

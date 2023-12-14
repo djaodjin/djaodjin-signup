@@ -310,12 +310,17 @@ class JWTPasswordConfirm(PasswordResetConfirmMixin, JWTBase):
         POST /api/auth/reset/16793aa72a4c7ae94b50b20c2eca52df5b0fe2c6\
  HTTP/1.1
 
+    responds
+
+    .. code-block:: http
+
+        {}
     """
     serializer_class = NoModelSerializer
     reset_method = 'post'
 
-    @swagger_auto_schema(responses={
-        201: OpenAPIResponse("", TokenSerializer),
+    @swagger_auto_schema(request_body=no_body, responses={
+        201: OpenAPIResponse("Created", NoModelSerializer),
         400: OpenAPIResponse("parameters error", ValidationErrorSerializer)})
     def post(self, request, *args, **kwargs):#pylint:disable=unused-argument
         try:

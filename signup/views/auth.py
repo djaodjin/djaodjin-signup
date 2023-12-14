@@ -320,8 +320,8 @@ class SigninView(LoginMixin, AuthResponseMixin, ProcessFormView):
     template_name = 'accounts/login.html'
 
     def get_form_class(self):
-        if ('code' in self.request.POST and
-            not 'code' in self.form_class.base_fields):
+        if ('otp_code' in self.request.POST and
+            not 'otp_code' in self.form_class.base_fields):
             return self.mfa_code_form_class
         if ('password' in self.request.POST and
             not 'password' in self.form_class.base_fields):

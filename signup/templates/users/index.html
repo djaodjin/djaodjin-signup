@@ -15,15 +15,35 @@
       </div>
       {{form.as_p}}
       <button type="submit">Update</button>
+
+      <hr />
+      <div>
+        <h2>Verify e-mail</h2>
+        <button type="button" id="verify-email-btn"
+                @click="verifyEmail">Send verification e-mail</button>
+        <label>Verification Code:</label>
+        <input type="text" name="email_code" v-model="emailCode"></input>
+        <button id="verify-email-code" type="submit">Verify</button>
+      </div>
+      <div>
+        <h2>Verify phone</h2>
+        <button type="button" id="verify-phone-btn"
+                @click="verifyEmail">Send verification text message</button>
+        <label>Verification Code:</label>
+        <input type="text" name="phone_code" v-model="phoneCode"></input>
+        <button id="verify-phone-code" type="submit">Verify</button>
+      </div>
     </form>
+
+    <hr />
     <div>
-      <a id="change-password" href="{% url 'password_change' user %}">Change Password</a>
+      <a id="change-password" href="{{urls.user.password_change}}">Change Password</a>
     </div>
     <div>
-      <a id="keys-update" href="{% url 'pubkey_update' user %}">Programmatic Keys</a>
+      <a id="keys-update" href="{{urls.user.keys_update}}">Programmatic Keys</a>
     </div>
     <div>
-      <a href="{% url 'users_notifications' user %}">Notifications</a>
+      <a href="{{urls.user.notifications}}">Notifications</a>
     </div>
     {% if urls.user.api_activate %}
     <div>

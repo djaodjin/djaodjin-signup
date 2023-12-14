@@ -171,11 +171,14 @@ class UserDetailSerializer(UserSerializer):
     # Implementation Note: relies on patching of User class in models.py
     nick_name = serializers.CharField(source='get_nick_name', required=False,
         help_text=_("Short casual name used to address the user"))
-
     email = serializers.EmailField(required=False,
         help_text=_("Primary e-mail address to contact user"))
+    email_code = serializers.IntegerField(required=False, write_only=True,
+        help_text=_("Email verification code"))
     phone = PhoneField(source='get_phone', required=False,
         help_text=_("Primary phone number to contact user"))
+    phone_code = serializers.IntegerField(required=False, write_only=True,
+        help_text=_("Phone verification code"))
     lang = serializers.CharField(source='get_lang', required=False,
         help_text=_("Preferred communication language"))
 
@@ -189,7 +192,8 @@ class UserDetailSerializer(UserSerializer):
     class Meta(UserSerializer.Meta):
         fields = UserSerializer.Meta.fields + ('email', 'phone',
             'full_name', 'nick_name', 'lang',
-            'credentials', 'created_at', 'last_login')
+            'credentials', 'created_at', 'last_login',
+            'email_code', 'phone_code')
         read_only_fields = ('credentials', 'created_at', 'last_login')
 
     @staticmethod

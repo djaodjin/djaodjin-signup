@@ -29,10 +29,11 @@ from ...compat import gettext_lazy as _
 
 class PhoneVerificationBackend(object):
 
-    def send(self, phone, code):
+    def send(self, phone, phone_code):
         """
         Send a text message to the user to verify her phone number.
         """
         client = boto3.client("sns")
         client.publish(PhoneNumber=phone, #E.164 format
-            Message=_("one-time verification code: %(code)s") % {'code': code})
+            Message=_("one-time verification code: %(code)s") % {
+            'code': phone_code})

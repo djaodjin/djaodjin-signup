@@ -222,12 +222,30 @@ class AuthMixin(object):
                 pass
 
     def auth_check_mfa(self, user, **cleaned_data):
-        code = cleaned_data.get('code')
+        email = cleaned_data.get('email')
+        email_code = cleaned_data.get('email_code')
+        if email_code:
+            try:
+                Contact.objects.finalize_email_verification(email, email_code)
+            except Contact.DoesNotExist:
+                raise serializers.ValidationError({'detail':
+                    _("E-mail verification code does not match.")})
+
+        phone = cleaned_data.get('phone')
+        phone_code = cleaned_data.get('phone_code')
+        if phone_code:
+            try:
+                Contact.objects.finalize_phone_verification(phone, phone_code)
+            except Contact.DoesNotExist:
+                raise serializers.ValidationError({'detail':
+                    _("Phone verification code does not match.")})
+
+        otp_code = cleaned_data.get('otp_code')
         if OTPGenerator.objects.filter(user=user).exists():
-            if not code:
+            if not otp_code:
                 raise OTPRequired({
-                    'code': _("OTP code is required.")})
-            if not user.otp.verify(code):
+                    'otp_code': _("OTP code is required.")})
+            if not user.otp.verify(otp_code):
                 if user.otp.nb_attempts >= settings.MFA_MAX_ATTEMPTS:
                     user.otp.clear_attempts()
                     raise exceptions.PermissionDenied({'detail': _(

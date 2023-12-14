@@ -342,7 +342,7 @@ class ContactManager(models.Manager):
                     # that will trigger an activate url, then filling the first
                     # form that showed up.
                     contact.email_verification_key = verification_key
-                    contact.email_code = generate_random_code()
+                contact.email_code = generate_random_code()
                 contact.email_verification_at = at_time
                 # XXX It is possible a 'reason' field would be a better
                 # implementation.
@@ -355,6 +355,7 @@ class ContactManager(models.Manager):
                 'user': user,
                 'email': email,
                 'email_verification_key': verification_key,
+                'email_code': generate_random_code(),
                 'email_verification_at': at_time
             })
             if user:
@@ -425,6 +426,7 @@ class ContactManager(models.Manager):
                 'user': user,
                 'phone': phone,
                 'phone_verification_key': verification_key,
+                'phone_code': generate_random_code(),
                 'phone_verification_at': at_time
             })
             if user:
@@ -438,6 +440,44 @@ class ContactManager(models.Manager):
                 kwargs.update({'extra': reason})
             contact = self.create(**kwargs)
         return contact, created
+
+    def finalize_email_verification(self, email, email_code, at_time=None):
+        """
+        Checks the email_code matches the code that was sent
+        to the email address.
+        """
+        if not at_time:
+            at_time = datetime_or_now()
+        email_filter = models.Q(email__iexact=email)
+        if not settings.BYPASS_VERIFICATION_KEY_EXPIRED_CHECK:
+            email_filter &= models.Q(email_verification_at__gt=at_time
+                - datetime.timedelta(days=settings.KEY_EXPIRATION))
+            email_filter &= models.Q(email_code=email_code)
+        contact = self.filter(email_filter).select_related('user').get()
+        contact.email_verification_key = None
+        contact.email_verified_at = at_time
+        contact.email_code = generate_random_code()
+        contact.save()
+        return contact
+
+    def finalize_phone_verification(self, phone, phone_code, at_time=None):
+        """
+        Checks the phone_code matches the code that was sent
+        to the phone number.
+        """
+        if not at_time:
+            at_time = datetime_or_now()
+        phone_filter = models.Q(phone=phone)
+        if not settings.BYPASS_VERIFICATION_KEY_EXPIRED_CHECK:
+            phone_filter &= models.Q(phone_verification_at__gt=at_time
+                - datetime.timedelta(days=settings.KEY_EXPIRATION))
+            phone_filter &= models.Q(phone_code=phone_code)
+        contact = self.filter(phone_filter).select_related('user').get()
+        contact.phone_verification_key = None
+        contact.phone_verified_at = at_time
+        contact.phone_code = generate_random_code()
+        contact.save()
+        return contact
 
     def activate_user(self, verification_key,
                       username=None, password=None, full_name=None):

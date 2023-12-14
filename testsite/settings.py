@@ -30,6 +30,20 @@ APPEND_SLASH = False # Django will return a 500 error by default on
 FERNET_KEYS = []
 SOCIAL_AUTH_SAML_ENABLED_IDPS = {}
 
+# Mail server and accounts for notifications.
+# Host, port, TLS for sending email.
+EMAIL_HOST = "localhost"
+EMAIL_PORT = 1025
+EMAIL_USE_TLS = False
+
+# Default email address to use for various automated correspondence from
+# the site managers (also django-registration settings)
+DEFAULT_FROM_EMAIL = "admin@localhost.localdomain"
+
+# Optional SMTP authentication information for EMAIL_HOST.
+EMAIL_HOST_USER = ""
+EMAIL_HOST_PASSWORD = ""
+
 
 def load_config(confpath):
     '''
@@ -271,20 +285,6 @@ STATIC_URL = '/static/'
 
 
 ACCOUNT_ACTIVATION_DAYS = 2
-
-# Mail server and accounts for notifications.
-# Host, port, TLS for sending email.
-EMAIL_HOST = "localhost"
-EMAIL_PORT = 1025
-EMAIL_USE_TLS = False
-
-# Default email address to use for various automated correspondence from
-# the site managers (also django-registration settings)
-DEFAULT_FROM_EMAIL = "admin@localhost.localdomain"
-
-# Optional SMTP authentication information for EMAIL_HOST.
-EMAIL_HOST_USER = ""
-EMAIL_HOST_PASSWORD = ""
 
 LOGIN_URL = reverse_lazy('login')
 LOGIN_REDIRECT_URL = '/app/'

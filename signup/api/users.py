@@ -27,6 +27,7 @@ import hashlib, logging, os, re
 import pyotp
 from django.contrib.auth import logout as auth_logout
 from django.db import transaction, IntegrityError
+from django.db.models import Q
 from django.contrib.auth import update_session_auth_hash, get_user_model
 from rest_framework import generics, parsers, status
 from rest_framework.exceptions import ValidationError
@@ -324,11 +325,8 @@ class UserDetailAPIView(UserMixin, generics.RetrieveUpdateDestroyAPIView):
 
 
     def perform_update(self, serializer):
+        #pylint:disable=too-many-locals
         update_fields = {}
-        slug = serializer.validated_data.get('slug',
-            serializer.validated_data.get('username'))
-        if slug:
-            update_fields.update({'slug': slug})
         full_name = serializer.validated_data.get('full_name',
             serializer.validated_data.get('get_full_name'))
         if full_name:
@@ -337,45 +335,135 @@ class UserDetailAPIView(UserMixin, generics.RetrieveUpdateDestroyAPIView):
             serializer.validated_data.get('get_nick_name'))
         if nick_name:
             update_fields.update({'nick_name': nick_name})
-        phone = serializer.validated_data.get('phone',
-            serializer.validated_data.get('get_phone'))
-        if phone:
-            update_fields.update({'phone': phone})
         lang = serializer.validated_data.get('lang',
             serializer.validated_data.get('get_lang'))
         if lang:
             update_fields.update({'lang': lang})
+
+        slug = serializer.validated_data.get('slug',
+            serializer.validated_data.get('username'))
+
+        email = serializer.validated_data.get('email')
+        if email:
+            email_code = serializer.validated_data.get('email_code')
+            if email_code:
+                try:
+                    Contact.objects.finalize_email_verification(
+                        email, email_code)
+                except Contact.DoesNotExist:
+                    raise ValidationError({'detail':
+                        _("E-mail verification code does not match.")})
+
+        phone = serializer.validated_data.get('phone',
+            serializer.validated_data.get('get_phone'))
+        if phone:
+            phone_code = serializer.validated_data.get('phone_code')
+            if phone_code:
+                try:
+                    Contact.objects.finalize_phone_verification(
+                        phone, phone_code)
+                except Contact.DoesNotExist:
+                    raise ValidationError({'detail':
+                        _("Phone verification code does not match.")})
+
         with transaction.atomic():
             user = self.get_object()
             try:
                 if user.pk:
-                    update_fields.update({'user': user})
+                    saves_user = False
                     if slug:
                         user.username = slug
+                        saves_user = True
                     if full_name:
-                        first_name, mid_name, last_name = \
-                            full_name_natural_split(
-                                full_name, middle_initials=False)
+                        first_name, mid_name, last_name = full_name_natural_split(
+                            full_name, middle_initials=False)
                         user.first_name = first_name
                         if mid_name:
                             user.first_name = (
                                 first_name + " " + mid_name).strip()
                         user.last_name = last_name
-                    if get_disabled_email_update(user):
-                        serializer.validated_data.pop('email')
-                    else:
-                        email = serializer.validated_data.get('email')
-                        if email:
-                            user.email = email
-                    user.save()
-                    update_fields.update({'email': user.email})
-                if 'email' not in update_fields:
-                    email = serializer.validated_data.get('email')
+                        saves_user = True
                     if email:
-                        update_fields.update({'email': email})
-                Contact.objects.update_or_create(
-                    slug=self.kwargs.get(self.lookup_url_kwarg),
-                    defaults=update_fields)
+                        if get_disabled_email_update(user):
+                            email = user.email
+                        else:
+                            user.email = email
+                            saves_user = True
+                    if saves_user:
+                        user.save()
+                    user.contacts.all().update(**update_fields)
+                    update_fields.update({'user': user})
+                    user_filter = Q(user=user) | Q(user__isnull=True)
+                else:
+                    user_filter = Q(user__isnull=True)
+
+                # We have updated the optional `user`. It is time
+                # to update the contacts.
+                # contact_by_email | contact_by_phone |    action
+                #       Yes                Yes        | update separate
+                #       Yes                No         | update phone in e-mail
+                #       No                 Yes        | update email in phone
+                #       No                 No         | update or create slug
+                contact_by_email = (Contact.objects.filter(
+                    Q(email__iexact=email) & user_filter)
+                    if email else Contact.objects.none())
+                contact_by_phone = (Contact.objects.filter(
+                    Q(phone=phone) & user_filter)
+                    if phone else Contact.objects.none())
+                contact_by_email_exists = contact_by_email.exists()
+                contact_by_phone_exists = contact_by_phone.exists()
+
+                if contact_by_email_exists:
+                    if contact_by_phone_exists:
+                        contact_by_email.update(**update_fields)
+                        contact_by_phone.update(**update_fields)
+                    else:
+                        if phone:
+                            update_fields.update({
+                                'phone': phone,
+                                'phone_verified_at': None
+                            })
+                        contact_by_email.update(**update_fields)
+                else:
+                    if contact_by_phone_exists:
+                        if email:
+                            update_fields.update({
+                                'email': email,
+                                'email_verified_at': None
+                            })
+                        contact_by_phone.update(**update_fields)
+                    else:
+                        # Nor the e-mail nor the phone could be found
+                        # in the contacts, so it is safe to update/create
+                        # a default contact model.
+                        try:
+                            contact = Contact.objects.get(
+                                slug=self.kwargs.get(self.lookup_url_kwarg))
+                            # If there is an `email_code` that verifies
+                            # the `email`, the contact will already have been
+                            # saved earlier in `finalize_email_verification`.
+                            if email and contact.email != email:
+                                update_fields.update({
+                                    'email_verified_at': None
+                                })
+                            # If there is an `phone_code` that verifies
+                            # the `phone`, the contact will already have been
+                            # saved earlier in `finalize_phone_verification`.
+                            if phone and contact.phone != phone:
+                                update_fields.update({
+                                    'phone_verified_at': None
+                                })
+                        except Contact.DoesNotExist:
+                            pass
+                        if email:
+                            update_fields.update({'email': email})
+                        if phone:
+                            update_fields.update({'phone': phone})
+                        if slug:
+                            update_fields.update({'slug': slug})
+                        Contact.objects.update_or_create(
+                            slug=self.kwargs.get(self.lookup_url_kwarg),
+                            defaults=update_fields)
             except IntegrityError as err:
                 handle_uniq_error(err)
         # A little patchy but it works. Otherwise we would need to override

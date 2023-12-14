@@ -136,7 +136,8 @@ Vue.component('user-update', {
             redirect_url: this.$urls.profile_redirect,
             api_activate_url: this.$urls.user.api_activate,
             formFields: {},
-            userModalOpen: false,
+            emailCode: null,
+            phoneCode: null,
             picture: null,
             codeSent: false
         };
@@ -178,13 +179,27 @@ Vue.component('user-update', {
                     data[field] = vm.formFields[field];
                 }
             }
+            if( vm.emailCode ) {
+                data['email_code'] = vm.emailCode;
+            }
+            if( vm.phoneCode ) {
+                data['phone_code'] = vm.phoneCode;
+            }
             vm.reqPatch(vm.url, data,
             function(resp) {
+                vm.codeSent = false;
+                vm.emailCode = null;
+                vm.phoneCode = null;
                 // XXX should really be success but then it needs to be changed
                 // in Django views as well.
                 if( resp.detail ) {
                     vm.showMessages([resp.detail], "info");
                 }
+            }, function(resp) {
+                vm.codeSent = false;
+                vm.emailCode = null;
+                vm.phoneCode = null;
+                vm.showErrorMessages(resp);
             });
             if(vm.imageSelected){
                 vm.uploadProfilePicture();
@@ -211,14 +226,13 @@ Vue.component('user-update', {
             var fields = $(vm.$el).find('[name]').not(
                 '[name="csrfmiddlewaretoken"]');
             for( var fieldIdx = 0; fieldIdx < fields.length; ++fieldIdx ) {
-                var fieldName = $(fields[fieldIdx]).attr('name');
-                var fieldValue = $(fields[fieldIdx]).val();
+                const fieldName = $(fields[fieldIdx]).attr('name');
+                const fieldValue = $(fields[fieldIdx]).val();
                 if( vm.formFields[fieldName] !== fieldValue ) {
                     vm.formFields[fieldName] = fieldValue;
                 }
                 if( vm.formFields[fieldName] ) {
-                    // We have at least one piece of information
-                    // about the plan already available.
+                    // We have at least one piece of information available.
                     isEmpty = false;
                 }
             }
@@ -226,9 +240,10 @@ Vue.component('user-update', {
         },
         verifyEmail: function() {
             var vm = this;
-            vm.reqPost(vm.verify_url, {email: vm.$refs.email.value},
+            vm.validateForm();
+            vm.reqPost(vm.verify_url, {email: vm.formFields.email},
             function(resp) {
-                vm.modalHide();
+                vm.codeSent = true;
                 if( resp.detail ) {
                     vm.showMessages([resp.detail], "success");
                 }
@@ -241,7 +256,8 @@ Vue.component('user-update', {
         },
         verifyPhone: function() {
             var vm = this;
-            vm.reqPost(vm.verify_url, {email: vm.$refs.phone.value},
+            vm.validateForm();
+            vm.reqPost(vm.verify_url, {phone: vm.formFields.phone},
             function(resp) {
                 vm.codeSent = true;
                 if( resp.detail ) {
@@ -254,18 +270,6 @@ Vue.component('user-update', {
                 }
             });
         },
-        submitCode: function() {
-            // submit the one-time code that was e-mailed
-            // or sent by text message.
-            var vm = this;
-            vm.reqPost(vm.verify_url, {code: vm.$refs.code.value},
-            function(resp) {
-                vm.modalHide();
-                if( resp.detail ) {
-                    vm.showMessages([resp.detail], "success");
-                }
-            });
-        }
     },
     computed: {
         imageSelected: function(){

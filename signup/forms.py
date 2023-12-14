@@ -475,7 +475,7 @@ class PasswordAuthForm(StartAuthenticationForm):
 
 class MFACodeForm(PasswordAuthForm):
 
-    code = forms.IntegerField(widget=forms.TextInput(
+    otp_code = forms.IntegerField(widget=forms.TextInput(
         attrs={'placeholder': _("One-time authentication code"),
             'autofocus': True}),
         label=_("One-time authentication code"))
