@@ -20,7 +20,7 @@ DB_NAME = os.path.join(RUN_DIR, 'db.sqlite')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
-BYPASS_VERIFICATION_KEY_EXPIRED_CHECK = False
+SKIP_EXPIRATION_CHECK = False
 JS_FRAMEWORK = 'vuejs'
 
 ALLOWED_HOSTS = []
@@ -78,14 +78,14 @@ load_config(os.path.join(
 load_config(os.path.join(
     os.getenv('TESTSITE_SETTINGS_LOCATION', RUN_DIR), 'site.conf'))
 
+for env_var in ['DEBUG', 'SKIP_EXPIRATION_CHECK']:
+    if os.getenv(env_var):
+        setattr(sys.modules[__name__], env_var, (int(os.getenv(env_var)) > 0))
+
 if not hasattr(sys.modules[__name__], "SECRET_KEY"):
     from random import choice
     SECRET_KEY = "".join([choice(
         "abcdefghijklmnopqrstuvwxyz0123456789!@#$%^*-_=+") for i in range(50)])
-
-if os.getenv('BYPASS_VERIFICATION_KEY_EXPIRED_CHECK'):
-    BYPASS_VERIFICATION_KEY_EXPIRED_CHECK = (int(os.getenv(
-        'BYPASS_VERIFICATION_KEY_EXPIRED_CHECK')) > 0)
 
 SILENCED_SYSTEM_CHECKS = ['captcha.recaptcha_test_key_error']
 
@@ -301,8 +301,7 @@ DEBUG_TOOLBAR_CONFIG = {
 }
 
 SIGNUP = {
-    'BYPASS_VERIFICATION_KEY_EXPIRED_CHECK':
-        BYPASS_VERIFICATION_KEY_EXPIRED_CHECK,
+    'SKIP_EXPIRATION_CHECK': SKIP_EXPIRATION_CHECK,
     'RANDOM_SEQUENCE': getattr(
         sys.modules[__name__], 'SIGNUP_RANDOM_SEQUENCE', []),
 #    'REQUIRES_RECAPTCHA': True

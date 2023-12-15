@@ -288,11 +288,11 @@ class ContactManager(models.Manager):
             try:
                 at_time = datetime_or_now()
                 email_filter = models.Q(email_verification_key=verification_key)
-                if not settings.BYPASS_VERIFICATION_KEY_EXPIRED_CHECK:
+                if not settings.SKIP_EXPIRATION_CHECK:
                     email_filter &= models.Q(email_verification_at__gt=at_time
                         - datetime.timedelta(days=settings.KEY_EXPIRATION))
                 phone_filter = models.Q(phone_verification_key=verification_key)
-                if not settings.BYPASS_VERIFICATION_KEY_EXPIRED_CHECK:
+                if not settings.SKIP_EXPIRATION_CHECK:
                     phone_filter &= models.Q(phone_verification_at__gt=at_time
                         - datetime.timedelta(days=settings.KEY_EXPIRATION))
                 return self.filter(email_filter | phone_filter).select_related(
@@ -449,7 +449,7 @@ class ContactManager(models.Manager):
         if not at_time:
             at_time = datetime_or_now()
         email_filter = models.Q(email__iexact=email)
-        if not settings.BYPASS_VERIFICATION_KEY_EXPIRED_CHECK:
+        if not settings.SKIP_EXPIRATION_CHECK:
             email_filter &= models.Q(email_verification_at__gt=at_time
                 - datetime.timedelta(days=settings.KEY_EXPIRATION))
             email_filter &= models.Q(email_code=email_code)
@@ -468,7 +468,7 @@ class ContactManager(models.Manager):
         if not at_time:
             at_time = datetime_or_now()
         phone_filter = models.Q(phone=phone)
-        if not settings.BYPASS_VERIFICATION_KEY_EXPIRED_CHECK:
+        if not settings.SKIP_EXPIRATION_CHECK:
             phone_filter &= models.Q(phone_verification_at__gt=at_time
                 - datetime.timedelta(days=settings.KEY_EXPIRATION))
             phone_filter &= models.Q(phone_code=phone_code)
