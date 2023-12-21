@@ -3,7 +3,7 @@
     "version": "0.8.0-dev",
     "dependencies": {
         "jquery": "~3.6.0",
-        "moment": "2.29.1",
+        "moment": "2.29.4",
         "moment-timezone": "0.5.33",
         "qrcode": "1.5.1",
         "vue": "~2.7.8",
