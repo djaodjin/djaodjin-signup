@@ -39,7 +39,8 @@ from .. import settings
 from ..auth import validate_redirect
 from ..compat import gettext_lazy as _, reverse
 from ..forms import (ActivationForm, AuthenticationForm, FrictionlessSignupForm,
-    MFACodeForm, PasswordAuthForm, PasswordResetConfirmForm, RecoverForm)
+    MFACodeForm, PasswordAuthForm, PasswordResetConfirmForm, RecoverForm,
+    VerifyEmailForm, VerifyPhoneForm)
 from ..helpers import update_context_urls
 from ..mixins import (LoginMixin, PasswordResetConfirmMixin,
     RegisterMixin, VerifyMixin, VerifyCompleteMixin, AuthDisabled, OTPRequired,
@@ -409,3 +410,57 @@ class SignoutView(AuthResponseMixin, View):
             for cookie in settings.LOGOUT_CLEAR_COOKIES:
                 response.delete_cookie(cookie)
         return response
+
+
+class VerificationView(AuthResponseMixin, ProcessFormView):
+    """
+    The user is now on the verification url. We are waiting for an e-mail code.
+    """
+    form_class = VerifyEmailForm
+    template_name = 'accounts/verify.html'
+
+    @property
+    def contact(self):
+        if not hasattr(self, '_contact'):
+            #pylint:disable=attribute-defined-outside-init
+            self._contact = Contact.objects.get_token(
+                self.kwargs.get(self.key_url_kwarg))
+        return self._contact
+
+    @property
+    def phone_code_expected(self):
+        if not hasattr(self, '_phone_code_expected'):
+            #pylint:disable=attribute-defined-outside-init
+            self._phone_code_expected = (self.contact.phone_verification_key
+                == self.kwargs.get(self.key_url_kwarg))
+        return self._phone_code_expected
+
+    def get_form_class(self):
+        if self.phone_code_expected:
+            return VerifyPhoneForm
+        return self.form_class
+
+    def get_initial(self):
+        return {
+            'email': self.contact.email,
+            'phone': self.contact.phone
+         }
+
+    def form_valid(self, form):
+        if self.phone_code_expected:
+            try:
+                Contact.objects.finalize_phone_verification(
+                    form.cleaned_data['phone'], form.cleaned_data['phone_code'])
+            except Contact.DoesNotExist:
+                form.add_error('phone_code',
+                    _("Phone verification code does not match."))
+                return self.form_invalid(form)
+            return HttpResponseRedirect(self.get_success_url())
+        try:
+            Contact.objects.finalize_email_verification(
+                form.cleaned_data['email'], form.cleaned_data['email_code'])
+        except Contact.DoesNotExist:
+            form.add_error('email_code',
+                _("Email verification code does not match."))
+            return self.form_invalid(form)
+        return HttpResponseRedirect(self.get_success_url())

@@ -100,11 +100,13 @@ def check_email_verified(request, user,
                          redirect_field_name=REDIRECT_FIELD_NAME,
                          next_url=None):
     """
-    Checks that a *user*'s e-mail has been verified.
+    Checks that a *user*'s e-mail is verified. If it hasn't, send an
+    e-mail to verify the user e-mail address, and returns the associated
+    `Contact` object.
     """
     #pylint:disable=unused-variable
     if Contact.objects.is_reachable_by_email(user):
-        return True
+        return None
 
     contact, created = Contact.objects.prepare_email_verification(
         user.email, user=user)
@@ -114,18 +116,20 @@ def check_email_verified(request, user,
     send_verification_email(
         contact, request, next_url=next_url,
         redirect_field_name=redirect_field_name)
-    return False
+    return contact
 
 
 def check_phone_verified(request, user,
                          redirect_field_name=REDIRECT_FIELD_NAME,
                          next_url=None):
     """
-    Checks that a *user*'s e-mail has been verified.
+    Checks that a *user*'s phone number is verified. If it hasn't, send an
+    text message to verify the user phone number, and returns the associated
+    `Contact` object.
     """
     #pylint:disable=unused-variable
     if Contact.objects.is_reachable_by_phone(user):
-        return True
+        return None
 
     contact, created = Contact.objects.prepare_phone_verification(
         user.phone, user=user) # XXX
@@ -135,7 +139,7 @@ def check_phone_verified(request, user,
     send_verification_phone(
         contact, request, next_url=next_url,
         redirect_field_name=redirect_field_name)
-    return False
+    return contact
 
 
 def fail_authenticated(request):
@@ -169,8 +173,12 @@ def fail_verified_email(request):
     """
     Active with a verified e-mail address
     """
-    if not check_email_verified(request, request.user):
-        return str(settings.LOGIN_URL)
+    contact = check_email_verified(request, request.user)
+    if contact:
+        if settings.USE_VERIFICATION_LINKS:
+            return str(reverse('email_verification_link'))
+        return str(reverse('verify_channel', args=(
+            contact.email_verification_key,)))
     return False
 
 
@@ -178,8 +186,12 @@ def fail_verified_phone(request):
     """
     Active with a verified phone number
     """
-    if not check_phone_verified(request, request.user):
-        return str(settings.LOGIN_URL)
+    contact = check_phone_verified(request, request.user)
+    if contact:
+        if settings.USE_VERIFICATION_LINKS:
+            return str(reverse('phone_verification_link'))
+        return str(reverse('verify_channel', args=(
+            contact.phone_verification_key,)))
     return False
 
 

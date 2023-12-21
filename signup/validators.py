@@ -1,4 +1,4 @@
-# Copyright (c) 2021, DjaoDjin inc.
+# Copyright (c) 2023, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -108,7 +108,7 @@ def as_email_or_phone(value):
         return value, None
     except ValidationError:
         try:
-            validate_phone(value)
+            value = str(validate_phone(value)) # returns E164-formatted phone
             return None, value
         except ValidationError:
             pass

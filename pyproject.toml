@@ -31,7 +31,6 @@ dependencies = [
   "phonenumbers>=8.12.6",
   "PyJWT>=1.6.1",
   "pyotp>=2.8.0",
-  "python-dateutil>=2.2",
   "python3-saml>=1.2.1", # This will require transitively to install native
                          # package xmlsec1-devel and xmlsec1-openssl.
   "social-auth-app-django>=4.0.0", # v1.2.0 does not support Django>=2.1
@@ -59,6 +58,8 @@ include = ["signup*"]
 [tool.setuptools.package-data]
 signup = [
   'templates/accounts/*.html',
+  'templates/accounts/activate/*.html',
+  'templates/contacts/*.html',
   'templates/notification/*.eml',
   'templates/users/*.html',
   'static/js/*.js'

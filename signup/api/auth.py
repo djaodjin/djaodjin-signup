@@ -59,25 +59,7 @@ class AllowRegistrationEnabled(permissions.BasePermission):
         return not get_disabled_registration(request)
 
 
-class JWTBase(GenericAPIView):
-
-    serializer_class = TokenSerializer
-
-    @swagger_auto_schema(responses={
-        201: OpenAPIResponse("", TokenSerializer),
-        400: OpenAPIResponse("parameters error", ValidationErrorSerializer)})
-    def post(self, request, *args, **kwargs):#pylint:disable=unused-argument
-        try:
-            user_with_backend = self.run_pipeline()
-            return self.create_token(user_with_backend)
-        except SSORequired as err:
-            raise serializers.ValidationError({'detail': _(
-                "SSO required through %(provider)s") % {
-                    'provider': err.printable_name},
-                    'provider': err.delegate_auth.provider,
-                    'url': self.request.build_absolute_uri(err.url)})
-
-        raise serializers.ValidationError({'detail': "invalid request"})
+class CreateTokenMixin(object):
 
     def create_token(self, user, expires_at=None):
         if not expires_at:
@@ -96,6 +78,30 @@ class JWTBase(GenericAPIView):
             pass
         return Response(TokenSerializer().to_representation({'token': token}),
             status=status.HTTP_201_CREATED)
+
+
+class JWTBase(CreateTokenMixin, GenericAPIView):
+
+    serializer_class = TokenSerializer
+
+    def run_pipeline(self):
+        raise NotImplementedError()
+
+    @swagger_auto_schema(responses={
+        201: OpenAPIResponse("", TokenSerializer),
+        400: OpenAPIResponse("parameters error", ValidationErrorSerializer)})
+    def post(self, request, *args, **kwargs):#pylint:disable=unused-argument
+        try:
+            user_with_backend = self.run_pipeline()
+            return self.create_token(user_with_backend)
+        except SSORequired as err:
+            raise serializers.ValidationError({'detail': _(
+                "SSO required through %(provider)s") % {
+                    'provider': err.printable_name},
+                    'provider': err.delegate_auth.provider,
+                    'url': self.request.build_absolute_uri(err.url)})
+
+        raise serializers.ValidationError({'detail': "invalid request"})
 
     def permission_denied(self, request, message=None, code=None):
         # We override this function from `APIView`. The request will never
@@ -334,7 +340,7 @@ class JWTPasswordConfirm(PasswordResetConfirmMixin, JWTBase):
         return Response({}, status=status.HTTP_201_CREATED)
 
 
-class JWTLogout(JWTBase):
+class JWTLogout(GenericAPIView):
     """
     Logs a user out
 

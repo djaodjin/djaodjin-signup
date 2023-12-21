@@ -22,9 +22,8 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import logging
+import datetime, logging
 
-from dateutil.relativedelta import relativedelta
 from django.contrib.auth.hashers import make_password
 from django.core.exceptions import PermissionDenied
 from rest_framework import status
@@ -33,6 +32,7 @@ from rest_framework.generics import (GenericAPIView, ListAPIView,
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
 
+from .. import filters, settings
 from ..backends.auth_ldap import is_ldap_user, set_ldap_pubkey
 from ..compat import gettext_lazy as _
 from ..docs import OpenAPIResponse, swagger_auto_schema
@@ -43,7 +43,6 @@ from ..serializers import (AuthenticatedUserPasswordSerializer,
     APIKeypairSerializer, APIKeySeralizer, NewKeypairSerializer,
     PublicKeySerializer, ValidationErrorSerializer)
 from ..utils import generate_random_slug
-from .. import settings
 
 
 LOGGER = logging.getLogger(__name__)
@@ -81,7 +80,18 @@ class ListCreateAPIKeysAPIView(AuthenticatedUserPasswordMixin,
             ]
         }
     """
+    search_fields = (
+        'title',
+    )
+    ordering_fields = (
+        ('title', 'title'),
+        ('ends_at', 'ends_at'),
+    )
+    ordering = ('title',)
+
+    filter_backends = (filters.SearchFilter, filters.OrderingFilter)
     serializer_class = APIKeySeralizer
+
 
     def get_serializer_class(self):
         if self.request.method.lower() == 'post':
@@ -141,7 +151,7 @@ class ListCreateAPIKeysAPIView(AuthenticatedUserPasswordMixin,
             user=self.user,
             api_pub_key=api_pub_key,
             api_password=make_password(api_password),
-            ends_at=datetime_or_now() + relativedelta(
+            ends_at=datetime_or_now() + datetime.timedelta(
                 days=settings.USER_API_KEY_LIFETIME_DAYS),
             title=title
         )

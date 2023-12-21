@@ -41,7 +41,7 @@ DISABLED_REGISTRATION
 REQUIRE_RECAPTCHA
    Requires to answer a recaptcha in registration
 """
-import sys
+import datetime, sys
 
 import django
 from django.conf import settings
@@ -94,9 +94,11 @@ _SETTINGS = {
         'github': {'name': 'GitHub'},
         'google-oauth2': {'name': 'Google'},
     },
+    'USE_VERIFICATION_LINKS': True,
     'USER_CONTACT_CALLABLE': None,  # XXX deprecated?
     'USER_SERIALIZER': 'signup.serializers_overrides.UserSerializer',
     'USER_API_KEY_LIFETIME_DAYS': getattr(settings, 'USER_API_KEY_LIFETIME_DAYS', 365),
+    'VERIFICATION_LIFETIME': datetime.timedelta(days=365)
 }
 _SETTINGS.update(getattr(settings, 'SIGNUP', {}))
 
@@ -152,8 +154,10 @@ RANDOM_SEQUENCE = _SETTINGS.get('RANDOM_SEQUENCE')
 REQUIRES_RECAPTCHA = _SETTINGS.get('REQUIRES_RECAPTCHA')
 SEARCH_FIELDS_PARAM = _SETTINGS.get('SEARCH_FIELDS_PARAM')
 SSO_PROVIDERS = _SETTINGS.get('SSO_PROVIDERS')
+USE_VERIFICATION_LINKS = _SETTINGS.get('USE_VERIFICATION_LINKS')
 USER_CONTACT_CALLABLE = _SETTINGS.get('USER_CONTACT_CALLABLE')
 USER_SERIALIZER = _SETTINGS.get('USER_SERIALIZER')
+VERIFICATION_LIFETIME = _SETTINGS.get('VERIFICATION_LIFETIME')
 
 LANGUAGE_CODE = getattr(settings, 'LANGUAGE_CODE')
 LOGIN_URL = getattr(settings, 'LOGIN_URL')

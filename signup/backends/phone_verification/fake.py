@@ -1,4 +1,4 @@
-# Copyright (c) 2022, Djaodjin Inc.
+# Copyright (c) 2023, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -21,26 +21,19 @@
 # WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+import logging
 
-"""
-Signals for user registration and activation.
-"""
+LOGGER = logging.getLogger(__name__)
 
-from django.dispatch import Signal
 
-#pylint: disable=invalid-name
-user_registered = Signal(
-#    providing_args=['user']
-)
-user_activated = Signal(
-#    providing_args=['user', 'verification_key', 'request']
-)
-user_email_verification = Signal(
-#    providing_args=['contact', 'request']
-)
-user_phone_verification = Signal(
-#    providing_args=['contact', 'request']
-)
-user_reset_password = Signal(
-#    providing_args=['user', 'request']
-)
+class PhoneVerificationBackend(object):
+    """
+    Fake phone verification backend for tests purposes.
+    """
+
+    def send(self, phone, phone_code):
+        """
+        Send a text message to the user to verify her phone number.
+        """
+        LOGGER.warning("Fake phone verification backend sent code %s to %s.",
+            phone_code, phone)

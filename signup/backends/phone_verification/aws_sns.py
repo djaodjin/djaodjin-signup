@@ -22,12 +22,24 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import logging
+
 import boto3
 
 from ...compat import gettext_lazy as _
 
 
+LOGGER = logging.getLogger(__name__)
+
+
 class PhoneVerificationBackend(object):
+    """
+    You will first need to request 10DLC number in the Amazon PinPoint console,
+
+    then you will need the following actions in the IAM profile:
+
+        - SNS:Publish
+    """
 
     def send(self, phone, phone_code):
         """

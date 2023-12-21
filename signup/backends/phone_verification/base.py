@@ -21,11 +21,15 @@
 # WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+import logging
 
 from django.contrib.auth import REDIRECT_FIELD_NAME
+from django.utils import translation
 
 from ... import settings, signals
 from ..base import load_backend
+
+LOGGER = logging.getLogger(__name__)
 
 
 def send_verification_phone(contact, request,
@@ -40,7 +44,10 @@ def send_verification_phone(contact, request,
     """
     #pylint:disable=unused-argument
     backend = load_backend(settings.PHONE_VERIFICATION_BACKEND)
-    backend.send(contact.phone, contact.phone_code)
+    phone = str(contact.phone) # insures we pass a string to the backend.
+    with translation.override(contact.lang):
+        backend.send(phone, contact.phone_code)
 
+    LOGGER.info("text message verification code to phone %s", phone)
     signals.user_phone_verification.send(
-        sender=__name__, user=contact, request=request)
+        sender=__name__, contact=contact, request=request)

@@ -483,3 +483,27 @@ class MFACodeForm(PasswordAuthForm):
     def __init__(self, *args, **kwargs):
         super(MFACodeForm, self).__init__(*args, **kwargs)
         self.fields['password'].widget = forms.HiddenInput()
+
+
+class VerifyEmailForm(forms.Form):
+    """
+    Form to verify an e-mail address
+    """
+    email = forms.EmailField(label=_("E-mail address"),
+        widget=forms.TextInput(attrs={
+            'placeholder': _("ex: john@myorganization.com")}))
+    email_code = forms.IntegerField(label=_("Email verification code"),
+        widget=forms.TextInput(
+            attrs={'placeholder': _("Email verification code")}))
+
+
+class VerifyPhoneForm(forms.Form):
+    """
+    Form to verify an e-mail address
+    """
+    phone = PhoneField(label=_("Phone number"),
+        widget=forms.TextInput(attrs={
+            'placeholder': _("ex: +14155555555")}))
+    phone_code = forms.IntegerField(label=_("Phone verification code"),
+        widget=forms.TextInput(
+            attrs={'placeholder': _("Phone verification code")}))

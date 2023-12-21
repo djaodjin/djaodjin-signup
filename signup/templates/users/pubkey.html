@@ -28,7 +28,7 @@
 
       <!-- modals -->
       <div>
-        <form id="generate-key" @submit.prevent="generateKey">
+        <form id="password-form" @submit.prevent="generateKey">
           <input type="hidden" name="csrfmiddlewaretoken" value="{{csrf_token}}">
           <label>Generate a new API key</label>
           <div v-show="apiKey">

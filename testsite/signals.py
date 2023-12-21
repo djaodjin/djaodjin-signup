@@ -1,4 +1,4 @@
-# Copyright (c) 2018, Djaodjin Inc.
+# Copyright (c) 2023, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -25,8 +25,7 @@
 from django.conf import settings
 from django.core.mail import send_mail
 from django.dispatch import receiver
-from signup.signals import (user_registered, user_activated,
-    user_reset_password, user_verification)
+from signup.signals import user_registered, user_activated
 
 #pylint: disable=unused-argument
 SEND_EMAIL = False
@@ -46,22 +45,4 @@ def user_activated_notice(sender, user, request, **kwargs):
         send_mail("user activated", "%s has been activated.",
               settings.DEFAULT_FROM_EMAIL,
               [admin[1] for admin in settings.ADMINS],
-              fail_silently=False)
-
-
-@receiver(user_verification, dispatch_uid="user_verification_notice")
-def user_verification_notice(
-        sender, user, request, back_url, expiration_days, **kwargs):
-    if SEND_EMAIL:
-        send_mail("email verification", "please click %s" % back_url,
-              settings.DEFAULT_FROM_EMAIL, [user.email],
-              fail_silently=False)
-
-
-@receiver(user_reset_password, dispatch_uid="user_reset_password_notice")
-def user_reset_password_notice(
-        sender, user, request, back_url, expiration_days, **kwargs):
-    if SEND_EMAIL:
-        send_mail("password reset", "please click %s" % back_url,
-              settings.DEFAULT_FROM_EMAIL, [user.email],
               fail_silently=False)

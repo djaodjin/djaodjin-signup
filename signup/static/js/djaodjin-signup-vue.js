@@ -257,7 +257,9 @@ Vue.component('user-update', {
         verifyPhone: function() {
             var vm = this;
             vm.validateForm();
-            vm.reqPost(vm.verify_url, {phone: vm.formFields.phone},
+            // XXX We have extended the API such that `email` can be
+            // either an e-mail address or a phone number.
+            vm.reqPost(vm.verify_url, {email: vm.formFields.phone},
             function(resp) {
                 vm.codeSent = true;
                 if( resp.detail ) {
@@ -385,6 +387,7 @@ Vue.component('user-rotate-api-keys', {
             url: this.$urls.user.api_generate_keys,
             modalSelector: '.user-password-modal',
             apiKey: '',
+            apiTitle: null,
             title: '',
             deleteKeyPending: null,
         };
@@ -396,6 +399,7 @@ Vue.component('user-rotate-api-keys', {
                 { password: vm.password, title: vm.title },
             function(resp) {
                 vm.apiKey = resp.secret;
+                vm.apiTitle = vm.title;
                 vm.title = '';
                 vm.modalHide();
                 vm.get();

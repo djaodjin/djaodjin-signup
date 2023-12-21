@@ -329,6 +329,8 @@ class ContactManager(models.Manager):
                 pass
         if not contact and user:
             contact = self.filter(email__isnull=True, user=user).first()
+            if contact:
+                contact.email = email
 
         if contact:
             created = False
@@ -400,6 +402,8 @@ class ContactManager(models.Manager):
                 pass
         if not contact and user:
             contact = self.filter(phone__isnull=True, user=user).first()
+            if contact:
+                contact.phone = phone
 
         if contact:
             created = False
@@ -453,7 +457,8 @@ class ContactManager(models.Manager):
             email_filter &= models.Q(email_verification_at__gt=at_time
                 - datetime.timedelta(days=settings.KEY_EXPIRATION))
             email_filter &= models.Q(email_code=email_code)
-        contact = self.filter(email_filter).select_related('user').get()
+        queryset = self.filter(email_filter).select_related('user')
+        contact = queryset.get()
         contact.email_verification_key = None
         contact.email_verified_at = at_time
         contact.email_code = generate_random_code()
@@ -549,19 +554,27 @@ class ContactManager(models.Manager):
             pass # We return None instead here.
         return None, None
 
-    def is_reachable_by_email(self, user):
+    def is_reachable_by_email(self, user, at_time=None):
         """
         Returns True if the user is reachable by email.
         """
-        return self.filter(user=user).exclude(
-            email_verified_at__isnull=True).exists()
+        verified_filter = models.Q(email_verified_at__isnull=True)
+        if settings.VERIFICATION_LIFETIME:
+            at_time = datetime_or_now(at_time)
+            verified_filter |= models.Q(email_verified_at__lt=at_time
+                - settings.VERIFICATION_LIFETIME)
+        return self.filter(user=user).exclude(**verified_filter).exists()
 
-    def is_reachable_by_phone(self, user):
+    def is_reachable_by_phone(self, user, at_time=None):
         """
         Returns True if the user is reachable by phone.
         """
-        return self.filter(user=user).exclude(
-            phone_verified_at__isnull=True).exists()
+        verified_filter = models.Q(phone_verified_at__isnull=True)
+        if settings.VERIFICATION_LIFETIME:
+            at_time = datetime_or_now(at_time)
+            verified_filter |= models.Q(phone_verified_at__lt=at_time
+                - settings.VERIFICATION_LIFETIME)
+        return self.filter(user=user).exclude(**verified_filter).exists()
 
 
 @python_2_unicode_compatible

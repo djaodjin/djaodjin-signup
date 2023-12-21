@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/1.6/ref/settings/
 """
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
-import logging, os, re, sys
+import os, re, sys
 
 from django.contrib.messages import constants as messages
 from signup.compat import reverse_lazy
@@ -301,10 +301,12 @@ DEBUG_TOOLBAR_CONFIG = {
 }
 
 SIGNUP = {
-    'SKIP_EXPIRATION_CHECK': SKIP_EXPIRATION_CHECK,
+    'PHONE_VERIFICATION_BACKEND': getattr(
+        sys.modules[__name__], 'SIGNUP_PHONE_VERIFICATION_BACKEND', None),
     'RANDOM_SEQUENCE': getattr(
         sys.modules[__name__], 'SIGNUP_RANDOM_SEQUENCE', []),
 #    'REQUIRES_RECAPTCHA': True
+    'SKIP_EXPIRATION_CHECK': SKIP_EXPIRATION_CHECK,
 }
 
 INTERNAL_IPS = ('127.0.0.1', '::1')

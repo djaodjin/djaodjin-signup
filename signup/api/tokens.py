@@ -1,4 +1,4 @@
-# Copyright (c) 2020, DjaoDjin inc.
+# Copyright (c) 2023, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -26,9 +26,10 @@ import logging
 
 from django.core.exceptions import PermissionDenied
 from rest_framework.exceptions import ValidationError
+from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
 
-from .auth import JWTBase
+from .auth import CreateTokenMixin
 from ..docs import OpenAPIResponse, swagger_auto_schema
 from ..serializers import TokenSerializer, ValidationErrorSerializer
 from ..utils import verify_token as verify_token_base
@@ -37,7 +38,7 @@ from ..utils import verify_token as verify_token_base
 LOGGER = logging.getLogger(__name__)
 
 
-class JWTVerify(JWTBase):
+class JWTVerify(CreateTokenMixin, GenericAPIView):
     """
     Verifies a JSON Web Token
 

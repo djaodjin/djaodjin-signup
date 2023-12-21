@@ -25,8 +25,8 @@
 import logging
 
 from django.http import Http404
-from django.contrib.auth import (REDIRECT_FIELD_NAME, authenticate,
-    get_user_model, login as auth_login)
+from django.contrib.auth import (authenticate, get_user_model,
+    login as auth_login)
 from django.db import IntegrityError
 from django.utils import translation
 from django.utils.http import urlencode
@@ -383,43 +383,7 @@ class VerifyMixin(AuthMixin):
             pass
         return request.GET.get(key, default_value)
 
-    def send_notification_email(self, contact, next_url=None):
-        request = self.request
-        if self.get_query_param(request, 'noreset'):
-            send_verification_email(contact, request, next_url=next_url)
-        else:
-            back_url = request.build_absolute_uri(
-                reverse('password_reset_confirm', args=(
-                    contact.email_verification_key,)))
-            if next_url:
-                back_url += '?%s=%s' % (REDIRECT_FIELD_NAME, next_url)
-            signals.user_reset_password.send(
-                sender=__name__, user=contact, request=request,
-                back_url=back_url, expiration_days=settings.KEY_EXPIRATION)
 
-
-    def check_password(self, user, **cleaned_data):
-        next_url = cleaned_data.get('next_url')
-        email = cleaned_data.get('email')
-        if not email and user:
-            email = user.email
-        # send link through e-mail
-        if email:
-            #pylint:disable=unused-variable
-            contact, unused = Contact.objects.prepare_email_verification(
-                email, user=user)
-            self.send_notification_email(contact, next_url=next_url)
-            raise VerifyRequired({'detail': _(
-                    "We sent a one-time link to your e-mail address.")})
-
-        raise serializers.ValidationError({
-            'detail': _("Credentials do not match.")})
-
-
-class VerifyPhoneMixin(AuthMixin):
-    """
-    Authenticate by verifying phone
-    """
     def check_password(self, user, **cleaned_data):
         next_url = cleaned_data.get('next_url')
 
@@ -432,6 +396,24 @@ class VerifyPhoneMixin(AuthMixin):
             send_verification_phone(contact, self.request, next_url=next_url)
             raise VerifyRequired({'detail': _(
                     "We sent a one-time code to your phone.")})
+
+        email = cleaned_data.get('email')
+        if not email and user:
+            email = user.email
+        # send link through e-mail
+        if email:
+            #pylint:disable=unused-variable
+            contact, unused = Contact.objects.prepare_email_verification(
+                email, user=user)
+            back_url = None
+            if not self.get_query_param(self.request, 'noreset'):
+                back_url = self.request.build_absolute_uri(reverse(
+                    'password_reset_confirm', args=(
+                    contact.email_verification_key,)))
+            send_verification_email(contact, self.request, next_url=next_url,
+                back_url=back_url)
+            raise VerifyRequired({'detail': _(
+                    "We sent a one-time link to your e-mail address.")})
 
         raise serializers.ValidationError({
             'detail': _("Credentials do not match.")})
@@ -631,6 +613,9 @@ class PasswordResetConfirmMixin(VerifyCompleteMixin):
             if user:
                 user.password = '!'
                 user.save()
+                LOGGER.info("%s password reset", user)
+                signals.user_reset_password.send(
+                    sender=__name__, user=user, request=self.request)
             if not user or has_invalid_password(user):
                 raise IncorrectUser({'email': _("Not found.")})
         # This will call `VerifyCompleteMixin.check_password` which also
