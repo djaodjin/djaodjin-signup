@@ -35,7 +35,7 @@ from rest_framework.exceptions import ValidationError
 from .. import filters, settings
 from ..backends.auth_ldap import is_ldap_user, set_ldap_pubkey
 from ..compat import gettext_lazy as _
-from ..docs import OpenAPIResponse, swagger_auto_schema
+from ..docs import extend_schema, OpenApiResponse
 from ..helpers import datetime_or_now
 from ..mixins import AuthenticatedUserPasswordMixin, UserMixin
 from ..models import Credentials
@@ -101,13 +101,13 @@ class ListCreateAPIKeysAPIView(AuthenticatedUserPasswordMixin,
     def get_queryset(self):
         return Credentials.objects.filter(user=self.user)
 
-    @swagger_auto_schema(responses={
-        201: OpenAPIResponse("Reset successful", APIKeypairSerializer)})
+    @extend_schema(responses={
+        201: OpenApiResponse(APIKeypairSerializer)})
     def post(self, request, *args, **kwargs):#pylint:disable=unused-argument
         """
-        Resets a user secret API key
+        Creates an API key
 
-        Resets the secret API key with which a user can authenticate
+        Creates an API key with which a user can authenticate
         with the service.
 
         **Tags: auth, user, usermodel
@@ -167,8 +167,8 @@ class DestroyAPIKeyAPIView(AuthenticatedUserPasswordMixin,
     """
     serializer_class = AuthenticatedUserPasswordSerializer
 
-    @swagger_auto_schema(responses={
-        200: OpenAPIResponse("Delete successful", ValidationErrorSerializer)})
+    @extend_schema(operation_id='users_api_keys_delete', responses={
+        200: OpenApiResponse(ValidationErrorSerializer)})
     def post(self, request, *args, **kwargs):#pylint:disable=unused-argument
         """
         Deletes a user API key
@@ -218,8 +218,8 @@ class PublicKeyAPIView(AuthenticatedUserPasswordMixin,
     """
     serializer_class = PublicKeySerializer
 
-    @swagger_auto_schema(responses={
-        200: OpenAPIResponse("success", ValidationErrorSerializer)})
+    @extend_schema(responses={
+        200: OpenApiResponse(ValidationErrorSerializer)})
     def put(self, request, *args, **kwargs):
         """
         Updates a user public RSA key

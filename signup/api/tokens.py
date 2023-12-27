@@ -30,7 +30,7 @@ from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
 
 from .auth import CreateTokenMixin
-from ..docs import OpenAPIResponse, swagger_auto_schema
+from ..docs import OpenApiResponse, extend_schema
 from ..serializers import TokenSerializer, ValidationErrorSerializer
 from ..utils import verify_token as verify_token_base
 
@@ -79,9 +79,9 @@ zEwfQ.F2y1iwj5NHlImmPfSff6IHLN7sUXpBFmX0qjCbFTe6A"
     def verify_token(token):
         return verify_token_base(token)
 
-    @swagger_auto_schema(responses={
-        200: OpenAPIResponse("Token is valid", TokenSerializer),
-        400: OpenAPIResponse("Token is invalid", ValidationErrorSerializer)})
+    @extend_schema(responses={
+        200: OpenApiResponse(TokenSerializer),
+        400: OpenApiResponse(ValidationErrorSerializer)})
     def post(self, request, *args, **kwargs): #pylint:disable=unused-argument
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():

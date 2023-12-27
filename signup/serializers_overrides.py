@@ -23,6 +23,14 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 Default implementation when not overriden
+
+The `UserSerializer` serializer is used for summary accounts in lists and
+other places where a `Contact`/`User` profile is referenced. Its intent is
+to facilitate composition of this App with other Django Apps which references
+a `django.contrib.auth.User model`.
+
+The `UserDetailSerializer` serializer is used in APIs where detailed
+information on a single `Contact`/`User` profile is returned.
 """
 
 from __future__ import unicode_literals
@@ -75,13 +83,7 @@ class PhoneField(serializers.Field):
 
 
 class UserSerializer(serializers.ModelSerializer):
-    """
-    This serializer is used in lists and other places where a Contact/User
-    profile is referenced. Its intent is to facilitate composition of this App
-    with other Django Apps which references a `django.contrib.auth.User model`.
 
-    For a detailed profile, see `UserDetailSerializer`.
-    """
     # Only way I found out to remove the ``UniqueValidator``. We are not
     # interested to create new instances here.
     slug = serializers.CharField(source='username', validators=[
@@ -145,12 +147,7 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class UserDetailSerializer(UserSerializer):
-    """
-    This serializer is used in APIs where a single Contact/User
-    profile is returned.
 
-    For a summary profile, see `UserSerializer`.
-    """
     # difference with `slug` definition in UserSerializer is `required=False`.
     slug = serializers.CharField(source='username', required=False, validators=[
         validators.RegexValidator(r'^[\w.@+-]+$', _("Enter a valid username."),

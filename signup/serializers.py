@@ -315,3 +315,12 @@ class APIKeySeralizer(serializers.ModelSerializer):
     class Meta:
         model = Credentials
         fields = ('title', 'api_pub_key', 'ends_at')
+
+
+# Serializers to document HTTP query parameters
+
+class CookieQueryParamSerializer(NoModelSerializer):
+
+    cookie = serializers.BooleanField(required=False,
+      help_text=_("True when a cookie session should additionally be created"),
+        default=None, allow_null=True)

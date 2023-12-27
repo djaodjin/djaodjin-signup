@@ -40,7 +40,7 @@ from ..backends.auth_ldap import is_ldap_user, set_ldap_password
 from ..compat import (force_str, gettext_lazy as _, reverse, six,
     urlparse, urlunparse)
 from ..decorators import check_has_credentials
-from ..docs import OpenAPIResponse, no_body, swagger_auto_schema
+from ..docs import extend_schema, OpenApiResponse
 from ..helpers import full_name_natural_split
 from ..mixins import AuthenticatedUserPasswordMixin, ContactMixin, UserMixin
 from ..models import (Contact, Credentials, Notification, OTPGenerator,
@@ -115,9 +115,9 @@ class UserActivateAPIView(ContactMixin, generics.GenericAPIView):
     serializer_class = UserDetailSerializer
     queryset = Contact.objects.all().select_related('user')
 
-    @swagger_auto_schema(request_body=no_body, responses={
-        201: OpenAPIResponse("success", UserDetailSerializer),
-        400: OpenAPIResponse("parameters error", ValidationErrorSerializer)})
+    @extend_schema(request=None, responses={
+        201: OpenApiResponse(UserDetailSerializer),
+        400: OpenApiResponse(ValidationErrorSerializer)})
     def post(self, request, *args, **kwargs):#pylint:disable=unused-argument
         instance = self.get_object()
         if check_has_credentials(request, instance.user):
@@ -625,9 +625,9 @@ class UserListCreateAPIView(UserListMixin, generics.ListCreateAPIView):
             return UserCreateSerializer
         return super(UserListCreateAPIView, self).get_serializer_class()
 
-    @swagger_auto_schema(responses={
-        201: OpenAPIResponse("success", UserDetailSerializer),
-        400: OpenAPIResponse("parameters error", ValidationErrorSerializer)})
+    @extend_schema(responses={
+        201: OpenApiResponse(UserDetailSerializer),
+        400: OpenApiResponse(ValidationErrorSerializer)})
     def post(self, request, *args, **kwargs):
         """
         Creates a user account
@@ -756,10 +756,10 @@ class OTPChangeAPIView(AuthenticatedUserPasswordMixin,
     def get_queryset(self):
         return OTPGenerator.objects.filter(user=self.user)
 
-    @swagger_auto_schema(responses={
-        200: OpenAPIResponse("success", OTPSerializer),
-        201: OpenAPIResponse("success", OTPSerializer),
-        400: OpenAPIResponse("parameters error", ValidationErrorSerializer)})
+    @extend_schema(responses={
+        200: OpenApiResponse(OTPSerializer), # also 201 but for presentation
+        # purposes, we do not specify it here.
+        400: OpenApiResponse(ValidationErrorSerializer)})
     def put(self, request, *args, **kwargs):
         """
         Enables multi-factor authentication
@@ -837,8 +837,8 @@ class PasswordChangeAPIView(AuthenticatedUserPasswordMixin,
     serializer_class = PasswordChangeSerializer
     queryset = get_user_model().objects.filter(is_active=True)
 
-    @swagger_auto_schema(responses={
-        200: OpenAPIResponse("success", ValidationErrorSerializer)})
+    @extend_schema(responses={
+        200: OpenApiResponse(ValidationErrorSerializer)})
     def put(self, request, *args, **kwargs):
         """
         Updates a user password

@@ -765,8 +765,10 @@ class Notification(models.Model):
 
     slug = models.SlugField(unique=True, choices=NOTIFICATION_TYPE,
         help_text=_("Unique identifier shown in the URL bar"))
-    title = models.CharField(max_length=100, blank=True)
-    description = models.TextField(null=True, blank=True)
+    title = models.CharField(max_length=100, blank=True,
+        help_text=_("Short description of the notification"))
+    description = models.TextField(null=True, blank=True,
+        help_text=_("Long description of the notification"))
     users = models.ManyToManyField(settings.AUTH_USER_MODEL,
         related_name='notifications')
     extra = _get_extra_field_class()(null=True)
@@ -783,10 +785,14 @@ class Credentials(models.Model):
     API_PUB_KEY_LENGTH = 32
     API_PASSWORD_LENGTH = 32
 
-    title = models.CharField(max_length=100, blank=True)
-    api_pub_key = models.SlugField(unique=True, max_length=API_PUB_KEY_LENGTH)
-    api_password = models.CharField(max_length=128)
-    ends_at = models.DateTimeField(null=True, blank=True)
+    title = models.CharField(max_length=100, blank=True,
+        help_text=_("Short description of the notification"))
+    api_pub_key = models.SlugField(unique=True, max_length=API_PUB_KEY_LENGTH,
+        help_text=_("Unique public identifier for the API key"))
+    api_password = models.CharField(max_length=128,
+        help_text=_("Private portion of the API key"))
+    ends_at = models.DateTimeField(null=True, blank=True,
+        help_text=_("Date/time at which the API key expires (in ISO format)"))
     user = models.ForeignKey(settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE, related_name='credentials')
     extra = _get_extra_field_class()(null=True)

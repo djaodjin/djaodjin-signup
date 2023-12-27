@@ -34,13 +34,14 @@ from rest_framework.response import Response
 
 from .. import settings
 from ..compat import gettext_lazy as _
-from ..docs import OpenAPIResponse, no_body, swagger_auto_schema
+from ..docs import extend_schema, OpenApiResponse
 from ..helpers import as_timestamp, datetime_or_now
 from ..mixins import (LoginMixin, PasswordResetConfirmMixin, RegisterMixin,
     VerifyMixin, VerifyCompleteMixin, SSORequired, IncorrectUser)
 from ..models import Contact
 from ..serializers_overrides import UserDetailSerializer
-from ..serializers import (CredentialsSerializer, NoModelSerializer,
+from ..serializers import (CookieQueryParamSerializer,
+    CredentialsSerializer, NoModelSerializer,
     RecoverSerializer, TokenSerializer, UserActivateSerializer,
     UserCreateSerializer, ValidationErrorSerializer)
 from ..utils import get_disabled_registration
@@ -87,9 +88,9 @@ class JWTBase(CreateTokenMixin, GenericAPIView):
     def run_pipeline(self):
         raise NotImplementedError()
 
-    @swagger_auto_schema(responses={
-        201: OpenAPIResponse("", TokenSerializer),
-        400: OpenAPIResponse("parameters error", ValidationErrorSerializer)})
+    @extend_schema(responses={
+        201: OpenApiResponse(TokenSerializer),
+        400: OpenApiResponse(ValidationErrorSerializer)})
     def post(self, request, *args, **kwargs):#pylint:disable=unused-argument
         try:
             user_with_backend = self.run_pipeline()
@@ -149,9 +150,9 @@ sbF9uYW1lIjoiRG9ubnkgQ29vcGVyIiwiZXhwIjoxNTI5NjU4NzEwfQ.F2y\
     model = get_user_model()
     serializer_class = CredentialsSerializer
 
-    @swagger_auto_schema(responses={
-        201: OpenAPIResponse("", TokenSerializer),
-        400: OpenAPIResponse("parameters error", ValidationErrorSerializer)})
+    @extend_schema(parameters=[CookieQueryParamSerializer], responses={
+        201: OpenApiResponse(TokenSerializer),
+        400: OpenApiResponse(ValidationErrorSerializer)})
     def post(self, request, *args, **kwargs):
         return super(JWTLogin, self).post(request, *args, **kwargs)
 
@@ -199,9 +200,9 @@ JwcBUUMECj8AKxsHtRHUSypco"
     permission_classes = [AllowRegistrationEnabled]
     serializer_class = UserCreateSerializer
 
-    @swagger_auto_schema(responses={
-        201: OpenAPIResponse("", TokenSerializer),
-        400: OpenAPIResponse("parameters error", ValidationErrorSerializer)})
+    @extend_schema(parameters=[CookieQueryParamSerializer], responses={
+        201: OpenApiResponse(TokenSerializer),
+        400: OpenApiResponse(ValidationErrorSerializer)})
     def post(self, request, *args, **kwargs):#pylint:disable=unused-argument
         return super(JWTRegister, self).post(request, *args, **kwargs)
 
@@ -258,9 +259,9 @@ class JWTActivate(VerifyCompleteMixin, JWTBase):
         serializer = self.get_serializer(token.user)
         return Response(serializer.data)
 
-    @swagger_auto_schema(responses={
-        201: OpenAPIResponse("", TokenSerializer),
-        400: OpenAPIResponse("parameters error", ValidationErrorSerializer)})
+    @extend_schema(parameters=[CookieQueryParamSerializer], responses={
+        201: OpenApiResponse(TokenSerializer),
+        400: OpenApiResponse(ValidationErrorSerializer)})
     def post(self, request, *args, **kwargs):#pylint:disable=unused-argument
         """
         Activates a user
@@ -325,9 +326,9 @@ class JWTPasswordConfirm(PasswordResetConfirmMixin, JWTBase):
     serializer_class = NoModelSerializer
     reset_method = 'post'
 
-    @swagger_auto_schema(request_body=no_body, responses={
-        201: OpenAPIResponse("Created", NoModelSerializer),
-        400: OpenAPIResponse("parameters error", ValidationErrorSerializer)})
+    @extend_schema(request=None, responses={
+        201: OpenApiResponse(NoModelSerializer),
+        400: OpenApiResponse(ValidationErrorSerializer)})
     def post(self, request, *args, **kwargs):#pylint:disable=unused-argument
         try:
             return super(JWTPasswordConfirm, self).post(
@@ -357,8 +358,10 @@ class JWTLogout(GenericAPIView):
 
         POST /api/auth/logout  HTTP/1.1
     """
-    @swagger_auto_schema(request_body=no_body, responses={
-        200: OpenAPIResponse("success", no_body)})
+    serializer_class = NoModelSerializer
+
+    @extend_schema(request=None, responses={
+        200: OpenApiResponse(None)})
     def post(self, request, *args, **kwargs):#pylint:disable=unused-argument
         LOGGER.info("%s signed out.", self.request.user,
             extra={'event': 'logout', 'request': request})
