@@ -69,12 +69,11 @@ Tested with
 - **Python:** 3.10, **Django:** 4.2 (latest) - see [#55](https://github.com/djaodjin/djaodjin-signup/issues/55)
 - **Python:** 2.7, **Django:** 1.11 (legacy) - use testsite/requirements-legacy.txt
 
-0.9.0
+0.9.1
 
-  * introduces phone verification backend
-  * compatibles with Bootstrap5
-  * silences bots POSTing to `regsiter/.`
-  * fixes `phonenumber.to_python` may return `None`
-  * fixes forgot password when a `User` is deleted but not `Contact`
+  * adds multiple API keys per user
+  * sends verification codes as an alternative to URL links
+  * supports OpenAPI 3 schema for API documentation
+  * prevents a HEAD HTTP request to expire one-time reset links
 
 [previous release notes](changelog)
