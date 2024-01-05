@@ -1,4 +1,4 @@
-# Copyright (c) 2022, DjaoDjin inc.
+# Copyright (c) 2024, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -37,13 +37,14 @@ from __future__ import unicode_literals
 
 import logging
 
-from django.core import validators
+from django.conf import locale
 from django.contrib.auth import get_user_model
+from django.core import validators
 import phonenumbers
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from .compat import gettext_lazy as _
+from .compat import gettext_lazy as _, six
 from .helpers import has_invalid_password
 
 
@@ -176,7 +177,9 @@ class UserDetailSerializer(UserSerializer):
         help_text=_("Primary phone number to contact user"))
     phone_code = serializers.IntegerField(required=False, write_only=True,
         help_text=_("Phone verification code"))
-    lang = serializers.CharField(source='get_lang', required=False,
+    lang = serializers.ChoiceField(source='get_lang', required=False,
+        choices=[lang['code']
+            for lang in six.itervalues(locale.LANG_INFO) if 'code' in lang],
         help_text=_("Preferred communication language"))
 
     created_at = serializers.DateTimeField(source='date_joined', read_only=True,
