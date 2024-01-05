@@ -345,6 +345,16 @@ class LoginMixin(AuthMixin):
     view or an API call.
     """
     def check_password(self, user, **cleaned_data):
+        disabled_registration = get_disabled_registration(self.request)
+        if not disabled_registration:
+            if not user:
+                phone = email = None # XXX call find_candidate again?
+                if phone:
+                    raise IncorrectUser({'phone': _("Not found.")})
+                if email:
+                    raise IncorrectUser({'email': _("Not found.")})
+                raise IncorrectUser({'username': _("Not found.")})
+
         user_with_backend = None
         username = cleaned_data.get('username')
         password = cleaned_data.get('password')
@@ -355,16 +365,6 @@ class LoginMixin(AuthMixin):
             username=username, password=password)
         if user_with_backend:
             return user_with_backend
-
-        disabled_registration = get_disabled_registration(self.request)
-        if not disabled_registration:
-            if not user:
-                phone = email = None # XXX call find_candidate again?
-                if phone:
-                    raise IncorrectUser({'phone': _("Not found.")})
-                if email:
-                    raise IncorrectUser({'email': _("Not found.")})
-                raise IncorrectUser({'username': _("Not found.")})
 
         raise serializers.ValidationError({
             'detail': _("Credentials do not match.")})
