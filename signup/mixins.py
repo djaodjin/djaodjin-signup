@@ -348,6 +348,9 @@ class LoginMixin(AuthMixin):
         user_with_backend = None
         username = cleaned_data.get('username')
         password = cleaned_data.get('password')
+        if not password:
+            raise PasswordRequired({'password': _("Password is required.")})
+
         user_with_backend = authenticate(self.request,
             username=username, password=password)
         if user_with_backend:
@@ -362,9 +365,6 @@ class LoginMixin(AuthMixin):
                 if email:
                     raise IncorrectUser({'email': _("Not found.")})
                 raise IncorrectUser({'username': _("Not found.")})
-        if not password:
-            raise PasswordRequired({
-                'password': _("Password is required.")})
 
         raise serializers.ValidationError({
             'detail': _("Credentials do not match.")})
