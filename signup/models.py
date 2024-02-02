@@ -563,7 +563,7 @@ class ContactManager(models.Manager):
             at_time = datetime_or_now(at_time)
             verified_filter |= models.Q(email_verified_at__lt=at_time
                 - settings.VERIFICATION_LIFETIME)
-        return self.filter(user=user).exclude(**verified_filter).exists()
+        return self.filter(user=user).exclude(verified_filter).exists()
 
     def is_reachable_by_phone(self, user, at_time=None):
         """
@@ -574,7 +574,7 @@ class ContactManager(models.Manager):
             at_time = datetime_or_now(at_time)
             verified_filter |= models.Q(phone_verified_at__lt=at_time
                 - settings.VERIFICATION_LIFETIME)
-        return self.filter(user=user).exclude(**verified_filter).exists()
+        return self.filter(user=user).exclude(verified_filter).exists()
 
 
 @python_2_unicode_compatible

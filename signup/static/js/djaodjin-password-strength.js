@@ -1,8 +1,80 @@
-/* global jQuery: true*/
+/**
+   Functionality related to the decorate password fields in djaodjin-signup.
+
+   These are based on jquery.
+ */
+
+/* global jQuery */
+
+(function (root, factory) {
+    if (typeof define === 'function' && define.amd) {
+        // AMD. Register as an anonymous module.
+        define(['exports', 'jQuery'], factory);
+    } else if (typeof exports === 'object' && typeof exports.nodeName !== 'string') {
+        // CommonJS
+        factory(exports, require('jQuery'));
+    } else {
+        // Browser true globals added to `window`.
+        factory(root, root.jQuery);
+        // If we want to put the exports in a namespace, use the following line
+        // instead.
+        // factory((root.djResources = {}), root.jQuery);
+    }
+}(typeof self !== 'undefined' ? self : this, function (exports, jQuery) {
 
 (function($){
     "use strict";
 
+    // Toggle password input field visibility on and off.
+    function PasswordVisible(element, options){
+        var self = this;
+        self.el = element;
+        self.$el = $(element);
+        self.options = options;
+        self.init();
+        return self;
+    }
+
+    PasswordVisible.prototype = {
+        init: function(){
+            var self = this;
+            self.$el.parent().find('.' + self.options.offClass).click(
+            function(){
+                self.toggle();
+            });
+        },
+
+        toggle: function() {
+            var self = this;
+            var elems = self.$el.parent().find('.' + self.options.offClass);
+            if( elems.length > 0 ) {
+                elems.removeClass(self.options.offClass);
+                elems.addClass(self.options.onClass);
+                self.el.get(0).type = "text";
+            } else {
+                elems = self.$el.parent().find('.' + self.options.onClass);
+                elems.removeClass(self.options.onClass);
+                elems.addClass(self.options.offClass);
+                self.el.get(0).type = "password";
+            }
+        }
+    };
+
+    $.fn.passwordVisible = function(options){
+        var $el = $(this);
+        var opts = $.extend( {}, $.fn.passwordVisible.defaults, options );
+        if (!$.data($el, "djpasswordvisible")) {
+            $el.data("djpasswordvisible", new PasswordVisible($el, opts));
+        }
+        return $el;
+    };
+
+    $.fn.passwordVisible.defaults = {
+        onClass: "fa-eye",
+        offClass: "fa-eye-slash",
+    };
+
+    // Gives feedback on password strength.
     function PasswordStrength(element, options){
         var self = this;
         self.el = element;
@@ -13,17 +85,11 @@
     }
 
     PasswordStrength.prototype = {
+
         init: function(){
             var self = this;
-
-            var progressbar = $(
-"<div class=\"progress\" style=\"margin-bottom:0;border-radius:0;height:4px;\">"
-+ "<div class=\"progress-bar password-strength\" role=\"progressbar\" aria-valuenow=\"60\" aria-valuemin=\"0\" aria-valuemax=\"100\" style=\"width: 0%;\">"
-+ "</div></div><div><small class=\"strength-info text-muted\"></small></div>");
-            progressbar.insertAfter(self.$el);
-
             self.$el.keyup(function(){
-                self.calculateStrength($(this).val());
+                self.calculateStrength(self.$el.val());
             });
         },
 
@@ -105,17 +171,21 @@
                 strengthInfo.readableScore = self.options.infoText.none;
             }
 
-            var progressClass = "progress-bar-danger";
+            var progressClass = "text-danger";
             if (strengthInfo.score >= 40 && strengthInfo.score < 60){
-                progressClass = "progress-bar-warning";
+                progressClass = "text-warning";
             }else if (strengthInfo.score >= 60 && strengthInfo.score < 80){
-                progressClass = "progress-bar-success";
+                progressClass = "text-success";
             }else if (strengthInfo.score >= 80){
-                progressClass = "progress-bar-success";
+                progressClass = "text-success";
             }
-            self.$el.parent().find(".password-strength").removeClass(
-                "progress-bar-danger progress-bar-warning progress-bar-success").addClass(progressClass).attr("style", "width:" + strengthInfo.score + "%");
-            self.$el.parent().find(".strength-info").text(strengthInfo.readableScore);
+
+            var feedbackElement = self.$el.parent().siblings(
+                self.options.feedbackElement).last();
+            feedbackElement
+                .removeClass('text-danger text-warning text-success')
+                .addClass(progressClass)
+                .text(strengthInfo.readableScore);
 
             self.options.passwordStrengthCallback(strengthInfo, requirements);
         },
@@ -284,14 +354,16 @@
     };
 
     $.fn.passwordStrength = function(options){
+        var $el = $(this);
         var opts = $.extend( {}, $.fn.passwordStrength.defaults, options );
-        if (!$.data($(this), "djpasswordstrength")) {
-            $(this).data("djpasswordstrength",
-                new PasswordStrength($(this), opts));
+        if (!$.data($el, "djpasswordstrength")) {
+            $el.data("djpasswordstrength", new PasswordStrength($el, opts));
         }
+        return $el;
     };
 
     $.fn.passwordStrength.defaults = {
+        feedbackElement: '.help-block',
         passwordStrengthCallback: function(strength, requirements){
             return true;
         },
@@ -337,6 +409,7 @@
         }
     };
 
+    // check a password repeat matches another entry
     function PasswordMatch(element, options){
         var self = this;
         self.$el = $(element);
@@ -346,9 +419,9 @@
     }
 
     PasswordMatch.prototype = {
+
         init: function(){
             var self = this;
-            $(self.options.checkConfirmationTemplate).insertAfter(self.$el);
             var reference = $(self.options.reference).first();
             self.$el.keyup(function(){
                 self.checkPasswordConfirmation(reference.val());
@@ -361,16 +434,18 @@
 
         checkPasswordConfirmation: function(value){
             var self = this;
+            var feedbackElement = self.$el.parent().siblings(
+                self.options.feedbackElement).last();
             if( value && value !== "" && self.$el.val() !== "" ) {
                 if( self.$el.val() === value ) {
-                    self.$el.parent().find('.password-match')
+                    feedbackElement
                         .toggleClass(
                             self.options.checkConfirmationClass.match, true)
                         .toggleClass(
                             self.options.checkConfirmationClass.unmatch, false)
                         .text(self.options.checkConfirmationText.match);
                 } else {
-                    self.$el.parent().find('.password-match')
+                    feedbackElement
                         .toggleClass(
                             self.options.checkConfirmationClass.match, false)
                         .toggleClass(
@@ -378,19 +453,22 @@
                         .text(self.options.checkConfirmationText.unmatch);
                 }
             } else {
-                self.$el.parent().find('.password-match').text("");
+                feedbackElement.text("");
             }
         },
     };
 
     $.fn.passwordMatch = function(options){
+        var $el = $(this);
         var opts = $.extend( {}, $.fn.passwordMatch.defaults, options );
-        if (!$.data($(this), "djpasswordmatch")) {
-            $(this).data("djpasswordmatch", new PasswordMatch($(this), opts));
+        if (!$.data($el, "djpasswordmatch")) {
+            $el.data("djpasswordmatch", new PasswordMatch($el, opts));
         }
+        return $el;
     };
 
     $.fn.passwordMatch.defaults = {
+        feedbackElement: '.help-block',
         checkConfirmationClass: {
             match: "text-success",
             unmatch: "text-danger"
@@ -399,8 +477,9 @@
             match: "Password confirmed.",
             unmatch: "Password and confirmation do not match."
         },
-        checkConfirmationTemplate: "<div class=\"password-match\"></div>",
         reference: "[name='new_password']"
     };
 
-}(jQuery));
+}( jQuery ));
+
+}));
