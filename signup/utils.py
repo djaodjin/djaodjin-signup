@@ -85,15 +85,20 @@ def get_account_serializer():
     return import_string(settings.ACCOUNT_SERIALIZER)
 
 
-def get_recaptcha_form_field():
-    # The imports are here so catcha is only loaded when
-    # `settings.REQUIRE_RECAPTCHA` is True. This is a workaround
-    # until django-recaptcha supports Django4.0
+def get_recaptcha_form_field(public_key=None, private_key=None):
+    # The imports are here so captcha is only loaded when
+    # `settings.REQUIRE_RECAPTCHA` is True.
+    # django-recaptcha renamed the package namespace from 'captcha'
+    # to 'django_captcha' between version 3 and version 4.
     # pylint:disable=import-outside-toplevel
-    from captcha.fields import ReCaptchaField
-    from captcha.widgets import ReCaptchaV2Checkbox
-    return ReCaptchaField(widget=ReCaptchaV2Checkbox(
-        attrs={'data-size': 'compact'}))
+    try:
+        from django_recaptcha.fields import ReCaptchaField
+        from django_recaptcha.widgets import ReCaptchaV2Checkbox
+    except ModuleNotFoundError:
+        from captcha.fields import ReCaptchaField
+        from captcha.widgets import ReCaptchaV2Checkbox
+    return ReCaptchaField(public_key=public_key, private_key=private_key,
+        widget=ReCaptchaV2Checkbox(attrs={'data-size': 'compact'}))
 
 
 def get_user_serializer():
