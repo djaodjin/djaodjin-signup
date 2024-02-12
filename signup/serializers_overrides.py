@@ -46,6 +46,7 @@ from rest_framework.exceptions import ValidationError
 
 from .compat import gettext_lazy as _, six
 from .helpers import has_invalid_password
+from .models import OTPGenerator
 
 
 LOGGER = logging.getLogger(__name__)
@@ -188,11 +189,13 @@ class UserDetailSerializer(UserSerializer):
         help_text=_("Date at which the user last logged in"))
     credentials = serializers.SerializerMethodField(read_only=True,
         help_text=_("True if the user has valid login credentials"))
+    otp_enabled = serializers.SerializerMethodField(read_only=True,
+        help_text=_("True if the user has valid login credentials"))
 
     class Meta(UserSerializer.Meta):
         fields = UserSerializer.Meta.fields + ('email', 'phone',
             'full_name', 'nick_name', 'lang',
-            'credentials', 'created_at', 'last_login',
+            'credentials', 'otp_enabled', 'created_at', 'last_login',
             'email_code', 'phone_code')
         read_only_fields = ('credentials', 'created_at', 'last_login')
 
@@ -202,3 +205,17 @@ class UserDetailSerializer(UserSerializer):
             hasattr(obj, 'pk') and (not has_invalid_password(obj))) or
             hasattr(obj, 'user') and obj.user and
                 (not has_invalid_password(obj.user)))
+
+    @staticmethod
+    def get_otp_enabled(obj):
+        if isinstance(obj, get_user_model()):
+            try:
+                return hasattr(obj, 'pk') and bool(obj.otp)
+            except OTPGenerator.DoesNotExist:
+                return False
+        else:
+            try:
+                return hasattr(obj, 'user') and obj.user and  bool(obj.user.otp)
+            except OTPGenerator.DoesNotExist:
+                return False
+        return False
