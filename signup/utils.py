@@ -256,3 +256,9 @@ def get_picture_storage(request, account=None, **kwargs):
         except ImportError:
             pass
     return default_storage
+
+
+def get_user_otp_required(request, user):
+    if isinstance(settings.USER_OTP_REQUIRED, six.string_types):
+        return import_string(settings.USER_OTP_REQUIRED)(request, user)
+    return bool(settings.USER_OTP_REQUIRED)

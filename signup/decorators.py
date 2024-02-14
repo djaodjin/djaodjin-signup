@@ -1,4 +1,4 @@
-# Copyright (c) 2023, Djaodjin Inc.
+# Copyright (c) 2024, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -41,7 +41,8 @@ from .backends.phone_verification import send_verification_phone
 from .compat import (available_attrs, gettext_lazy as _, is_authenticated,
     reverse, six)
 from .helpers import get_accept_list, has_invalid_password
-from .models import Contact
+from .models import Contact, OTPGenerator
+from .utils import get_user_otp_required
 
 
 def _insert_url(request, redirect_field_name=REDIRECT_FIELD_NAME,
@@ -166,6 +167,12 @@ def fail_active(request):
     """
     if not check_has_credentials(request, request.user):
         return str(settings.LOGIN_URL)
+
+    if (get_user_otp_required(request, request.user) and
+        not OTPGenerator.objects.filter(user=request.user).exists()):
+        # We can't let this user move forward without setting an OTP code
+        return reverse('password_change', args=(request.user,))
+
     return False
 
 
