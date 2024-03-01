@@ -69,8 +69,11 @@ Tested with
 - **Python:** 3.10, **Django:** 4.2 (latest) - see [#55](https://github.com/djaodjin/djaodjin-signup/issues/55)
 - **Python:** 2.7, **Django:** 1.11 (legacy) - use testsite/requirements-legacy.txt
 
-0.9.3
+0.9.4
 
-  * adds password visibility toggle
+  * sends proper signal for password reset
+  * adds global settings to require OTP or not
+  * adds otp_enabled in json responses
+  * supports django_captcha 4.0
 
 [previous release notes](changelog)
