@@ -298,11 +298,17 @@ class AuthMixin(object):
         # Login, Verify: Check if auth is disabled for User, or
         # auth disabled globally if we only have a Contact
         self.auth_check_disabled(user)
+        LOGGER.debug("[run_pipeline] auth_check_disabled user=%s", user)
+
         # Login, Verify: Auth rate-limiter
         self.check_user_throttles(self.request, user)
+        LOGGER.debug("[run_pipeline] check_user_throttles user=%s", user)
+
         # Login, Verify, Register:
         # Redirects if email requires SSO
         self.check_sso_required(email)
+        LOGGER.debug("[run_pipeline] check_sso_required email=%s", email)
+
         # Login: If login by verifying e-mail or phone, send code
         #        Else check password
         #pylint:disable=assignment-from-none
@@ -512,7 +518,6 @@ class VerifyCompleteMixin(AuthMixin):
     if the user has no password set.
     """
     key_url_kwarg = 'verification_key'
-    reset_method = 'get'
 
     def prefetch_contact_info(self):
         data = {}
@@ -551,12 +556,28 @@ class VerifyCompleteMixin(AuthMixin):
 
 
     def check_password(self, user, **cleaned_data):
-        if (self.request.method.lower() == self.reset_method and
-            (not user or has_invalid_password(user))):
-            raise IncorrectUser({'email': _("Not found.")})
-        # call `AuthMixin.check_password` up the chain (i.e. returns `None`)
-        return super(VerifyCompleteMixin, self).check_password(
-            user, **cleaned_data)
+        if (user and not has_invalid_password(user) and
+            user == self.request.user):
+            # If we already have an authenticated user and that user
+            # matches the one described by `verification_key`,
+            # we mark the email/phone as verified and move on.
+            verification_key = self.kwargs.get(self.key_url_kwarg)
+            LOGGER.debug("verification_key '%s' matches authenticated user"\
+                " '%s' so we just mark the contact verified",
+                verification_key, self.request.user)
+            try:
+                # There shouldn't be any `User` created, but in case.
+                user, _unused = Contact.objects.activate_user(
+                    verification_key)
+            except IntegrityError as err:
+                handle_uniq_error(err)
+
+            # Somehow the backend path is lost on authenticated users
+            self.request.user.backend = self.backend_path
+            return self.request.user
+
+        return None
+
 
     def create_user(self, **cleaned_data):
         verification_key = self.kwargs.get(self.key_url_kwarg)
@@ -593,6 +614,10 @@ class VerifyCompleteMixin(AuthMixin):
                 signals.user_activated.send(sender=__name__, user=user,
                     verification_key=self.kwargs.get(self.key_url_kwarg),
                     request=self.request)
+            else:
+                LOGGER.info("%s password reset", user)
+                signals.user_reset_password.send(
+                    sender=__name__, user=user, request=self.request)
 
         # Bypassing authentication here, we are doing frictionless registration
         # the first time around.
@@ -609,19 +634,7 @@ class PasswordResetConfirmMixin(VerifyCompleteMixin):
 
     def check_password(self, user, **cleaned_data):
         #pylint:disable=unused-argument
-        if self.request.method.lower() == self.reset_method:
-            if user:
-                user.password = '!'
-                user.save()
-                LOGGER.info("%s password reset", user)
-                signals.user_reset_password.send(
-                    sender=__name__, user=user, request=self.request)
-            if not user or has_invalid_password(user):
-                raise IncorrectUser({'email': _("Not found.")})
-        # This will call `VerifyCompleteMixin.check_password` which also
-        # look at the request get step.
-        return super(PasswordResetConfirmMixin, self).check_password(
-            user, **cleaned_data)
+        return None
 
 
 class AuthenticatedUserPasswordMixin(object):

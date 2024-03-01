@@ -324,7 +324,6 @@ class JWTPasswordConfirm(PasswordResetConfirmMixin, JWTBase):
         {}
     """
     serializer_class = NoModelSerializer
-    reset_method = 'post'
 
     @extend_schema(request=None, responses={
         201: OpenApiResponse(NoModelSerializer),
