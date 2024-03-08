@@ -48,7 +48,6 @@
 {% block scripts %}
 <script type="text/javascript" charset="utf-8" src="/static/vendor/jquery.js"></script>
 <script type="text/javascript" charset="utf-8" src="/static/js/djaodjin-resources.js"></script>
-{% if VUEJS %}
 <script type="text/javascript" charset="utf-8" src="/static/vendor/vue.js"></script>
 <script type="text/javascript" charset="utf-8" src="/static/vendor/vue-croppa.js"></script>
 <script type="text/javascript" charset="utf-8" src="/static/js/djaodjin-resources-vue.js"></script>
@@ -71,37 +70,6 @@ var app = new Vue({
   delimiters: ["[[","]]"],
 });
 </script>
-{% else %}
-<script type="text/javascript" charset="utf-8" src="/static/vendor/angular.js"></script>
-<script type="text/javascript" charset="utf-8" src="/static/vendor/angular-touch.js"></script>
-<script type="text/javascript" charset="utf-8" src="/static/vendor/angular-animate.js"></script>
-<script type="text/javascript" charset="utf-8" src="/static/vendor/angular-resource.js"></script>
-<script type="text/javascript" charset="utf-8" src="/static/vendor/angular-route.js"></script>
-<script type="text/javascript" charset="utf-8" src="/static/vendor/ui-bootstrap-tpls.js"></script>
-<script type="text/javascript" charset="utf-8" src="/static/js/djaodjin-signup-angular.js"></script>
-<script type="text/javascript">
-/* Implementation Note: Not including a list of dependent modules
-   (2nd parameter to `module`) "re-opens" the module for additional
-   configuration.
-   - We add the CSRF token for as an HTTP header on API calls.
-   - We make it easier to separate between django and angularjs templates
-     by changing Angular defaults to [[ and ]] characters. */
-var reopenSignupApp = angular.module('signupApp');
-reopenSignupApp.config(['$interpolateProvider', '$httpProvider',
-           function($interpolateProvider, $httpProvider) {
-    $httpProvider.defaults.headers.common['X-CSRFToken'] = '{{csrf_token}}';
-    $interpolateProvider.startSymbol('[[');
-    $interpolateProvider.endSymbol(']]');
-}]);
-reopenSignupApp.constant('settings', {
-  urls: {% if urls %}{{urls|to_json}}{% else %}{}{% endif %},
-  itemsPerPage: {% if items_per_page %}{{items_per_page}}{% else %}25{% endif %},
-  modals: {
-    generate_key: "#generate-key",
-  },
-});
-</script>
-{% endif %}
 {% block users_bodyscripts %}{% endblock %}
 {% endblock %}
 </html>

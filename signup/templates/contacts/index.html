@@ -1,49 +1,41 @@
 {% extends "contacts/base.html" %}
 
 {% block content %}
-<contact-list id="contact-list-container" inline-template
-     ng-app="signupApp">
-  <div ng-controller="contactsCtrl">
+<contact-list id="contact-list-container" inline-template>
+  <div>
     <h1>Contacts</h1>
     <form id="create-contact"
-       ng-submit="createContact()"
        @submit.prevent="createContact">
       <input type="hidden" name="csrfmiddlewaretoken" value="{{csrf_token}}">
       <div>
         <label>Full name</label>
         <input type="text" name="full_name"
-            ng-model="contact.full_name"
             v-model="contact.full_name">
       </div>
       <div>
         <label>Nick name</label>
         <input type="text" name="nick_name"
-            ng-model="contact.nick_name"
             v-model="contact.nick_name">
       </div>
       <div>
         <label>Email</label>
         <input type="text" name="email"
-            ng-model="contact.email"
             v-model="contact.email">
       </div>
       <button type="submit" value="submit">Create Contact</button>
     </form>
-    <div ng-show="!items.$resolved"
-         v-show="!itemsLoaded">
+    <div v-show="!itemsLoaded">
       <h3>Loading ...</h3>
     </div>
-    <div ng-show="items.$resolved && items.results.length == 0" ng-cloak
-         v-show="itemsLoaded && items.results.length === 0" v-cloak>
+    <div v-show="itemsLoaded && items.results.length === 0" v-cloak>
       <h4><em>No contacts</em></h4>
     </div>
     <div id="has-contacts"
-         ng-show="items.$resolved && items.results.length > 0" ng-cloak
          v-show="itemsLoaded && items.results.length > 0" v-cloak>
-      <div ng-repeat="entry in items.results"
-           v-for="entry in items.results">
-        <p><a v-bind:href="'{{urls.contacts}}' + entry.slug + '/'"
-              ng-href="'{{urls.contacts}}' + entry.slug + '/'">[[entry.printable_name]]</a></p>
+      <div v-for="entry in items.results">
+        <p>
+          <a v-bind:href="'{{urls.contacts}}' + entry.slug + '/'">[[entry.printable_name]]</a>
+        </p>
       </div>
     </div>
   </div>

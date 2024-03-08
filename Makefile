@@ -62,12 +62,26 @@ clean:: clean-dbs
 	find $(srcDir) -name '__pycache__' -exec rm -rf {} +
 	find $(srcDir) -name '*~' -exec rm -rf {} +
 
+
 clean-dbs:
 	[ ! -f $(DB_NAME) ] || rm $(DB_NAME)
 	[ ! -f $(srcDir)/testsite-app.log ] || rm $(srcDir)/testsite-app.log
 
 
-vendor-assets-prerequisites: $(srcDir)/testsite/package.json
+doc:
+	$(installDirs) build/docs
+	cd $(srcDir) && sphinx-build -b html ./docs $(PWD)/build/docs
+
+
+initdb: clean-dbs install-conf
+	$(installDirs) $(dir $(DB_NAME))
+	cd $(srcDir) && $(MANAGE) migrate $(RUNSYNCDB) --noinput
+	cat $(srcDir)/testsite/migrations/adjustments1-sqlite3.sql | $(SQLITE_UNSAFE) $(DB_NAME)
+	cat $(srcDir)/testsite/migrations/adjustments2-sqlite3.sql | $(SQLITE) $(DB_NAME)
+	cd $(srcDir) && $(MANAGE) loaddata testsite/fixtures/default-db.json
+
+
+vendor-assets-prerequisites: $(installTop)/.npm/djaodjin-signup-packages
 
 
 $(DESTDIR)$(CONFIG_DIR)/credentials: $(srcDir)/testsite/etc/credentials
@@ -81,21 +95,6 @@ $(DESTDIR)$(CONFIG_DIR)/gunicorn.conf: $(srcDir)/testsite/etc/gunicorn.conf
 	[ -f $@ ] || sed \
 		-e 's,%(LOCALSTATEDIR)s,$(LOCALSTATEDIR),' $< > $@
 
-
-initdb: clean-dbs install-conf
-	$(installDirs) $(dir $(DB_NAME))
-	cd $(srcDir) && $(MANAGE) migrate $(RUNSYNCDB) --noinput
-	cat $(srcDir)/testsite/migrations/adjustments1-sqlite3.sql | $(SQLITE_UNSAFE) $(DB_NAME)
-	cat $(srcDir)/testsite/migrations/adjustments2-sqlite3.sql | $(SQLITE) $(DB_NAME)
-	cd $(srcDir) && $(MANAGE) loaddata testsite/fixtures/default-db.json
-
-
-doc:
-	$(installDirs) build/docs
-	cd $(srcDir) && sphinx-build -b html ./docs $(PWD)/build/docs
-
-
-vendor-assets-prerequisites: $(installTop)/.npm/djaodjin-signup-packages
 
 $(installTop)/.npm/djaodjin-signup-packages: $(srcDir)/testsite/package.json
 	$(installFiles) $^ $(installTop)

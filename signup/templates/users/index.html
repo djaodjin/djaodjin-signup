@@ -1,9 +1,8 @@
 {% extends "base.html" %}
 
 {% block content %}
-<user-update id="user-profile-container" inline-template
-    ng-app="signupApp">
-  <div ng-controller="userProfileCtrl">
+<user-update id="user-profile-container" inline-template>
+  <div>
     <h1>User Profile</h1>
     <form id="update-user-info" method="post" @submit.prevent="updateProfile">
       <input type="hidden" name="csrfmiddlewaretoken" value="{{csrf_token}}">
