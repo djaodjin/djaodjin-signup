@@ -67,6 +67,7 @@ _SETTINGS = {
     'DEFAULT_FROM_EMAIL': getattr(settings, 'DEFAULT_FROM_EMAIL'),
     'DISABLED_AUTHENTICATION': False,
     'DISABLED_REGISTRATION': False,
+    'DISABLED_USER_UPDATE': False,
     'EMAIL_DYNAMIC_VALIDATOR': None,
     'EMAIL_VERIFICATION_BACKEND':
         'signup.backends.email_verification.base.EmailVerificationBackend',
@@ -121,6 +122,8 @@ DISABLED_AUTHENTICATION = _SETTINGS.get('DISABLED_AUTHENTICATION')
 #: When `True`, registration of new users on the site is disabled.
 #: This settings can either be a boolean value or a callable function.
 DISABLED_REGISTRATION = _SETTINGS.get('DISABLED_REGISTRATION')
+
+DISABLED_USER_UPDATE = _SETTINGS.get('DISABLED_USER_UPDATE')
 
 #: A callable function which is passed an email address and that returns `False`
 #: when the email suspiciously looks like it belongs to a bot.

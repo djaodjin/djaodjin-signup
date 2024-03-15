@@ -1,4 +1,4 @@
-# Copyright (c) 2023, Djaodjin Inc.
+# Copyright (c) 2024, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -586,6 +586,12 @@ class VerifyCompleteMixin(AuthMixin):
             first_name = cleaned_data.get('first_name', "")
             last_name = cleaned_data.get('last_name', "")
             full_name = (first_name + ' ' + last_name).strip()
+
+        if settings.DISABLED_USER_UPDATE:
+            raise exceptions.AuthenticationFailed({
+                'detail': _("Update of credentials (password, etc.)"\
+                            " has been disabled.")})
+
         # If we don't save the ``User`` model here,
         # we won't be able to authenticate later.
         try:
@@ -641,6 +647,12 @@ class AuthenticatedUserPasswordMixin(object):
 
     def re_auth(self, request, validated_data):
         password = validated_data.get('password')
+
+        if settings.DISABLED_USER_UPDATE:
+            raise exceptions.AuthenticationFailed({
+                'detail': _("Update of credentials (password, etc.)"\
+                            " has been disabled.")})
+
         if not request.user.check_password(password):
             raise exceptions.AuthenticationFailed()
 
