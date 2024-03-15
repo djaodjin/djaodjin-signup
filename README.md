@@ -69,6 +69,11 @@ Tested with
 - **Python:** 3.10, **Django:** 4.2 (latest) - see [#55](https://github.com/djaodjin/djaodjin-signup/issues/55)
 - **Python:** 2.7, **Django:** 1.11 (legacy) - use testsite/requirements-legacy.txt
 
+0.9.5
+
+  * disables credentials update (ex: for interactive demos)
+  * removes deprecated angular.js front-end
+
 0.9.4
 
   * sends proper signal for password reset

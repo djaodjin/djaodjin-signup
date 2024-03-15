@@ -1,3 +1,10 @@
+0.9.5
+
+  * disables credentials update (ex: for interactive demos)
+  * removes deprecated angular.js front-end
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Thu, 14 Mar 2024 22:30:00 -0700
+
 0.9.4
 
   * sends proper signal for password reset
