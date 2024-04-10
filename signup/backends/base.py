@@ -1,4 +1,4 @@
-# Copyright (c) 2023, Djaodjin Inc.
+# Copyright (c) 2024, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -28,6 +28,9 @@ from django.core.exceptions import ImproperlyConfigured
 
 
 def load_backend(path):
+    if not path:
+        raise ImproperlyConfigured('backend cannot be loaded since path'\
+            ' is empty or None')
     dot_pos = path.rfind('.')
     module, attr = path[:dot_pos], path[dot_pos + 1:]
     try:
@@ -39,5 +42,5 @@ def load_backend(path):
         cls = getattr(mod, attr)
     except AttributeError:
         raise ImproperlyConfigured('Module "%s" does not define a "%s"'\
-' backend' % (module, attr))
+            ' backend' % (module, attr))
     return cls()

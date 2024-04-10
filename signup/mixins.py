@@ -27,6 +27,7 @@ import logging
 from django.http import Http404
 from django.contrib.auth import (authenticate, get_user_model,
     login as auth_login)
+from django.core.exceptions import ImproperlyConfigured
 from django.db import IntegrityError
 from django.utils import translation
 from django.utils.http import urlencode
@@ -378,7 +379,7 @@ class LoginMixin(AuthMixin):
 
 class VerifyMixin(AuthMixin):
     """
-    Authenticate by verifying e-mail address
+    Authenticate by verifying e-mail address or phone number
     """
     pattern_name = 'registration_activate'
 
@@ -399,9 +400,16 @@ class VerifyMixin(AuthMixin):
             #pylint:disable=unused-variable
             contact, unused = Contact.objects.prepare_phone_verification(
                 phone, user=user)
-            send_verification_phone(contact, self.request, next_url=next_url)
-            raise VerifyRequired({'detail': _(
+            try:
+                send_verification_phone(contact, self.request,
+                    next_url=next_url)
+                raise VerifyRequired({'detail': _(
                     "We sent a one-time code to your phone.")})
+            except ImproperlyConfigured:
+                # Cannot send phone verification if we don't have a backend,
+                # so we fall through and will attempt to send an e-mail
+                # verification.
+                pass
 
         email = cleaned_data.get('email')
         if not email and user:
