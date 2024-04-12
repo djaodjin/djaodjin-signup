@@ -218,7 +218,7 @@ Vue.component('user-update', {
                     vm.$forceUpdate();
                     vm.showMessages(["Profile was updated."], "success");
                 });
-            }, 'image/jpeg');
+            }, 'image/png');
         },
         validateForm: function(){ // XXX depends on jQuery
             var vm = this;
