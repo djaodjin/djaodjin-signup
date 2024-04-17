@@ -115,7 +115,7 @@ class FrictionlessSignupForm(forms.Form):
     phone = PhoneField(label=_("Phone number"), required=False,
         widget=forms.TextInput(attrs={
             'placeholder': _("ex: +14155555555")}))
-    full_name = forms.RegexField(label=_("Full name"),
+    full_name = forms.RegexField(label=_("Full name"), required=False,
         regex=settings.FULL_NAME_PAT, max_length=60,
         widget=forms.TextInput(attrs={
             'placeholder': 'ex: John Smith'}),
@@ -126,6 +126,13 @@ class FrictionlessSignupForm(forms.Form):
         super(FrictionlessSignupForm, self).__init__(*args, **kwargs)
         if settings.REQUIRES_RECAPTCHA:
             self.fields['captcha'] = get_recaptcha_form_field()
+
+    def clean_full_name(self):
+        if not self.cleaned_data['full_name']:
+            self.cleaned_data['full_name'] = (
+                "%s %s" % (self.data.get('first_name', ""),
+                    self.data.get('last_name', ""))).strip()
+        return self.cleaned_data['full_name']
 
     def clean_email(self):
         # If we don't convert `''` to `None`, the database will later complain
@@ -163,6 +170,9 @@ class FrictionlessSignupForm(forms.Form):
                 if not phone:
                     raise forms.ValidationError(
                         {'phone': _("A phone must be valid.")})
+            else:
+                raise forms.ValidationError(
+                    _("Either email or phone must be present."))
         return self.cleaned_data
 
 
