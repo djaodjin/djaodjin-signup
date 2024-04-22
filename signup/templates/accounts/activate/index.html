@@ -41,8 +41,9 @@
         <button type="submit" name="submit">Submit</button>
   </form>
   {% if email_verification_link %}
-  <form method="post" action="{{urls.user.password_reset}}{% if next %}/?next={{next}}{% endif %}">
+  <form method="post" action="{{urls.user.password_reset}}?noreset=1{% if next %}&next={{next}}{% endif %}">
     {% csrf_token %}
+    <input type="hidden" name="username" value="{{form.username.value}}" autocomplete="username">
     <button id="email-verification-link">Email me a one-time link</button>
   </form>
   {% endif %}

@@ -269,4 +269,13 @@
       "username": "xia16"
     },
     "model": "auth.User", "pk": 16
+},
+{
+    "fields": {
+      "slug": "reset-passwd-email-no-user",
+      "created_at": "2024-01-01T00:00:00-00:00",
+      "email": "xia+17@localhost.localdomain",
+      "email_verification_key": "6eb8ecd4ee3e93271e84f6439b1c07e9a7883259"
+    },
+    "model": "signup.Contact", "pk": 13
 }]

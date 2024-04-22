@@ -309,7 +309,16 @@ class PasswordResetConfirmView(PasswordResetConfirmMixin, ActivationView):
     """
     Specific view that will first reset a user's password so the form displays.
     """
-    form_class = PasswordResetConfirmForm
+    password_form_class = PasswordResetConfirmForm
+
+    def get_form_class(self):
+        contact = self.contact
+        if contact and contact.user:
+            # Without this check, we might bypass the activation/registration
+            # page expected to gather personal information (full_name,
+            # phone, etc.)
+            return self.password_form_class
+        return self.form_class
 
 
 class SigninView(LoginMixin, AuthResponseMixin, ProcessFormView):
