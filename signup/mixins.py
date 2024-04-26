@@ -346,37 +346,6 @@ class AuthMixin(object):
         return user_with_backend
 
 
-class LoginMixin(AuthMixin):
-    """
-    Workflow for authentication (login/sign-in) either through an HTML page
-    view or an API call.
-    """
-    def check_password(self, user, **cleaned_data):
-        disabled_registration = get_disabled_registration(self.request)
-        if not disabled_registration:
-            if not user:
-                phone = email = None # XXX call find_candidate again?
-                if phone:
-                    raise IncorrectUser({'phone': _("Not found.")})
-                if email:
-                    raise IncorrectUser({'email': _("Not found.")})
-                raise IncorrectUser({'username': _("Not found.")})
-
-        user_with_backend = None
-        username = cleaned_data.get('username')
-        password = cleaned_data.get('password')
-        if not password:
-            raise PasswordRequired({'password': _("Password is required.")})
-
-        user_with_backend = authenticate(self.request,
-            username=username, password=password)
-        if user_with_backend:
-            return user_with_backend
-
-        raise serializers.ValidationError({
-            'detail': _("Credentials do not match.")})
-
-
 class VerifyMixin(AuthMixin):
     """
     Authenticate by verifying e-mail address or phone number
@@ -428,6 +397,43 @@ class VerifyMixin(AuthMixin):
                 back_url=back_url)
             raise VerifyRequired({'detail': _(
                     "We sent a one-time link to your e-mail address.")})
+
+        raise serializers.ValidationError({
+            'detail': _("Credentials do not match.")})
+
+
+class LoginMixin(VerifyMixin):
+    """
+    Workflow for authentication (login/sign-in) either through an HTML page
+    view or an API call.
+    """
+    def check_password(self, user, **cleaned_data):
+        disabled_registration = get_disabled_registration(self.request)
+        if not disabled_registration:
+            if not user:
+                phone = email = None # XXX call find_candidate again?
+                if phone:
+                    raise IncorrectUser({'phone': _("Not found.")})
+                if email:
+                    raise IncorrectUser({'email': _("Not found.")})
+                raise IncorrectUser({'username': _("Not found.")})
+
+            if has_invalid_password(user):
+                # The user exists but doesn't have a password setup
+                # to authenticate, maybe because the user was invited
+                # by someone else. We automatically send a verification code.
+                super(LoginMixin, self).check_password(user, **cleaned_data)
+
+        user_with_backend = None
+        username = cleaned_data.get('username')
+        password = cleaned_data.get('password')
+        if not password:
+            raise PasswordRequired({'password': _("Password is required.")})
+
+        user_with_backend = authenticate(self.request,
+            username=username, password=password)
+        if user_with_backend:
+            return user_with_backend
 
         raise serializers.ValidationError({
             'detail': _("Credentials do not match.")})
