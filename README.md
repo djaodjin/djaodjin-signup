@@ -69,16 +69,12 @@ Tested with
 - **Python:** 3.10, **Django:** 4.2 (latest) - see [#55](https://github.com/djaodjin/djaodjin-signup/issues/55)
 - **Python:** 2.7, **Django:** 1.11 (legacy) - use testsite/requirements-legacy.txt
 
-0.9.5
+0.9.6
 
-  * disables credentials update (ex: for interactive demos)
-  * removes deprecated angular.js front-end
-
-0.9.4
-
-  * sends proper signal for password reset
-  * adds global settings to require OTP or not
-  * adds otp_enabled in json responses
-  * supports django_captcha 4.0
+  * redirects to activate page when a contact exists but no user
+  * presents the activation/registration page when recovering password
+  * supports full_name or first_name/last_name form fields
+  * handles alpha channel properly in profile pictures
+  * falls back on verifying e-mail if there are no phone backend
 
 [previous release notes](changelog)

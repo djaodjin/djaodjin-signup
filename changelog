@@ -1,3 +1,13 @@
+0.9.6
+
+  * redirects to activate page when a contact exists but no user
+  * presents the activation/registration page when recovering password
+  * supports full_name or first_name/last_name form fields
+  * handles alpha channel properly in profile pictures
+  * falls back on verifying e-mail if there are no phone backend
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Sun, 16 Jun 2024 22:40:00 -0700
+
 0.9.5
 
   * disables credentials update (ex: for interactive demos)
