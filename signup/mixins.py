@@ -183,6 +183,7 @@ class AuthMixin(object):
         email = cleaned_data.get('email')
         phone = cleaned_data.get('phone')
 
+        user = None
         if username:
             try:
                 user = self.model.objects.find_user(username)
