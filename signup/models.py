@@ -113,7 +113,7 @@ class ActivatedUserManager(UserManager):
         username_base = username
         while trials < 10:
             try:
-                with transaction.atomic():
+                with transaction.atomic(using=self._db):
                     return super(ActivatedUserManager, self).create_user(
                         username, email=email, password=password, **kwargs)
             except IntegrityError as exp:
@@ -142,7 +142,7 @@ class ActivatedUserManager(UserManager):
         username_base = username
         while trials < 10:
             try:
-                with transaction.atomic():
+                with transaction.atomic(using=self._db):
                     return super(ActivatedUserManager, self).create_user(
                         username, password=password, **kwargs)
             except IntegrityError as exp:
@@ -183,7 +183,7 @@ class ActivatedUserManager(UserManager):
             # By definition, all users created through a SSO provider
             # are active.
             password = "*****"
-        with transaction.atomic():
+        with transaction.atomic(using=self._db):
             if username:
                 user = super(ActivatedUserManager, self).create_user(
                     username, email=email, password=password, **kwargs)
@@ -334,7 +334,7 @@ class ContactManager(models.Manager):
 
         if contact:
             created = False
-            with transaction.atomic():
+            with transaction.atomic(using=self._db):
                 # We have to wrap in a transaction.atomic here, otherwise
                 # we end-up with a TransactionManager error when Contact.slug
                 # already exists in db and we generate new one.
@@ -407,7 +407,7 @@ class ContactManager(models.Manager):
 
         if contact:
             created = False
-            with transaction.atomic():
+            with transaction.atomic(using=self._db):
                 # We have to wrap in a transaction.atomic here, otherwise
                 # we end-up with a TransactionManager error when Contact.slug
                 # already exists in db and we generate new one.
@@ -503,7 +503,7 @@ class ContactManager(models.Manager):
                         'email_verification_key': token.email_verification_key,
                         'phone_verification_key': token.phone_verification_key})
                 user_model = get_user_model()
-                with transaction.atomic():
+                with transaction.atomic(using=self._db):
                     if token.email_verification_key == verification_key:
                         token.email_verification_key = None
                         token.email_verified_at = at_time
@@ -718,10 +718,10 @@ class Contact(models.Model):
                 except IntegrityError as err:
                     if 'uniq' not in str(err).lower():
                         raise
-                    handle_uniq_error(err)
+                    handle_uniq_error(err) # could also be due to email or phone
             except DRFValidationError as err:
                 if not 'slug' in err.detail:
-                    raise err
+                    raise
                 if len(slug_base) + 8 > max_length:
                     slug_base = slug_base[:(max_length - 8)]
                 self.slug = generate_random_slug(

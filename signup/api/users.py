@@ -1,4 +1,4 @@
-# Copyright (c) 2023, DjaoDjin inc.
+# Copyright (c) 2024, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -26,7 +26,7 @@ import hashlib, logging, os, re
 
 import pyotp
 from django.contrib.auth import logout as auth_logout
-from django.db import transaction, IntegrityError
+from django.db import router, transaction, IntegrityError
 from django.db.models import Q
 from django.contrib.auth import update_session_auth_hash, get_user_model
 from rest_framework import generics, parsers, status
@@ -295,7 +295,8 @@ class UserDetailAPIView(UserMixin, generics.RetrieveUpdateDestroyAPIView):
                 email = '%s%s' % (slug, look.group(1))
             # We are deleting a `User` model. Let's unlink the `Contact`
             # info but otherwise leave the poor-man's CRM's data intact.
-            with transaction.atomic():
+            #pylint:disable=protected-access
+            with transaction.atomic(using=user._state.db):
                 user.contacts.all().update(user=None)
                 self.delete_records(user)
                 requires_logout = (self.request.user == user)
@@ -366,9 +367,10 @@ class UserDetailAPIView(UserMixin, generics.RetrieveUpdateDestroyAPIView):
                     raise ValidationError({'detail':
                         _("Phone verification code does not match.")})
 
-        with transaction.atomic():
-            user = self.get_object()
-            try:
+        user = self.get_object()
+        try:
+            #pylint:disable=protected-access
+            with transaction.atomic(using=user._state.db):
                 if user.pk:
                     saves_user = False
                     if slug:
@@ -464,8 +466,8 @@ class UserDetailAPIView(UserMixin, generics.RetrieveUpdateDestroyAPIView):
                         Contact.objects.update_or_create(
                             slug=self.kwargs.get(self.lookup_url_kwarg),
                             defaults=update_fields)
-            except IntegrityError as err:
-                handle_uniq_error(err)
+        except IntegrityError as err:
+            handle_uniq_error(err)
         # A little patchy but it works. Otherwise we would need to override
         # `update` as well.
         #pylint:disable=pointless-statement,protected-access
@@ -683,7 +685,7 @@ class UserListCreateAPIView(UserListMixin, generics.ListCreateAPIView):
             serializer.validated_data.get('get_phone'))
         lang = serializer.validated_data.get('lang',
             serializer.validated_data.get('get_lang'))
-        with transaction.atomic():
+        with transaction.atomic(using=router.db_for_write(Contact)):
             try:
                 user = user_model.objects.get(
                     email__iexact=serializer.validated_data.get('email'))
@@ -985,7 +987,8 @@ class UserNotificationsAPIView(UserMixin, generics.RetrieveUpdateAPIView):
 
     def perform_update(self, serializer):
         notification_slugs = serializer.validated_data.get('notifications', [])
-        with transaction.atomic():
+        #pylint:disable=protected-access
+        with transaction.atomic(using=self.user._state.db):
             self.user.notifications.clear()
             for notification_slug in six.iterkeys(self.get_notifications(
                     user=self.user)):
@@ -1052,7 +1055,7 @@ class UserPictureAPIView(ContactMixin, generics.CreateAPIView):
             "", "", ""))
         location = self.request.build_absolute_uri(location)
         user_model = self.user_queryset.model
-        with transaction.atomic():
+        with transaction.atomic(using=router.db_for_write(Contact)):
             try:
                 user = user_model.objects.get(
                     username=self.kwargs.get(self.lookup_url_kwarg))

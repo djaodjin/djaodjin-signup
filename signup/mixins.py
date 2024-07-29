@@ -182,20 +182,31 @@ class AuthMixin(object):
         username = cleaned_data.get('username')
         email = cleaned_data.get('email')
         phone = cleaned_data.get('phone')
-        if not username:
-            username = email
-        if not username:
-            username = phone
-        try:
-            user = self.model.objects.find_user(username)
 
-            if not email:
-                email = user.email
+        if username:
+            try:
+                user = self.model.objects.find_user(username)
+                if not email:
+                    email = user.email
+            except self.model.DoesNotExist:
+                user = None
 
-        except self.model.DoesNotExist:
-            user = None
+        if not user and email:
+            try:
+                user = self.model.objects.find_user(email)
+            except self.model.DoesNotExist:
+                user = None
+
+        if not user and phone:
+            try:
+                user = self.model.objects.find_user(phone)
+                if not email:
+                    email = user.email
+            except self.model.DoesNotExist:
+                user = None
 
         return user, email
+
 
     def auth_check_disabled(self, user):
         auth_disabled = get_disabled_authentication(self.request, user)
@@ -299,24 +310,24 @@ class AuthMixin(object):
         # Login, Verify: Check if auth is disabled for User, or
         # auth disabled globally if we only have a Contact
         self.auth_check_disabled(user)
-        LOGGER.debug("[run_pipeline] auth_check_disabled user=%s", user)
+        LOGGER.debug("[run_pipeline] auth_check_disabled(user=%s)", user)
 
         # Login, Verify: Auth rate-limiter
         self.check_user_throttles(self.request, user)
-        LOGGER.debug("[run_pipeline] check_user_throttles user=%s", user)
+        LOGGER.debug("[run_pipeline] check_user_throttles(user=%s)", user)
 
         # Login, Verify, Register:
         # Redirects if email requires SSO
         self.check_sso_required(email)
-        LOGGER.debug("[run_pipeline] check_sso_required email=%s", email)
+        LOGGER.debug("[run_pipeline] check_sso_required(email=%s)", email)
 
         # Login: If login by verifying e-mail or phone, send code
         #        Else check password
         #pylint:disable=assignment-from-none
         user_with_backend = self.check_password(user, **cleaned_data)
-        LOGGER.debug(
-            "[run_pipeline] check_password(%s) returned user_with_backend=%s",
-            user, user_with_backend)
+        LOGGER.debug("[run_pipeline] check_password(user=%s, cleaned_data=%s)"\
+            " returned user_with_backend=%s",
+            user, cleaned_data, user_with_backend)
 
         # Login, Verify: If required, check 2FA
         self.auth_check_mfa(user, **cleaned_data)
@@ -331,6 +342,8 @@ class AuthMixin(object):
             # want those to fall through `check_password`, end up here
             # and render the link unusable before someone can click on it.
             #pylint:disable=assignment-from-none
+            LOGGER.debug("[run_pipeline] create_user(cleaned_data=%s)",
+                cleaned_data)
             user_with_backend = self.create_user(**cleaned_data)
 
         if not user_with_backend:

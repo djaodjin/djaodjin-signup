@@ -66,7 +66,8 @@ class UserProfileView(UserMixin, UpdateView):
         if not contact:
             contact = self.user.contacts.order_by('pk').first()
         failed = False
-        with transaction.atomic():
+        #pylint:disable=protected-access
+        with transaction.atomic(using=self.user._state.db):
             # `form.save(commit=False)` will copy the form fields values
             # to the instance without committing to the database.
             # `update_db_row` will commit to the database.
@@ -174,7 +175,8 @@ class UserNotificationsView(UserMixin, UpdateView):
     template_name = 'users/notifications.html'
 
     def form_valid(self, form):
-        with transaction.atomic():
+        #pylint:disable=protected-access
+        with transaction.atomic(using=self.user._state.db):
             notifications = self.get_initial().get('notifications')
             self.user.notifications.clear()
             for notification_slug, enabled in six.iteritems(form.cleaned_data):
