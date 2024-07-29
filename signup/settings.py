@@ -51,7 +51,7 @@ _DEFAULT_ENCRYPTED_FIELD = 'fernet_fields.EncryptedCharField'
 if django.VERSION[0] >= 4:
     _DEFAULT_ENCRYPTED_FIELD = None
     sys.stderr.write("warning: encrypted fields disabled"\
-        " because django-fernet==0.6 is incompatible with Django4+")
+        " because django-fernet==0.6 is incompatible with Django4+\n")
 
 _SETTINGS = {
     'ACCOUNT_ACTIVATION_DAYS': getattr(settings, 'ACCOUNT_ACTIVATION_DAYS', 2),

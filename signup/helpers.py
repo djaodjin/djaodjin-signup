@@ -1,4 +1,4 @@
-# Copyright (c) 2023, DjaoDjin inc.
+# Copyright (c) 2024, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -24,28 +24,40 @@
 
 import datetime
 
-from dateutil.parser import parse
-from django.utils.timezone import utc
+from django.utils.dateparse import parse_date, parse_datetime
 
 # Implementation Note: We cannot import `signup.settings` here otherwise
 # EXTRA_MIXIN is not setup properly (i.e. it uses the default one).
-from .compat import six
+from .compat import six, timezone_or_utc
 
 def as_timestamp(dtime_at=None):
     if not dtime_at:
         dtime_at = datetime_or_now()
     return int((
-        dtime_at - datetime.datetime(1970, 1, 1, tzinfo=utc)).total_seconds())
+        dtime_at - datetime.datetime(1970, 1, 1,
+            tzinfo=timezone_or_utc())).total_seconds())
 
 
-def datetime_or_now(dtime_at=None):
-    if not dtime_at:
-        return datetime.datetime.utcnow().replace(tzinfo=utc)
+def datetime_or_now(dtime_at=None, tzinfo=None):
+    tzinfo = timezone_or_utc(tzinfo)
+    as_datetime = dtime_at
     if isinstance(dtime_at, six.string_types):
-        dtime_at = parse(dtime_at)
-    if dtime_at.tzinfo is None:
-        dtime_at = dtime_at.replace(tzinfo=utc)
-    return dtime_at
+        as_datetime = parse_datetime(dtime_at)
+        if not as_datetime:
+            as_date = parse_date(dtime_at)
+            if as_date:
+                as_datetime = datetime.datetime.combine(
+                    as_date, datetime.time.min)
+    elif (not isinstance(dtime_at, datetime.datetime) and
+          isinstance(dtime_at, datetime.date)):
+        as_datetime = datetime.datetime.combine(
+            dtime_at, datetime.time.min)
+    if not as_datetime:
+        as_datetime = datetime.datetime.now(tz=tzinfo)
+    if (as_datetime.tzinfo is None or
+        as_datetime.tzinfo.utcoffset(as_datetime) is None):
+        as_datetime = as_datetime.replace(tzinfo=tzinfo)
+    return as_datetime
 
 
 def full_name_natural_split(full_name, middle_initials=True):
