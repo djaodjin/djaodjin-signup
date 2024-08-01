@@ -1,4 +1,4 @@
-# Copyright (c) 2023, Djaodjin Inc.
+# Copyright (c) 2024, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -24,6 +24,7 @@
 import logging
 
 from django.contrib.auth import REDIRECT_FIELD_NAME
+from django.core.exceptions import ImproperlyConfigured
 from django.utils import translation
 
 from ... import settings, signals
@@ -43,8 +44,14 @@ def send_verification_phone(contact, request,
     workflow once verification is completed.
     """
     #pylint:disable=unused-argument
-    backend = load_backend(settings.PHONE_VERIFICATION_BACKEND)
     phone = str(contact.phone) # insures we pass a string to the backend.
+    if not settings.PHONE_VERIFICATION_BACKEND:
+        LOGGER.error("Attempting to verify phone number '%s',"\
+            " yet no PHONE_VERIFICATION_BACKEND was specified.", phone)
+        raise ImproperlyConfigured("Attempting to verify phone number '%s',"\
+            " yet no PHONE_VERIFICATION_BACKEND was specified." % phone)
+
+    backend = load_backend(settings.PHONE_VERIFICATION_BACKEND)
     with translation.override(contact.lang):
         backend.send(phone, contact.phone_code)
 
