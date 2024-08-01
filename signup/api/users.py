@@ -43,7 +43,7 @@ from ..decorators import check_has_credentials
 from ..docs import extend_schema, OpenApiResponse
 from ..helpers import full_name_natural_split
 from ..mixins import AuthenticatedUserPasswordMixin, ContactMixin, UserMixin
-from ..models import (Contact, Credentials, Notification, OTPGenerator,
+from ..models import (Contact, Notification, OTPGenerator,
     get_disabled_email_update)
 from ..serializers_overrides import UserSerializer, UserDetailSerializer
 from ..serializers import (OTPSerializer, OTPUpdateSerializer,
@@ -319,10 +319,10 @@ class UserDetailAPIView(UserMixin, generics.RetrieveUpdateDestroyAPIView):
                             'email': contact.email, 'pk': contact.pk})
                 contacts.delete()
 
+
     def delete_records(self, user):
         user.notifications.all().delete()
-        if Credentials.objects.filter(user=user).exists():
-            user.credentials.delete()
+        user.credentials.all().delete()
 
 
     def perform_update(self, serializer):
