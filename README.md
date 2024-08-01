@@ -69,12 +69,10 @@ Tested with
 - **Python:** 3.10, **Django:** 4.2 (latest) - see [#55](https://github.com/djaodjin/djaodjin-signup/issues/55)
 - **Python:** 2.7, **Django:** 1.11 (legacy) - use testsite/requirements-legacy.txt
 
-0.9.6
+0.9.7
 
-  * redirects to activate page when a contact exists but no user
-  * presents the activation/registration page when recovering password
-  * supports full_name or first_name/last_name form fields
-  * handles alpha channel properly in profile pictures
-  * falls back on verifying e-mail if there are no phone backend
+  * fixes API to activate a user when an e-mail code is generated
+  * fixes deleting API keys when a User is deleted
+  * fixes database rollback when creating a User and phone number already exists
 
 [previous release notes](changelog)

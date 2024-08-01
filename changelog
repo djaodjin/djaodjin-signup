@@ -1,3 +1,11 @@
+0.9.7
+
+  * fixes API to activate a user when an e-mail code is generated
+  * fixes deleting API keys when a User is deleted
+  * fixes database rollback when creating a User and phone number already exists
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Thu, 1 Aug 2024 15:45:00 -0700
+
 0.9.6
 
   * redirects to activate page when a contact exists but no user
