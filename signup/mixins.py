@@ -547,17 +547,35 @@ class VerifyCompleteMixin(AuthMixin):
     """
     key_url_kwarg = 'verification_key'
 
+    @property
+    def contact(self):
+        if not hasattr(self, '_contact'):
+            #pylint:disable=attribute-defined-outside-init
+            verification_key = self.kwargs.get(self.key_url_kwarg)
+            self._contact = Contact.objects.get_token(verification_key)
+            if not self._contact:
+                raise Http404("Contact could not be found from"\
+                    " verification_key '%s'" % str())
+        return self._contact
+
     def prefetch_contact_info(self):
         data = {}
-        verification_key = self.kwargs.get(self.key_url_kwarg)
-        contact = Contact.objects.get_token(verification_key)
+        contact = self.contact
         if contact:
             fields = []
             if self.form_class is not None:
                 fields = six.iterkeys(self.get_initial())
             elif self.serializer_class is not None and hasattr(
                     self.serializer_class, 'Meta'):
-                fields = self.serializer_class.Meta.fields
+                # We want to pre-populate all fields except write-only
+                # fields obviously (ex: email_code), or read-only fields
+                # (ex: 'created_at').
+                #pylint:disable=protected-access
+                fields = [field_name
+                    for field_name, field_obj in six.iteritems(
+                        self.serializer_class._declared_fields) if not (
+                        field_obj.write_only or field_obj.read_only)]
+                LOGGER.debug("[prefetch_contact_info] fields=%s", str(fields))
             for field_name in fields:
                 field_value = None
                 if contact.user:
@@ -569,8 +587,7 @@ class VerifyCompleteMixin(AuthMixin):
         return data
 
     def find_candidate(self, **cleaned_data):
-        verification_key = self.kwargs.get(self.key_url_kwarg)
-        contact = Contact.objects.get_token(verification_key)
+        contact = self.contact
         if not contact:
             raise serializers.ValidationError({
                 'detail': _("verification key not found")})
@@ -595,8 +612,7 @@ class VerifyCompleteMixin(AuthMixin):
                 verification_key, self.request.user)
             try:
                 # There shouldn't be any `User` created, but in case.
-                user, _unused = Contact.objects.activate_user(
-                    verification_key)
+                user, _unused = self.contact.activate_user(verification_key)
             except IntegrityError as err:
                 handle_uniq_error(err)
 
@@ -620,10 +636,15 @@ class VerifyCompleteMixin(AuthMixin):
                 'detail': _("Update of credentials (password, etc.)"\
                             " has been disabled.")})
 
-        # If we don't save the ``User`` model here,
-        # we won't be able to authenticate later.
+        # It is important to keep the same reference (`self.contact`
+        # cached property) before and after `auth_check_mfa` is called
+        # otherwise a `finalize_*_verification` will have reset verification
+        # keys and we wouldn't be able to get the contact back here
+        # from the URL path argument.
         try:
-            user, previously_inactive = Contact.objects.activate_user(
+            # If we don't save the ``User`` model here,
+            # we won't be able to authenticate later.
+            user, previously_inactive = self.contact.activate_user(
                 verification_key,
                 username=cleaned_data.get('username'),
                 password=cleaned_data.get('new_password'),
@@ -646,16 +667,17 @@ class VerifyCompleteMixin(AuthMixin):
                     user.get_full_name(), user.email, user,
                     extra={'event': 'activate', 'user': user})
                 signals.user_activated.send(sender=__name__, user=user,
-                    verification_key=self.kwargs.get(self.key_url_kwarg),
+                    verification_key=verification_key,
                     request=self.request)
             else:
                 LOGGER.info("%s password reset", user)
                 signals.user_reset_password.send(
                     sender=__name__, user=user, request=self.request)
 
-        # Bypassing authentication here, we are doing frictionless registration
-        # the first time around.
-        user.backend = self.backend_path
+            # Bypassing authentication here, we are doing frictionless
+            # registration the first time around.
+            user.backend = self.backend_path
+
         return user
 
 

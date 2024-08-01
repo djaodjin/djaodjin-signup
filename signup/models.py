@@ -450,6 +450,7 @@ class ContactManager(models.Manager):
         Checks the email_code matches the code that was sent
         to the email address.
         """
+        assert email and email_code
         if not at_time:
             at_time = datetime_or_now()
         email_filter = models.Q(email__iexact=email)
@@ -461,15 +462,17 @@ class ContactManager(models.Manager):
         contact = queryset.get()
         contact.email_verification_key = None
         contact.email_verified_at = at_time
-        contact.email_code = generate_random_code()
+        contact.email_code = None
         contact.save()
         return contact
+
 
     def finalize_phone_verification(self, phone, phone_code, at_time=None):
         """
         Checks the phone_code matches the code that was sent
         to the phone number.
         """
+        assert phone and phone_code
         if not at_time:
             at_time = datetime_or_now()
         phone_filter = models.Q(phone=phone)
@@ -480,79 +483,10 @@ class ContactManager(models.Manager):
         contact = self.filter(phone_filter).select_related('user').get()
         contact.phone_verification_key = None
         contact.phone_verified_at = at_time
-        contact.phone_code = generate_random_code()
+        contact.phone_code = None
         contact.save()
         return contact
 
-    def activate_user(self, verification_key,
-                      username=None, password=None, full_name=None):
-        """
-        Activate a user whose email address has been verified.
-        """
-        #pylint:disable=too-many-arguments
-        at_time = datetime_or_now()
-        try:
-            token = self.get_token(verification_key=verification_key)
-            if token:
-                token_username = (
-                    token.user.username if token.user else token.slug)
-                LOGGER.info('active user %s through code: %s ...',
-                    token_username, verification_key,
-                    extra={'event': 'activate', 'username': token_username,
-                        'verification_key': verification_key,
-                        'email_verification_key': token.email_verification_key,
-                        'phone_verification_key': token.phone_verification_key})
-                user_model = get_user_model()
-                with transaction.atomic(using=self._db):
-                    if token.email_verification_key == verification_key:
-                        token.email_verification_key = None
-                        token.email_verified_at = at_time
-                    elif token.phone_verification_key == verification_key:
-                        token.phone_verification_key = None
-                        token.phone_verified_at = at_time
-                    if not token.user:
-                        try:
-                            token.user = user_model.objects.get(
-                                email__iexact=token.email)
-                        except user_model.DoesNotExist:
-                            token.user = user_model.objects.create_user(
-                                username, email=token.email,
-                                password=password)
-                    token.save()
-                    previously_inactive = has_invalid_password(token.user)
-                    needs_save = False
-                    if full_name:
-                        token.full_name = full_name
-                        #pylint:disable=unused-variable
-                        first_name, mid_name, last_name = \
-                            full_name_natural_split(full_name)
-                        token.user.first_name = first_name
-                        token.user.last_name = last_name
-                        LOGGER.info('%s (first_name, last_name) needs '\
-                            'to be saved as ("%s", "%s")', verification_key,
-                            token.user.first_name, token.user.last_name)
-                        needs_save = True
-                    if username:
-                        token.user.username = username
-                        LOGGER.info('%s username needs to be saved as "%s"',
-                            verification_key, token.user.username)
-                        needs_save = True
-                    if password:
-                        token.user.set_password(password)
-                        LOGGER.info('%s password needs to be saved',
-                            verification_key)
-                        needs_save = True
-                    if not token.user.is_active:
-                        token.user.is_active = True
-                        LOGGER.info('%s user needs to be activated',
-                            verification_key)
-                        needs_save = True
-                    if needs_save:
-                        token.user.save()
-                return token.user, previously_inactive
-        except Contact.DoesNotExist:
-            pass # We return None instead here.
-        return None, None
 
     def is_reachable_by_email(self, user, at_time=None):
         """
@@ -564,6 +498,7 @@ class ContactManager(models.Manager):
             verified_filter |= models.Q(email_verified_at__lt=at_time
                 - settings.VERIFICATION_LIFETIME)
         return self.filter(user=user).exclude(verified_filter).exists()
+
 
     def is_reachable_by_phone(self, user, at_time=None):
         """
@@ -582,6 +517,8 @@ class Contact(models.Model):
     """
     Used in workflow to verify the email address of a ``User``.
     """
+    #pylint:disable=too-many-instance-attributes
+
     objects = ContactManager()
 
     slug = models.SlugField(unique=True,
@@ -729,6 +666,71 @@ class Contact(models.Model):
         raise DRFValidationError({'slug':
             _("Unable to create a unique URL slug with a base of '%(base)s'")
                 % {'base': slug_base}})
+
+
+    def activate_user(self, verification_key, username=None, password=None,
+                      full_name=None, at_time=None):
+        """
+        Activate a user whose email address has been verified.
+        """
+        #pylint:disable=too-many-arguments
+        if not at_time:
+            at_time = datetime_or_now()
+        token_username = (self.user.username if self.user else self.slug)
+        LOGGER.info('active user %s through code: %s ...',
+            token_username, verification_key,
+            extra={'event': 'activate', 'username': token_username,
+                'verification_key': verification_key,
+                'email_verification_key': self.email_verification_key,
+                'phone_verification_key': self.phone_verification_key})
+        user_model = get_user_model()
+        with transaction.atomic(using=self._state.db):
+            if self.email_verification_key == verification_key:
+                self.email_verification_key = None
+                self.email_verified_at = at_time
+                self.email_code = None
+            elif self.phone_verification_key == verification_key:
+                self.phone_verification_key = None
+                self.phone_verified_at = at_time
+                self.phone_code = None
+            if not self.user:
+                try:
+                    self.user = user_model.objects.get(email__iexact=self.email)
+                except user_model.DoesNotExist:
+                    self.user = user_model.objects.create_user(
+                        username, email=self.email, password=password)
+            self.save()
+            previously_inactive = has_invalid_password(self.user)
+            needs_save = False
+            if full_name:
+                self.full_name = full_name
+                #pylint:disable=unused-variable
+                first_name, mid_name, last_name = full_name_natural_split(
+                    full_name)
+                self.user.first_name = first_name
+                self.user.last_name = last_name
+                LOGGER.info('%s (first_name, last_name) needs '\
+                    'to be saved as ("%s", "%s")', verification_key,
+                    self.user.first_name, self.user.last_name)
+                needs_save = True
+            if username:
+                self.user.username = username
+                LOGGER.info('%s username needs to be saved as "%s"',
+                    verification_key, self.user.username)
+                needs_save = True
+            if password:
+                self.user.set_password(password)
+                LOGGER.info('%s password needs to be saved',
+                    verification_key)
+                needs_save = True
+            if not self.user.is_active:
+                self.user.is_active = True
+                LOGGER.info('%s user needs to be activated',
+                    verification_key)
+                needs_save = True
+            if needs_save:
+                self.user.save()
+        return self.user, previously_inactive
 
 
 @python_2_unicode_compatible

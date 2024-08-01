@@ -189,14 +189,6 @@ class ActivationView(VerifyCompleteMixin, AuthResponseMixin, View):
     form_class = ActivationForm
     template_name = 'accounts/activate/verification_key.html'
 
-    @property
-    def contact(self):
-        if not hasattr(self, '_contact'):
-            #pylint:disable=attribute-defined-outside-init
-            self._contact = Contact.objects.get_token(
-                self.kwargs.get(self.key_url_kwarg))
-        return self._contact
-
     def get_context_data(self, **kwargs):
         context = super(ActivationView, self).get_context_data(**kwargs)
         context.update({'object': self.contact})
