@@ -69,10 +69,8 @@ Tested with
 - **Python:** 3.10, **Django:** 4.2 (latest) - see [#55](https://github.com/djaodjin/djaodjin-signup/issues/55)
 - **Python:** 2.7, **Django:** 1.11 (legacy) - use testsite/requirements-legacy.txt
 
-0.9.7
+0.9.8
 
-  * fixes API to activate a user when an e-mail code is generated
-  * fixes deleting API keys when a User is deleted
-  * fixes database rollback when creating a User and phone number already exists
+  * fixes `TransactionManagementError` when duplicate candidate usernames
 
 [previous release notes](changelog)

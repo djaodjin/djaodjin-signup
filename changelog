@@ -1,3 +1,9 @@
+0.9.8
+
+  * fixes `TransactionManagementError` when duplicate candidate usernames
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Thu, 20 Aug 2024 11:55:00 -0700
+
 0.9.7
 
   * fixes API to activate a user when an e-mail code is generated
