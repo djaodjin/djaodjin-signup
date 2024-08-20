@@ -1,4 +1,4 @@
-# Copyright (c) 2023, Djaodjin Inc.
+# Copyright (c) 2024, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -36,7 +36,7 @@ from django.core.validators import (RegexValidator, URLValidator,
     validate_email as validate_email_base)
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import UserManager
-from django.db import models, transaction, IntegrityError
+from django.db import models, router, transaction, IntegrityError
 from django.template.defaultfilters import slugify
 from django.contrib.auth.hashers import check_password, make_password
 from phonenumber_field.modelfields import PhoneNumberField
@@ -113,7 +113,8 @@ class ActivatedUserManager(UserManager):
         username_base = username
         while trials < 10:
             try:
-                with transaction.atomic(using=self._db):
+                using = self._db or router.db_for_write(self.model)
+                with transaction.atomic(using=using):
                     return super(ActivatedUserManager, self).create_user(
                         username, email=email, password=password, **kwargs)
             except IntegrityError as exp:
@@ -142,7 +143,8 @@ class ActivatedUserManager(UserManager):
         username_base = username
         while trials < 10:
             try:
-                with transaction.atomic(using=self._db):
+                using = self._db or router.db_for_write(self.model)
+                with transaction.atomic(using=using):
                     return super(ActivatedUserManager, self).create_user(
                         username, password=password, **kwargs)
             except IntegrityError as exp:
@@ -183,7 +185,8 @@ class ActivatedUserManager(UserManager):
             # By definition, all users created through a SSO provider
             # are active.
             password = "*****"
-        with transaction.atomic(using=self._db):
+        using = self._db or router.db_for_write(self.model)
+        with transaction.atomic(using=using):
             if username:
                 user = super(ActivatedUserManager, self).create_user(
                     username, email=email, password=password, **kwargs)
@@ -334,7 +337,8 @@ class ContactManager(models.Manager):
 
         if contact:
             created = False
-            with transaction.atomic(using=self._db):
+            using = self._db or router.db_for_write(self.model)
+            with transaction.atomic(using=using):
                 # We have to wrap in a transaction.atomic here, otherwise
                 # we end-up with a TransactionManager error when Contact.slug
                 # already exists in db and we generate new one.
@@ -407,7 +411,8 @@ class ContactManager(models.Manager):
 
         if contact:
             created = False
-            with transaction.atomic(using=self._db):
+            using = self._db or router.db_for_write(self.model)
+            with transaction.atomic(using=using):
                 # We have to wrap in a transaction.atomic here, otherwise
                 # we end-up with a TransactionManager error when Contact.slug
                 # already exists in db and we generate new one.

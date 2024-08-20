@@ -685,13 +685,13 @@ class UserListCreateAPIView(UserListMixin, generics.ListCreateAPIView):
             serializer.validated_data.get('get_phone'))
         lang = serializer.validated_data.get('lang',
             serializer.validated_data.get('get_lang'))
-        with transaction.atomic(using=router.db_for_write(Contact)):
-            try:
-                user = user_model.objects.get(
-                    email__iexact=serializer.validated_data.get('email'))
-            except user_model.DoesNotExist:
-                user = None
-            try:
+        try:
+            with transaction.atomic(using=router.db_for_write(Contact)):
+                try:
+                    user = user_model.objects.get(
+                        email__iexact=serializer.validated_data.get('email'))
+                except user_model.DoesNotExist:
+                    user = None
                 contact = Contact.objects.create(
                     slug=slug,
                     full_name=full_name,
@@ -702,8 +702,8 @@ class UserListCreateAPIView(UserListMixin, generics.ListCreateAPIView):
                     user=user)
                 if not user:
                     user = self.as_user(contact)
-            except IntegrityError as err:
-                handle_uniq_error(err)
+        except IntegrityError as err:
+            handle_uniq_error(err)
 
         location = self.request.build_absolute_uri(
             reverse('api_user_profile', args=(user,)))
@@ -1055,14 +1055,17 @@ class UserPictureAPIView(ContactMixin, generics.CreateAPIView):
             "", "", ""))
         location = self.request.build_absolute_uri(location)
         user_model = self.user_queryset.model
-        with transaction.atomic(using=router.db_for_write(Contact)):
-            try:
-                user = user_model.objects.get(
-                    username=self.kwargs.get(self.lookup_url_kwarg))
-            except user_model.DoesNotExist:
-                user = None
-            Contact.objects.update_or_create(
-                slug=self.kwargs.get(self.lookup_url_kwarg),
-                defaults={'picture': location, 'user': user})
+        try:
+            with transaction.atomic(using=router.db_for_write(Contact)):
+                try:
+                    user = user_model.objects.get(
+                        username=self.kwargs.get(self.lookup_url_kwarg))
+                except user_model.DoesNotExist:
+                    user = None
+                Contact.objects.update_or_create(
+                    slug=self.kwargs.get(self.lookup_url_kwarg),
+                    defaults={'picture': location, 'user': user})
+        except IntegrityError as err:
+            handle_uniq_error(err)
         return Response(self.get_serializer().to_representation(
             {'location': location}), status=status.HTTP_201_CREATED)
