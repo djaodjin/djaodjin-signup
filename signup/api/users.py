@@ -31,6 +31,7 @@ from django.db.models import Q
 from django.contrib.auth import update_session_auth_hash, get_user_model
 from rest_framework import generics, parsers, status
 from rest_framework.exceptions import ValidationError
+from rest_framework.mixins import DestroyModelMixin, UpdateModelMixin
 from rest_framework.response import Response
 from rest_framework.settings import api_settings
 
@@ -830,6 +831,7 @@ class OTPChangeAPIView(AuthenticatedUserPasswordMixin,
 
 
 class PasswordChangeAPIView(AuthenticatedUserPasswordMixin,
+                            UpdateModelMixin, DestroyModelMixin,
                             generics.GenericAPIView):
     """
     Updates a user password
@@ -898,6 +900,30 @@ class PasswordChangeAPIView(AuthenticatedUserPasswordMixin,
             update_session_auth_hash(self.request, serializer.instance)
 
         return Response({'detail': _("Password updated successfully.")})
+
+
+    def delete(self, request, *args, **kwargs):
+        """
+        Removes a user password
+
+        Technically this de-activates a user. An e-mail verification will
+        be required before the user can be activate again.
+
+        **Tags: auth, user, usermodel
+
+        **Example
+
+        .. code-block:: http
+
+            DELETE /api/users/xia/password HTTP/1.1
+        """
+        return self.destroy(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        user = self.get_object()
+        user.password = '!'
+        user.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class UserNotificationsAPIView(UserMixin, generics.RetrieveUpdateAPIView):
