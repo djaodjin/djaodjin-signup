@@ -75,6 +75,14 @@ class AuthResponseMixin(TemplateResponseMixin, FormMixin):
             next_url = super(AuthResponseMixin, self).get_success_url()
         return next_url
 
+
+    def get_template_names(self):
+        disabled_registration = get_disabled_registration(self.request)
+        if disabled_registration:
+            return ['accounts/disabled.html']
+        return super(AuthResponseMixin, self).get_template_names()
+
+
     def get_context_data(self, **kwargs):
         context = super(AuthResponseMixin, self).get_context_data(
             **kwargs)
@@ -83,6 +91,7 @@ class AuthResponseMixin(TemplateResponseMixin, FormMixin):
             context.update({REDIRECT_FIELD_NAME: next_url})
         # URLs for user
         disabled_registration = get_disabled_registration(self.request)
+        context.update({'disabled_registration': disabled_registration})
         update_context_urls(context, {
             'api': {
                 'login': reverse('api_login'),
@@ -127,12 +136,20 @@ class RecoverView(VerifyMixin, AuthResponseMixin, View):
             form = self.get_form()
             fill_form_errors(form, err)
             context = self.get_context_data(form=form)
-        except AuthDisabled:
-            context = {'disabled_authentication': True}
         except exceptions.AuthenticationFailed as err:
             form = self.get_form()
             fill_form_errors(form, err)
             context = self.get_context_data(form=form)
+        except AuthDisabled:
+            context = self.get_context_data()
+            context.update({'disabled_authentication': True})
+            return self.response_class(
+                request=self.request,
+                template=['accounts/disabled.html'],
+                context=context,
+                using=self.template_engine,
+                content_type=self.content_type)
+
         if not context:
             context = self.get_context_data()
         return self.render_to_response(context)
@@ -163,14 +180,16 @@ class SignupView(RegisterMixin, AuthResponseMixin, View):
             form = self.get_form()
             context = self.get_context_data(form=form)
             context.update({'sso_required': err})
-        except RegistrationDisabled:
-            context = {'disabled_registration': True}
         except exceptions.AuthenticationFailed as err:
             # This could be an IncorrectPath or any other forms of
             # bots activity.
             form = self.get_form()
             fill_form_errors(form, err)
             context = self.get_context_data(form=form)
+        except RegistrationDisabled:
+            # We set the template_name to accounts/disabled.html
+            # in `get_template_names()`.
+            pass
 
         if context is None:
             context = self.get_context_data()
@@ -256,13 +275,22 @@ class ActivationView(VerifyCompleteMixin, AuthResponseMixin, View):
         except OTPRequired:
             form = self.get_mfa_form()
             context = self.get_context_data(form=form)
-        except AuthDisabled:
-            context = {'disabled_authentication': True}
-        except RegistrationDisabled:
-            context = {'disabled_registration': True}
         except (exceptions.AuthenticationFailed,
                 serializers.ValidationError):
             # Force registration
+            pass
+        except AuthDisabled:
+            context = self.get_context_data()
+            context.update({'disabled_authentication': True})
+            return self.response_class(
+                request=self.request,
+                template=['accounts/disabled.html'],
+                context=context,
+                using=self.template_engine,
+                content_type=self.content_type)
+        except RegistrationDisabled:
+            # We set the template_name to accounts/disabled.html
+            # in `get_template_names()`.
             pass
 
         if not context:
@@ -283,14 +311,23 @@ class ActivationView(VerifyCompleteMixin, AuthResponseMixin, View):
             form = self.get_mfa_form()
             context = self.get_context_data(form=form)
         except AuthDisabled:
-            context = {'disabled_authentication': True}
-        except RegistrationDisabled:
-            context = {'disabled_registration': True}
+            context = self.get_context_data()
+            context.update({'disabled_authentication': True})
+            return self.response_class(
+                request=self.request,
+                template=['accounts/disabled.html'],
+                context=context,
+                using=self.template_engine,
+                content_type=self.content_type)
         except (exceptions.AuthenticationFailed,
                 serializers.ValidationError) as err:
             form = self.get_form()
             fill_form_errors(form, err)
             context = self.get_context_data(form=form)
+        except RegistrationDisabled:
+            # We set the template_name to accounts/disabled.html
+            # in `get_template_names()`.
+            pass
 
         if context is None:
             context = self.get_context_data(form=self.get_form())
@@ -380,8 +417,6 @@ class SigninView(LoginMixin, AuthResponseMixin, ProcessFormView):
             form = self.get_form()
             fill_form_errors(form, err)
             context = self.get_context_data(form=form)
-        except AuthDisabled:
-            context = {'disabled_authentication': True}
         except exceptions.AuthenticationFailed as err:
             form = self.get_form()
             fill_form_errors(form, err)
@@ -389,6 +424,15 @@ class SigninView(LoginMixin, AuthResponseMixin, ProcessFormView):
             disabled_registration = get_disabled_registration(self.request)
             context.update({'register_link': (reverse('registration_register')
                 if not disabled_registration else None),})
+        except AuthDisabled:
+            context = self.get_context_data()
+            context.update({'disabled_authentication': True})
+            return self.response_class(
+                request=self.request,
+                template=['accounts/disabled.html'],
+                context=context,
+                using=self.template_engine,
+                content_type=self.content_type)
 
         if not context:
             context = self.get_context_data()
