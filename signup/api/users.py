@@ -801,7 +801,7 @@ class OTPChangeAPIView(AuthenticatedUserPasswordMixin,
 
             {
               "priv_key": "**********************",
-              "provisioning_uri": "https://localhost:8020/"
+              "provisioning_uri": "https://livedemo.djaoapp.com/"
             }
         """
         #pylint:disable=unused-argument
