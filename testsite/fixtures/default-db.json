@@ -305,6 +305,28 @@
 },
 {
     "fields": {
+      "date_joined": "2024-01-01T00:00:00-09:00",
+      "email": "xia+179@localhost.localdomain",
+      "first_name": "Xia",
+      "last_name": "MFA",
+      "is_active": true,
+      "is_staff": false,
+      "is_superuser": false,
+      "last_login": "2024-01-01T00:00:00-09:00",
+      "password": "pbkdf2_sha256$10000$z0MBiWn0Rlem$iZdC6uHomlE07qGK/TqfcfxNzKJtFp03c0JILF1frRc=",
+      "username": "xia179"
+    },
+    "model": "auth.User", "pk": 179
+},
+{
+    "fields": {
+      "user": 179,
+      "priv_key": "abc123"
+    },
+    "model": "signup.OTPGenerator", "pk": 179
+},
+{
+    "fields": {
       "slug": "testsite",
       "cors_restricted": false,
       "authentication": 0,
