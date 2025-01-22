@@ -1,4 +1,4 @@
-# Copyright (c) 2021, Djaodjin Inc.
+# Copyright (c) 2025, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -24,48 +24,120 @@
 
 from django.conf import settings
 from django.conf.urls.static import static
+from django.contrib.auth.decorators import login_required
 from django.views.generic.base import RedirectView, TemplateView
-from rules.urldecorators import include, url
-from signup.compat import reverse_lazy
-from signup.decorators import fail_authenticated
+from signup.compat import reverse_lazy, include, path, re_path
+from signup.api.auth import JWTLogout
+from signup.api.contacts import (ActivityListCreateAPIView,
+    ContactDetailAPIView, ContactListAPIView, ContactPictureAPIView)
+from signup.api.keys import (ListCreateAPIKeysAPIView, PublicKeyAPIView,
+    DestroyAPIKeyAPIView)
+from signup.api.tokens import JWTRefresh, JWTVerify
+from signup.api.users import (OTPChangeAPIView, PasswordChangeAPIView,
+    UserDetailAPIView, UserListCreateAPIView, UserNotificationsAPIView,
+    UserPictureAPIView)
 from signup.views.auth import SignupView
+from signup.views.contacts import ContactListView, ContactDetailView
+from signup.views.users import (PasswordChangeView,
+    UserPublicKeyUpdateView, UserProfileView, UserNotificationsView,
+    redirect_to_user_profile)
 
 from .forms import SignupWithCaptchaForm
 
 urlpatterns = \
     static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT) + [
-    url(r'^api/',
-        include('signup.urls.api.contacts'),
-        redirects=[fail_authenticated]),
-    url(r'^api/',
-        include('signup.urls.api.keys'),
-        redirects=[fail_authenticated]),
-    url(r'^api/',
-        include('signup.urls.api.tokens'),
-        redirects=[fail_authenticated]),
-    url(r'^api/',
-        include('signup.urls.api.users'),
-        redirects=[fail_authenticated]),
-    url(r'^api/',
+    # signup.urls.api.contacts
+    path('api/contacts/<slug:user>/activities',
+         login_required(ActivityListCreateAPIView.as_view()),
+         name='api_activities'),
+    path('api/contacts/<slug:user>/picture',
+         login_required(ContactPictureAPIView.as_view()),
+         name='api_contact_picture'),
+    path('api/contacts/<slug:user>',
+         login_required(ContactDetailAPIView.as_view()),
+         name='api_contact'),
+    path('api/contacts',
+         login_required(ContactListAPIView.as_view()),
+         name='api_contacts'),
+    # signup.urls.api.keys
+    path('api/users/<slug:user>/ssh-keys',
+         login_required(PublicKeyAPIView.as_view()),
+         name='api_pubkey'),
+    path('api/users/<slug:user>/api-keys',
+         login_required(ListCreateAPIKeysAPIView.as_view()),
+         name='api_generate_keys'),
+    path('api/users/<slug:user>/api-keys/<slug:key>',
+         login_required(DestroyAPIKeyAPIView.as_view()),
+         name='api_destroy_key'),
+    # signup.urls.api.tokens
+    path('api/auth/tokens/verify',
+         login_required(JWTVerify.as_view()),
+         name='api_verify_token'),
+    path('api/auth/tokens',
+         login_required(JWTRefresh.as_view()),
+         name='api_refresh_token'),
+    path('api/auth/logout',
+         JWTLogout.as_view(),
+         name='api_logout'),
+    # signup.urls.api.users
+    path('api/users/<slug:user>/notifications',
+         login_required(UserNotificationsAPIView.as_view()),
+         name='api_user_notifications'),
+    path('api/users/<slug:user>/picture',
+         login_required(UserPictureAPIView.as_view()),
+         name='api_user_picture'),
+    path('api/users/<slug:user>/otp',
+         login_required(OTPChangeAPIView.as_view()),
+         name='api_user_otp_change'),
+    path('api/users/<slug:user>/password',
+         login_required(PasswordChangeAPIView.as_view()),
+         name='api_user_password_change'),
+    path('api/users/<slug:user>',
+         login_required(UserDetailAPIView.as_view()),
+         name='api_user_profile'),
+    path('api/users',
+         login_required(UserListCreateAPIView.as_view()),
+         name='saas_api_users'),
+
+    path('api/',
         include('signup.urls.api.activate')),
-    url(r'^api/',
+    path('api/',
         include('signup.urls.api.auth')),
-    url(r'^contacts/',
-        include('signup.urls.views.contacts'),
-        redirects=[fail_authenticated]),
-    url(r'^users/',
-        include('signup.urls.views.users'),
-        redirects=[fail_authenticated]),
-    url(r'^register/frictionless/',
+
+    # Views
+    # signup.urls.views.contacts
+    path('contacts/<slug:user>/',
+         login_required(ContactDetailView.as_view()),
+         name='signup_contact'),
+    path('contacts/',
+         login_required(ContactListView.as_view()),
+         name='signup_contacts'),
+    # signup.urls.views.users
+    path('users/<slug:user>/password/',
+         login_required(PasswordChangeView.as_view()),
+         name='password_change'),
+    path('users/<slug:user>/pubkey/',
+         login_required(UserPublicKeyUpdateView.as_view()),
+         name='pubkey_update'),
+    path('users/<slug:user>/notifications/',
+         login_required(UserNotificationsView.as_view()),
+         name='users_notifications'),
+    path('users/<slug:user>/',
+         login_required(UserProfileView.as_view()),
+         name='users_profile'),
+    path('users/',
+         redirect_to_user_profile,
+         name='accounts_profile'),
+
+    path('register/frictionless/',
         SignupView.as_view(),
         name='registration_frictionless'),
-    url(r'^register/((?P<path>\w+)/)?',
+    re_path('register/((?P<path>\w+)/)?',
         SignupView.as_view(form_class=SignupWithCaptchaForm),
         name='registration_register'),
-    url(r'^', include('signup.urls.views.accounts')),
-
-    url(r'^app/', TemplateView.as_view(template_name='app.html'),
-        redirects=[fail_authenticated]),
-    url(r'^$', RedirectView.as_view(url=reverse_lazy('registration_register')),
+    path('', include('signup.urls.views.accounts')),
+    path('app/',
+         login_required(TemplateView.as_view(template_name='app.html'))),
+    path('', RedirectView.as_view(url=reverse_lazy('registration_register')),
         name='homepage'),
 ]

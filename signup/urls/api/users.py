@@ -38,6 +38,6 @@ urlpatterns = [
         PasswordChangeAPIView.as_view(), name='api_user_password_change'),
     path('users/<slug:user>',
         UserDetailAPIView.as_view(), name='api_user_profile'),
-    path(r'users',
+    path('users',
         UserListCreateAPIView.as_view(), name='saas_api_users'),
 ]

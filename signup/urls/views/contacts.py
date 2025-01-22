@@ -29,5 +29,5 @@ urlpatterns = [
     # These three URLs must be protected.
     path('<slug:user>/',
         ContactDetailView.as_view(), name='signup_contact'),
-    path(r'', ContactListView.as_view(), name='signup_contacts'),
+    path('', ContactListView.as_view(), name='signup_contacts'),
 ]

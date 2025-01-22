@@ -35,6 +35,7 @@ SOCIAL_AUTH_SAML_ENABLED_IDPS = {}
 EMAIL_HOST = "localhost"
 EMAIL_PORT = 1025
 EMAIL_USE_TLS = False
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 # Default email address to use for various automated correspondence from
 # the site managers (also django-registration settings)
