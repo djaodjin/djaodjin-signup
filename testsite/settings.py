@@ -102,7 +102,6 @@ INSTALLED_APPS = (
     'captcha',
     'signup',
     'social_django',
-    'rules',
     'testsite'
 )
 
@@ -177,10 +176,6 @@ LOGGING = {
         },
     },
     'loggers': {
-        'rules': {
-            'handlers': [],
-            'level': 'INFO',
-        },
         'signup': {
             'handlers': [],
             'level': 'INFO',
