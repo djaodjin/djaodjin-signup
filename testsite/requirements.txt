@@ -1,5 +1,5 @@
 boto3==1.26.84
-Django==3.2.24
+Django==4.2.18
 django-fernet-fields==0.6
 django-phonenumber-field==5.2.0      # latest 7.0.2
 django-recaptcha==3.0.0              # 2.0.6 requires Django<4.0
