@@ -1,6 +1,6 @@
 boto3==1.26.84
 Django==3.2.24
-django-fernet-fields==0.6
+django-fernet-fields @ git+https://github.com/djaodjin/django-fernet-fields.git@6f261ed465a7fbafa1c41b635f7acd9fd6f3ccca
 django-phonenumber-field==5.2.0
 django-recaptcha==4.0.0
 django-storages==1.13.2
