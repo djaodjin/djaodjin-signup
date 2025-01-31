@@ -38,7 +38,7 @@ DISABLED_AUTHENTICATION
 DISABLED_REGISTRATION
    prevent new users from registering
 
-REQUIRE_RECAPTCHA
+REQUIRES_RECAPTCHA
    Requires to answer a recaptcha in registration
 """
 import datetime, sys

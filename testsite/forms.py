@@ -34,6 +34,6 @@ class SignupWithCaptchaForm(FrictionlessSignupForm):
     new_password2 = forms.CharField(widget=forms.PasswordInput(
         attrs={'placeholder': 'Type Password Again'}),
         label="Password confirmation")
-    # Implementation Note: make sure REQUIRES_RECAPTCHA is set in settings.py
+    # Implementation Note: make sure `REQUIRES_RECAPTCHA = True` in settings.py
     # otherwise no capcha field is created. We currently running tests with
-    # `REQUIRES_RECAPTCHA = False` until django-recaptcha supports Django4.0.
+    # `REQUIRES_RECAPTCHA = False`.

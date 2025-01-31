@@ -2,10 +2,15 @@ boto3==1.26.84
 Django==3.2.24
 django-fernet-fields==0.6
 django-phonenumber-field==5.2.0      # latest 7.0.2
-django-recaptcha==3.0.0              # 2.0.6 requires Django<4.0
 django-storages==1.13.2
 djangorestframework==3.14.0          # Django 2.2 is no longer supported
                                      # Django 4.1 compatibility
+django-recaptcha==3.0.0 ; python_version < "3.9" # 2.0.6 requires Django<4.0
+django-recaptcha==4.0.0 ; python_version >= "3.9" # 4.0.0 Renames
+                                                  # package namespace
+                                                  # from `captcha' to
+                                                  # `django_recaptcha'.
+
 docutils==0.16
 phonenumbers==8.13.7
 PyJWT==2.6.0                         # requires Python>=3.7
