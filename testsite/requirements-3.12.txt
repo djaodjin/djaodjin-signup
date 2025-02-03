@@ -14,13 +14,12 @@ pyotp==2.8.0
 python-ldap==3.4.3
 pytz==2022.7.1
 six==1.16.0
-python3-saml==1.15.0
+python3-saml==1.16.0
 social-auth-app-django==5.4.2
 
 # testsite-only
 coverage==7.2.1
 django-extensions==3.2.3
-djaodjin-rules==0.4.7
 gunicorn==20.1.0
 whitenoise==6.4.0
 
