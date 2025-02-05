@@ -136,3 +136,19 @@ def is_authenticated(request):
     if callable(request.user.is_authenticated):
         return request.user.is_authenticated()
     return request.user.is_authenticated
+
+
+# Fall back to old namespace if on a legacy deployment. See:
+# https://github.com/django-recaptcha/django-recaptcha/blob/main/CHANGELOG.md#400-2023-11-14
+try:
+    import django_recaptcha
+    dj_recaptcha_name = django_recaptcha.__name__
+    del django_recaptcha
+except ModuleNotFoundError:
+    import captcha
+    dj_recaptcha_name = captcha.__name__
+    del captcha
+except ImportError:
+    import captcha
+    dj_recaptcha_name = captcha.__name__
+    del captcha

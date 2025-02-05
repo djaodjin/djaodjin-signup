@@ -29,7 +29,6 @@ import logging
 
 from django.core.exceptions import FieldDoesNotExist
 from django.db import models
-from rest_framework.compat import distinct
 from rest_framework.filters import (OrderingFilter as BaseOrderingFilter,
     SearchFilter as BaseSearchFilter)
 
@@ -74,7 +73,7 @@ class SearchFilter(BaseSearchFilter):
             # call queryset.distinct() in order to avoid duplicate items
             # in the resulting queryset.
             # We try to avoid this if possible, for performance reasons.
-            queryset = distinct(queryset, base)
+            queryset = queryset.distinct()
         return queryset
 
 

@@ -66,11 +66,12 @@ Release Notes
 Tested with
 
 - **Python:** 3.7, **Django:** 3.2 ([LTS](https://www.djangoproject.com/download/))
-- **Python:** 3.10, **Django:** 4.2 (latest) - see [#55](https://github.com/djaodjin/djaodjin-signup/issues/55)
+- **Python:** 3.10, **Django:** 4.2 (latest)
+- **Python:** 3.12, **Django:** 5.1 (next)
 - **Python:** 2.7, **Django:** 1.11 (legacy) - use testsite/requirements-legacy.txt
 
-0.9.8
+0.9.9
 
-  * fixes `TransactionManagementError` when duplicate candidate usernames
+  * adds support for Django versions 4.2 and 5.1
 
 [previous release notes](changelog)

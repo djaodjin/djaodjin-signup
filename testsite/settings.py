@@ -12,7 +12,7 @@ https://docs.djangoproject.com/en/1.6/ref/settings/
 import os, re, sys
 
 from django.contrib.messages import constants as messages
-from signup.compat import reverse_lazy
+from signup.compat import reverse_lazy, dj_recaptcha_name
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 RUN_DIR = os.getenv('RUN_DIR', os.getcwd())
@@ -88,7 +88,7 @@ if not hasattr(sys.modules[__name__], "SECRET_KEY"):
     SECRET_KEY = "".join([choice(
         "abcdefghijklmnopqrstuvwxyz0123456789!@#$%^*-_=+") for i in range(50)])
 
-SILENCED_SYSTEM_CHECKS = ['captcha.recaptcha_test_key_error']
+SILENCED_SYSTEM_CHECKS = [f'{dj_recaptcha_name}.recaptcha_test_key_error']
 
 INSTALLED_APPS = (
     'django.contrib.auth',
@@ -99,7 +99,7 @@ INSTALLED_APPS = (
     'django_extensions',
     'rest_framework',
     'phonenumber_field',
-    'captcha',
+    dj_recaptcha_name,
     'signup',
     'social_django',
     'testsite'
@@ -301,10 +301,8 @@ SIGNUP = {
         sys.modules[__name__], 'SIGNUP_PHONE_VERIFICATION_BACKEND', None),
     'RANDOM_SEQUENCE': getattr(
         sys.modules[__name__], 'SIGNUP_RANDOM_SEQUENCE', []),
-#    'REQUIRES_RECAPTCHA': True
+    # 'REQUIRES_RECAPTCHA': True,
     'SKIP_EXPIRATION_CHECK': SKIP_EXPIRATION_CHECK,
 }
 
 INTERNAL_IPS = ('127.0.0.1', '::1')
-
-NOCAPTCHA = True

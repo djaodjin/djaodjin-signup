@@ -1,3 +1,9 @@
+0.9.9
+
+  * adds support for Django versions 4.2 and 5.1
+
+ -- Morgan Shorter <morgan@morganshorter.com> Mon, 3 Feb 2025 15:55:20 -0800
+
 0.9.8
 
   * fixes `TransactionManagementError` when duplicate candidate usernames

@@ -87,9 +87,9 @@ def get_account_serializer():
 
 def get_recaptcha_form_field(public_key=None, private_key=None):
     # The imports are here so captcha is only loaded when
-    # `settings.REQUIRE_RECAPTCHA` is True.
+    # `settings.REQUIRES_RECAPTCHA` is True.
     # django-recaptcha renamed the package namespace from 'captcha'
-    # to 'django_captcha' between version 3 and version 4.
+    # to 'django_recaptcha' between version 3 and version 4.
     # pylint:disable=import-outside-toplevel
     try:
         from django_recaptcha.fields import ReCaptchaField

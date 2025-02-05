@@ -38,7 +38,7 @@ DISABLED_AUTHENTICATION
 DISABLED_REGISTRATION
    prevent new users from registering
 
-REQUIRE_RECAPTCHA
+REQUIRES_RECAPTCHA
    Requires to answer a recaptcha in registration
 """
 import datetime, sys
@@ -47,11 +47,6 @@ import django
 from django.conf import settings
 
 _DEFAULT_ENCRYPTED_FIELD = 'fernet_fields.EncryptedCharField'
-# django-fernet==0.6 is not compatible with Django4+ (``force_text``)
-if django.VERSION[0] >= 4:
-    _DEFAULT_ENCRYPTED_FIELD = None
-    sys.stderr.write("warning: encrypted fields disabled"\
-        " because django-fernet==0.6 is incompatible with Django4+\n")
 
 _SETTINGS = {
     'ACCOUNT_ACTIVATION_DAYS': getattr(settings, 'ACCOUNT_ACTIVATION_DAYS', 2),
