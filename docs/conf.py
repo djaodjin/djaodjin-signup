@@ -29,13 +29,13 @@ django.setup()
 # -- Project information -----------------------------------------------------
 
 project = 'djaodjin-signup'
-copyright = '2024, DjaoDjin inc'
+copyright = '2025, DjaoDjin inc'
 author = 'The DjaoDjin Team'
 
 # The short X.Y version
 version = '0.9'
 # The full version, including alpha/beta/rc tags
-release = '0.9.9'
+release = '0.9.10-dev'
 
 
 # -- General configuration ---------------------------------------------------
