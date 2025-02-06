@@ -92,44 +92,45 @@ zEwfQ.F2y1iwj5NHlImmPfSff6IHLN7sUXpBFmX0qjCbFTe6A"
 
 
 class JWTRefresh(JWTVerify):
-    """
-    Refreshes a JSON Web Token
 
-    Refreshes a JSON Web Token by verifying the token and creating
-    a new one that expires further in the future.
-
-    The authenticated user and the user associated to the token should be
-    identical.
-
-    **Tags: auth, user, usermodel
-
-    **Example
-
-    .. code-block:: http
-
-        POST /api/auth/tokens HTTP/1.1
-
-    .. code-block:: json
-
-        {
-            "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2V\
-ybmFtZSI6ImRvbm55IiwiZW1haWwiOiJzbWlyb2xvKzRAZGphb2RqaW4uY2\
-9tIiwiZnVsbF9uYW1lIjoiRG9ubnkgQ29vcGVyIiwiZXhwIjoxNTI5NjU4N\
-zEwfQ.F2y1iwj5NHlImmPfSff6IHLN7sUXpBFmX0qjCbFTe6A"
-        }
-
-    responds
-
-    .. code-block:: json
-
-        {
-            "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VybmFt\
-ZSI6ImRvbm55IiwiZW1haWwiOiJzbWlyb2xvKzRAZGphb2RqaW4uY29tIiw\
-iZnVsbF9uYW1lIjoiRG9ubnkgQ29vcGVyIiwiZXhwIjoxNTI5Njk1NjA1fQ\
-.-uuZb8R68jWw1Tc9FJocOWe1KHFklRffXbH0Rg6d_0c"
-        }
-    """
     def post(self, request, *args, **kwargs):
+        """
+        Refreshes a JSON Web Token
+
+        Refreshes a JSON Web Token by verifying the token and creating
+        a new one that expires further in the future.
+
+        The authenticated user and the user associated to the token should be
+        identical.
+
+        **Tags: auth, user, usermodel
+
+        **Example
+
+        .. code-block:: http
+
+            POST /api/auth/tokens HTTP/1.1
+
+        .. code-block:: json
+
+            {
+                "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2V\
+    ybmFtZSI6ImRvbm55IiwiZW1haWwiOiJzbWlyb2xvKzRAZGphb2RqaW4uY2\
+    9tIiwiZnVsbF9uYW1lIjoiRG9ubnkgQ29vcGVyIiwiZXhwIjoxNTI5NjU4N\
+    zEwfQ.F2y1iwj5NHlImmPfSff6IHLN7sUXpBFmX0qjCbFTe6A"
+            }
+
+        responds
+
+        .. code-block:: json
+
+            {
+                "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VybmFt\
+    ZSI6ImRvbm55IiwiZW1haWwiOiJzbWlyb2xvKzRAZGphb2RqaW4uY29tIiw\
+    iZnVsbF9uYW1lIjoiRG9ubnkgQ29vcGVyIiwiZXhwIjoxNTI5Njk1NjA1fQ\
+    .-uuZb8R68jWw1Tc9FJocOWe1KHFklRffXbH0Rg6d_0c"
+            }
+        """
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
             token = serializer.validated_data['token']
