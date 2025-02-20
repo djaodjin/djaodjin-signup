@@ -75,14 +75,6 @@ class AuthResponseMixin(TemplateResponseMixin, FormMixin):
             next_url = super(AuthResponseMixin, self).get_success_url()
         return next_url
 
-
-    def get_template_names(self):
-        disabled_registration = get_disabled_registration(self.request)
-        if disabled_registration:
-            return ['accounts/disabled.html']
-        return super(AuthResponseMixin, self).get_template_names()
-
-
     def get_context_data(self, **kwargs):
         context = super(AuthResponseMixin, self).get_context_data(
             **kwargs)
@@ -165,6 +157,14 @@ class SignupView(RegisterMixin, AuthResponseMixin, View):
     template_name = 'accounts/register.html'
 
     def get(self, request, *args, **kwargs):
+        disabled_registration = get_disabled_registration(request)
+        if disabled_registration:
+            return self.response_class(
+                request=request,
+                template=['accounts/disabled.html'],
+                context=self.get_context_data(),
+                using=self.template_engine,
+                content_type=self.content_type)
         return self.render_to_response(self.get_context_data())
 
     def post(self, request, *args, **kwargs):
@@ -187,9 +187,12 @@ class SignupView(RegisterMixin, AuthResponseMixin, View):
             fill_form_errors(form, err)
             context = self.get_context_data(form=form)
         except RegistrationDisabled:
-            # We set the template_name to accounts/disabled.html
-            # in `get_template_names()`.
-            pass
+            return self.response_class(
+                request=request,
+                template=['accounts/disabled.html'],
+                context=self.get_context_data(),
+                using=self.template_engine,
+                content_type=self.content_type)
 
         if context is None:
             context = self.get_context_data()
@@ -289,9 +292,13 @@ class ActivationView(VerifyCompleteMixin, AuthResponseMixin, View):
                 using=self.template_engine,
                 content_type=self.content_type)
         except RegistrationDisabled:
-            # We set the template_name to accounts/disabled.html
-            # in `get_template_names()`.
-            pass
+            context = self.get_context_data()
+            return self.response_class(
+                request=request,
+                template=['accounts/disabled.html'],
+                context=context,
+                using=self.template_engine,
+                content_type=self.content_type)
 
         if not context:
             context = self.get_context_data(form=self.get_form())
@@ -310,6 +317,11 @@ class ActivationView(VerifyCompleteMixin, AuthResponseMixin, View):
         except OTPRequired:
             form = self.get_mfa_form()
             context = self.get_context_data(form=form)
+        except (exceptions.AuthenticationFailed,
+                serializers.ValidationError) as err:
+            form = self.get_form()
+            fill_form_errors(form, err)
+            context = self.get_context_data(form=form)
         except AuthDisabled:
             context = self.get_context_data()
             context.update({'disabled_authentication': True})
@@ -319,15 +331,14 @@ class ActivationView(VerifyCompleteMixin, AuthResponseMixin, View):
                 context=context,
                 using=self.template_engine,
                 content_type=self.content_type)
-        except (exceptions.AuthenticationFailed,
-                serializers.ValidationError) as err:
-            form = self.get_form()
-            fill_form_errors(form, err)
-            context = self.get_context_data(form=form)
         except RegistrationDisabled:
-            # We set the template_name to accounts/disabled.html
-            # in `get_template_names()`.
-            pass
+            context = self.get_context_data()
+            return self.response_class(
+                request=request,
+                template=['accounts/disabled.html'],
+                context=context,
+                using=self.template_engine,
+                content_type=self.content_type)
 
         if context is None:
             context = self.get_context_data(form=self.get_form())
