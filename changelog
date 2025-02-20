@@ -1,3 +1,9 @@
+0.9.10
+
+  * respects registration disabled / auth enabled
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Wed, 19 Feb 2025 19:35:00 -0700
+
 0.9.9
 
   * adds support for Django versions 4.2 and 5.1

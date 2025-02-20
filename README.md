@@ -69,8 +69,8 @@ Tested with
 - **Python:** 3.12, **Django:** 5.1 (next)
 - **Python:** 3.7, **Django:** 3.2 (legacy)
 
-0.9.9
+0.9.10
 
-  * adds support for Django versions 4.2 and 5.1
+  * respects registration disabled / auth enabled
 
 [previous release notes](changelog)
