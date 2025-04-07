@@ -94,7 +94,8 @@ _SETTINGS = {
     'USER_CONTACT_CALLABLE': None,  # XXX deprecated?
     'USER_OTP_REQUIRED': None,
     'USER_SERIALIZER': 'signup.serializers_overrides.UserSerializer',
-    'USER_API_KEY_LIFETIME_DAYS': getattr(settings, 'USER_API_KEY_LIFETIME_DAYS', 365),
+    'USER_API_KEY_LIFETIME_DAYS': getattr(settings,
+        'USER_API_KEY_LIFETIME_DAYS', 365),
     'VERIFICATION_LIFETIME': datetime.timedelta(days=365)
 }
 _SETTINGS.update(getattr(settings, 'SIGNUP', {}))

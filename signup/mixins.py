@@ -531,7 +531,8 @@ class RegisterMixin(AuthMixin):
             (" and phone %s" % str(phone)) if phone else "",
             (" and preferred language %s" % str(lang)) if lang else "",
             extra={'event': 'register', 'user': user})
-        signals.user_registered.send(sender=__name__, user=user)
+        signals.user_registered.send(sender=__name__, user=user,
+            request=self.request)
 
         # Bypassing authentication here, we are doing frictionless registration
         # the first time around.
@@ -661,7 +662,8 @@ class VerifyCompleteMixin(AuthMixin):
                     (" and phone %s" % str(phone)) if phone else "",
                     (" and preferred language %s" % str(lang)) if lang else "",
                     extra={'event': 'register', 'user': user})
-                signals.user_registered.send(sender=__name__, user=user)
+                signals.user_registered.send(sender=__name__, user=user,
+                        request=self.request)
             elif previously_inactive:
                 LOGGER.info("'%s <%s>' activated with username '%s'",
                     user.get_full_name(), user.email, user,
