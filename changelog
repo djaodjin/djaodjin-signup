@@ -1,3 +1,10 @@
+0.9.11
+
+  * fixes exception edge cases when DEFAULT_FROM_EMAIL is empty or None
+  * adds request context to `user_registered` signal
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Thu, 10 Apr 2025 08:00:00 -0700
+
 0.9.10
 
   * respects registration disabled / auth enabled
