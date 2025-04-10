@@ -291,9 +291,14 @@ class UserDetailAPIView(UserMixin, generics.RetrieveUpdateDestroyAPIView):
                 self.request.user, username, email, slug, extra={
                     'event': 'delete', 'request': self.request,
                     'username': username, 'email': email, 'pk': pkid})
-            look = re.match(r'.*(@\S+)', settings.DEFAULT_FROM_EMAIL)
-            if look:
-                email = '%s%s' % (slug, look.group(1))
+            domain = None
+            if settings.DEFAULT_FROM_EMAIL:
+                look = re.match(r'.*@(\S+)', settings.DEFAULT_FROM_EMAIL)
+                if look:
+                    domain = look.group(1)
+            if not domain:
+                domain = "anonimized.local"
+            email = "%s@%s" % (slug, domain)
             # We are deleting a `User` model. Let's unlink the `Contact`
             # info but otherwise leave the poor-man's CRM's data intact.
             #pylint:disable=protected-access
