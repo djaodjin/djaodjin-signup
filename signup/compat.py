@@ -140,6 +140,7 @@ def is_authenticated(request):
 
 # Fall back to old namespace if on a legacy deployment. See:
 # https://github.com/django-recaptcha/django-recaptcha/blob/main/CHANGELOG.md#400-2023-11-14
+#pylint:disable=invalid-name
 try:
     import django_recaptcha
     dj_recaptcha_name = django_recaptcha.__name__

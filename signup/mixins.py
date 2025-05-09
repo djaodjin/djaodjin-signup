@@ -1,4 +1,4 @@
-# Copyright (c) 2024, Djaodjin Inc.
+# Copyright (c) 2025, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -258,17 +258,15 @@ class AuthMixin(object):
             if not otp_code:
                 raise OTPRequired({
                     'otp_code': _("OTP code is required.")})
-            if not user.otp.verify(otp_code):
-                if user.otp.nb_attempts >= settings.MFA_MAX_ATTEMPTS:
-                    user.otp.clear_attempts()
-                    raise exceptions.PermissionDenied({'detail': _(
+            nb_attempts = OTPGenerator.objects.verify(user, otp_code)
+            if nb_attempts >= settings.MFA_MAX_ATTEMPTS:
+                raise exceptions.PermissionDenied({'detail': _(
             "You have exceeded the number of attempts to enter the OTP code."\
-                        " Please start again.")})
-                user.otp.nb_attempts += 1
-                user.otp.save()
+                    " Please start again.")})
+            if nb_attempts > 0:
                 raise serializers.ValidationError({
                     'code': _("OTP code does not match.")})
-            user.otp.clear_attempts()
+
 
     def create_user(self, **cleaned_data):
         #pylint:disable=unused-argument

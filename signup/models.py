@@ -829,10 +829,34 @@ class Credentials(models.Model):
         return self.ends_at and self.ends_at < datetime_or_now()
 
 
+class OTPGeneratorManager(models.Manager):
+    """
+    One-time code model manager
+    """
+    def verify(self, user, otp_code):
+        nb_attempts = 1
+        try:
+            nb_attempts = user.otp.nb_attempts
+            if not user.otp.verify(otp_code):
+                if nb_attempts >= settings.MFA_MAX_ATTEMPTS:
+                    user.otp.clear_attempts()
+                else:
+                    user.otp.nb_attempts += 1
+                    user.otp.save()
+                    nb_attempts = user.otp.nb_attempts
+            else:
+                user.otp.clear_attempts()
+                nb_attempts = 0
+        except Exception as err:
+            LOGGER.error("fetching OTPGenerator: %s", err.__class__)
+        return nb_attempts
+
+
 class OTPGenerator(models.Model):
     """
     Generates OTP one-time code for authentication
     """
+    objects = OTPGeneratorManager()
 
     user = models.OneToOneField(settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE, related_name='otp')

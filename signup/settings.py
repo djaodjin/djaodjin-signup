@@ -1,4 +1,4 @@
-# Copyright (c) 2023, Djaodjin Inc.
+# Copyright (c) 2025, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -41,9 +41,8 @@ DISABLED_REGISTRATION
 REQUIRES_RECAPTCHA
    Requires to answer a recaptcha in registration
 """
-import datetime, sys
+import datetime
 
-import django
 from django.conf import settings
 
 _DEFAULT_ENCRYPTED_FIELD = 'fernet_fields.EncryptedCharField'
