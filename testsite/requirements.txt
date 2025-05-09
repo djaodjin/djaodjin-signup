@@ -1,7 +1,7 @@
 boto3==1.33.13                       # last version compatible with Py3.7
 Django==3.2.24 ; python_version < "3.9"
-Django==4.2.17 ; python_version >= "3.9" and python_version < "3.12"
-Django==5.1.4 ; python_version >= "3.12"
+Django==4.2.21 ; python_version >= "3.9" and python_version < "3.12"
+Django==5.1.9  ; python_version >= "3.12"
 django-fernet-fields @ git+https://github.com/djaodjin/django-fernet-fields.git@6f261ed465a7fbafa1c41b635f7acd9fd6f3ccca
 django-phonenumber-field==5.2.0      # Latest 8.0.0. Some breaking
                                      # changes. See release notes
@@ -47,7 +47,7 @@ social-auth-app-django==5.4.2 ; python_version >= "3.9"
 # testsite-only
 coverage==7.2.1
 django-extensions==3.2.3
-gunicorn==20.1.0
+gunicorn==23.0.0                  # requires Py3.7
 whitenoise==6.4.0
 
 # development
