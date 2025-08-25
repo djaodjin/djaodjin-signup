@@ -1,4 +1,4 @@
-# Copyright (c) 2023, DjaoDjin inc.
+# Copyright (c) 2025, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -29,7 +29,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import NotAuthenticated, ValidationError
 
 from .compat import gettext_lazy as _
-from .models import Activity, Notification, Credentials
+from .models import Activity, Contact, Credentials, Notification
 from .serializers_overrides import UserDetailSerializer
 from .utils import (get_account_model, get_account_serializer,
     get_user_serializer)
@@ -77,14 +77,17 @@ class NoModelSerializer(serializers.Serializer):
 
 class ActivitySerializer(serializers.ModelSerializer):
 
-    account = get_account_serializer()(allow_null=True,
-        help_text=_("Account the activity is associated to"))
+
     created_by = get_user_serializer()(read_only=True,
         help_text=_("User that created the activity"))
+    contact = get_user_serializer()(allow_null=True,
+        help_text=_("Contact the activity is associated to"))
+    account = get_account_serializer()(allow_null=True,
+        help_text=_("Account the activity is associated to"))
 
     class Meta:
         model = Activity
-        fields = ('created_at', 'created_by', 'text', 'account')
+        fields = ('created_at', 'created_by', 'text', 'account', 'contact')
         read_only_fields = ('created_at', 'created_by')
 
 
@@ -97,6 +100,17 @@ class ActivityCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Activity
         fields = ('text', 'account')
+
+
+class ActivityByAccountCreateSerializer(serializers.ModelSerializer):
+
+    contact = serializers.SlugRelatedField(allow_null=True,
+        slug_field='slug', queryset=Contact.objects.all(),
+        help_text=_("Contact the activity is associated to"))
+
+    class Meta:
+        model = Activity
+        fields = ('text', 'contact')
 
 
 class AuthenticatedUserSerializer(NoModelSerializer):

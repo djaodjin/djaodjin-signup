@@ -729,7 +729,7 @@ class ActivityByAccountContactAPIView(UserListMixin, generics.ListAPIView):
 
     .. code-block:: http
 
-        GET /api/activities/xia/contacts HTTP/1.1
+        GET /api/profile/xia/contacts HTTP/1.1
 
     responds
 

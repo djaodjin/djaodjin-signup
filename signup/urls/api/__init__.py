@@ -1,4 +1,4 @@
-# Copyright (c) 2022, Djaodjin Inc.
+# Copyright (c) 2025, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,13 +22,14 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from ...compat import include, re_path
+from ...compat import include, path
 
 urlpatterns = [
-    re_path(r'^', include('signup.urls.api.contacts')),
-    re_path(r'^', include('signup.urls.api.keys')),
-    re_path(r'^', include('signup.urls.api.activate')),
-    re_path(r'^', include('signup.urls.api.users')),
-    re_path(r'^', include('signup.urls.api.tokens')),
-    re_path(r'^', include('signup.urls.api.auth')), # Prefix to previous urls
+    path('', include('signup.urls.api.activities')),
+    path('', include('signup.urls.api.contacts')),
+    path('', include('signup.urls.api.keys')),
+    path('', include('signup.urls.api.activate')),
+    path('', include('signup.urls.api.users')),
+    path('', include('signup.urls.api.tokens')),
+    path('', include('signup.urls.api.auth')), # Prefix to previous urls
 ]

@@ -1,4 +1,4 @@
-# Copyright (c) 2023, Djaodjin Inc.
+# Copyright (c) 2025, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -28,13 +28,13 @@ from ...api.activities import (ActivityByAccountAPIView,
 from ...api.users import ActivityByAccountContactAPIView
 
 urlpatterns = [
-    path('activities/<slug:profile>/contacts',
+    path('profile/<slug:profile>/contacts',
         ActivityByAccountContactAPIView.as_view(),
         name='api_profile_activities_contacts'),
-    path('activities/<slug:profile>',
+    path('profile/<slug:profile>/activities',
         ActivityByAccountAPIView.as_view(),
         name='api_profile_activities'),
-    path('activities',
-        ActivityByAccountIndexAPIView.as_view(),
-        name='api_profile_activities_index'),
+    #path('profile/activities',
+    #    ActivityByAccountIndexAPIView.as_view(),
+    #    name='api_profile_activities_index'),
 ]

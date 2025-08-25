@@ -1,4 +1,4 @@
-# Copyright (c) 2023, Djaodjin Inc.
+# Copyright (c) 2025, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -30,13 +30,28 @@ from rest_framework import generics
 
 from .. import filters
 from ..models import Activity
-from ..serializers import ActivitySerializer
-
+from ..serializers import ActivitySerializer, ActivityByAccountCreateSerializer
+from ..utils import get_account_model
 
 LOGGER = logging.getLogger(__name__)
 
 
-class ActivityByAccountAPIView(generics.ListAPIView):
+class AccountMixin(object):
+
+    lookup_field = 'slug'
+    lookup_url_kwarg = 'profile'
+    account_url_kwarg = 'profile'
+
+    @property
+    def account(self):
+        if not hasattr(self, '_account'):
+            kwargs = {self.lookup_field: self.kwargs.get(self.lookup_url_kwarg)}
+            self._account = generics.get_object_or_404(
+                get_account_model().objects.all(), **kwargs)
+        return self._account
+
+
+class ActivityByAccountAPIView(AccountMixin, generics.ListCreateAPIView):
     """
     Lists activities for an account
 
@@ -48,7 +63,7 @@ class ActivityByAccountAPIView(generics.ListAPIView):
 
     .. code-block:: http
 
-        GET /api/activities/xia HTTP/1.1
+        GET /api/profile/xia/activities HTTP/1.1
 
     responds
 
@@ -87,8 +102,6 @@ class ActivityByAccountAPIView(generics.ListAPIView):
             }]
         }
     """
-    account_url_kwarg = 'profile'
-
     search_fields = (
         'text',
     )
@@ -103,6 +116,44 @@ class ActivityByAccountAPIView(generics.ListAPIView):
     def get_queryset(self):
         return Activity.objects.filter(
             account__slug=self.kwargs.get(self.account_url_kwarg))
+
+    def get_serializer_class(self):
+        if self.request.method.lower() == 'post':
+            return ActivityByAccountCreateSerializer
+        return super(ActivityByAccountAPIView, self).get_serializer_class()
+
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user, account=self.account)
+
+    def post(self, request, *args, **kwargs):
+        """
+        Records new activity with a profile
+
+        **Tags: profile, broker
+
+        **Examples
+
+        .. code-block:: http
+
+            POST /api/profile/xia/activities HTTP/1.1
+
+        .. code-block:: json
+
+            {
+              "text": "Phone call",
+              "account": "cowork"
+            }
+
+        responds
+
+        .. code-block:: json
+
+            {
+              "text": "Phone call",
+              "account": "cowork"
+            }
+        """
+        return self.create(request, *args, **kwargs)
 
 
 class ActivityByAccountIndexAPIView(ActivityByAccountAPIView):
