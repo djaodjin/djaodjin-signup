@@ -41,8 +41,6 @@ DISABLED_REGISTRATION
 REQUIRES_RECAPTCHA
    Requires to answer a recaptcha in registration
 """
-import datetime
-
 from django.conf import settings
 
 _DEFAULT_ENCRYPTED_FIELD = 'fernet_fields.EncryptedCharField'
@@ -79,7 +77,9 @@ _SETTINGS = {
     'MFA_MAX_ATTEMPTS': 3,
     'NOTIFICATION_TYPE': tuple([]),
     'NOTIFICATIONS_OPT_OUT': True,
+    'PASSWORD_MIN_LENGTH': 10,
     'PICTURE_STORAGE_CALLABLE': None,
+    'PHONE_DYNAMIC_VALIDATOR': None,
     'PHONE_VERIFICATION_BACKEND': None,
     'RANDOM_SEQUENCE': [],
     'REQUIRES_RECAPTCHA': False,
@@ -95,7 +95,7 @@ _SETTINGS = {
     'USER_SERIALIZER': 'signup.serializers_overrides.UserSerializer',
     'USER_API_KEY_LIFETIME_DAYS': getattr(settings,
         'USER_API_KEY_LIFETIME_DAYS', 365),
-    'VERIFICATION_LIFETIME': datetime.timedelta(days=365)
+    'VERIFICATION_LIFETIME': None # ex: `datetime.timedelta(days=365)`
 }
 _SETTINGS.update(getattr(settings, 'SIGNUP', {}))
 
@@ -143,11 +143,15 @@ LOGOUT_CLEAR_COOKIES = _SETTINGS.get('LOGOUT_CLEAR_COOKIES')
 MFA_MAX_ATTEMPTS = _SETTINGS.get('MFA_MAX_ATTEMPTS')
 NOTIFICATION_TYPE = _SETTINGS.get('NOTIFICATION_TYPE')
 NOTIFICATIONS_OPT_OUT = _SETTINGS.get('NOTIFICATIONS_OPT_OUT')
+PASSWORD_MIN_LENGTH = _SETTINGS.get('PASSWORD_MIN_LENGTH')
 
 #: A callable function which returns a `Storage` object that will be used
 #: to upload a contact picture
 PICTURE_STORAGE_CALLABLE = _SETTINGS.get('PICTURE_STORAGE_CALLABLE')
 
+#: A callable function which is passed a phone number and that returns `False`
+#: when the phone suspiciously looks like it belongs to a bot.
+PHONE_DYNAMIC_VALIDATOR = _SETTINGS.get('PHONE_DYNAMIC_VALIDATOR')
 PHONE_VERIFICATION_BACKEND = _SETTINGS.get('PHONE_VERIFICATION_BACKEND')
 RANDOM_SEQUENCE = _SETTINGS.get('RANDOM_SEQUENCE')
 REQUIRES_RECAPTCHA = _SETTINGS.get('REQUIRES_RECAPTCHA')

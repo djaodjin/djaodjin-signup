@@ -265,6 +265,16 @@ class ActivatedUserManager(UserManager):
 
 class ContactManager(models.Manager):
 
+    def email_verification_required(self, email):
+        assert email is not None
+        return self.filter(
+            email=email, email_verification_required=True).exists()
+
+    def phone_verification_required(self, phone):
+        assert phone is not None
+        return self.filter(
+            phone=phone, phone_verification_required=True).exists()
+
     def find_by_username_or_comm(self, username):
         contact_kwargs = {}
         username = str(username) # We could have a ``PhoneNumber`` here.
@@ -462,7 +472,9 @@ class ContactManager(models.Manager):
         if not settings.SKIP_EXPIRATION_CHECK:
             email_filter &= models.Q(email_verification_at__gt=at_time
                 - datetime.timedelta(days=settings.KEY_EXPIRATION))
-            email_filter &= models.Q(email_code=email_code)
+            # set `SKIP_EXPIRATION_CHECK` to `True` **ONLY** in testing
+            email_filter &= (models.Q(email_code=email_code) |
+            models.Q(email_verification_key=email_code))
         queryset = self.filter(email_filter).select_related('user')
         contact = queryset.get()
         contact.email_verification_key = None
@@ -484,13 +496,40 @@ class ContactManager(models.Manager):
         if not settings.SKIP_EXPIRATION_CHECK:
             phone_filter &= models.Q(phone_verification_at__gt=at_time
                 - datetime.timedelta(days=settings.KEY_EXPIRATION))
-            phone_filter &= models.Q(phone_code=phone_code)
+            # set `SKIP_EXPIRATION_CHECK` to `True` **ONLY** in testing
+            phone_filter &= (models.Q(phone_code=phone_code) |
+                models.Q(phone_verification_key=phone_code))
         contact = self.filter(phone_filter).select_related('user').get()
         contact.phone_verification_key = None
         contact.phone_verified_at = at_time
         contact.phone_code = None
         contact.save()
         return contact
+
+    def is_email_verified(self, email, at_time=None):
+        """
+        Returns True if the user is reachable by email.
+        """
+        verified_filter = models.Q(email_verified_at__isnull=True)
+        if settings.VERIFICATION_LIFETIME:
+            at_time = datetime_or_now(at_time)
+            verified_filter |= models.Q(email_verified_at__lt=at_time
+                - settings.VERIFICATION_LIFETIME)
+        queryset = self.filter(email=email).exclude(verified_filter)
+        return queryset.exists()
+
+
+    def is_phone_verified(self, phone, at_time=None):
+        """
+        Returns True if the user is reachable by phone.
+        """
+        verified_filter = models.Q(phone_verified_at__isnull=True)
+        if settings.VERIFICATION_LIFETIME:
+            at_time = datetime_or_now(at_time)
+            verified_filter |= models.Q(phone_verified_at__lt=at_time
+                - settings.VERIFICATION_LIFETIME)
+        queryset = self.filter(phone=phone).exclude(verified_filter)
+        return queryset.exists()
 
 
     def is_reachable_by_email(self, user, at_time=None):
@@ -547,6 +586,13 @@ class Contact(models.Model):
         help_text=_("URL location of the profile picture"))
     user = models.ForeignKey(settings.AUTH_USER_MODEL,
         null=True, on_delete=models.SET_NULL, related_name='contacts')
+    lang = models.CharField(_("Preferred communication language"),
+         default=settings.LANGUAGE_CODE, max_length=8,
+        help_text=_("Two-letter ISO 639 code for the preferred"\
+        " communication language (ex: en)"))
+    extra = _get_extra_field_class()(null=True,
+        help_text=_("Extra meta data (can be stringify JSON)"))
+
     # key must be unique when used in URLs. IF we use a code,
     # then it shouldn't be.
     email_verification_key = models.CharField(_(
@@ -558,6 +604,9 @@ class Contact(models.Model):
         _("Email verification code"), null=True)
     email_verified_at = models.DateTimeField(null=True,
         help_text=_("Date/time when the e-mail was last verified"))
+    email_verification_required = models.BooleanField(default=False,
+        help_text=_("Auth requires email verification every time"))
+
     phone_verification_key = models.CharField(
         _("Phone verification key"),
         null=True, max_length=40)
@@ -567,16 +616,13 @@ class Contact(models.Model):
         _("Phone verification code"), null=True)
     phone_verified_at = models.DateTimeField(null=True,
         help_text=_("Date/time when the phone number was last verified"))
-    lang = models.CharField(_("Preferred communication language"),
-         default=settings.LANGUAGE_CODE, max_length=8,
-        help_text=_("Two-letter ISO 639 code for the preferred"\
-        " communication language (ex: en)"))
+    phone_verification_required = models.BooleanField(default=False,
+        help_text=_("Auth requires phone verification every time"))
+
     one_time_code = models.IntegerField(
         _("One-time authentication code"), null=True)
     otc_nb_attempts = models.IntegerField(
         _("Number of attempts to pass the one-time code"), default=0)
-    extra = _get_extra_field_class()(null=True,
-        help_text=_("Extra meta data (can be stringify JSON)"))
 
     def __str__(self):
         return str(self.slug)
@@ -673,7 +719,7 @@ class Contact(models.Model):
                 % {'base': slug_base}})
 
 
-    def activate_user(self, verification_key, username=None, password=None,
+    def activate_user(self, username=None, password=None,
                       full_name=None, at_time=None):
         """
         Activate a user whose email address has been verified.
@@ -682,29 +728,17 @@ class Contact(models.Model):
         if not at_time:
             at_time = datetime_or_now()
         token_username = (self.user.username if self.user else self.slug)
-        LOGGER.info('active user %s through code: %s ...',
-            token_username, verification_key,
-            extra={'event': 'activate', 'username': token_username,
-                'verification_key': verification_key,
-                'email_verification_key': self.email_verification_key,
-                'phone_verification_key': self.phone_verification_key})
+        LOGGER.info('active user %s through contact %s ...',
+            token_username, self.slug,
+            extra={'event': 'activate', 'username': token_username})
         user_model = get_user_model()
         with transaction.atomic(using=self._state.db):
-            if self.email_verification_key == verification_key:
-                self.email_verification_key = None
-                self.email_verified_at = at_time
-                self.email_code = None
-            elif self.phone_verification_key == verification_key:
-                self.phone_verification_key = None
-                self.phone_verified_at = at_time
-                self.phone_code = None
             if not self.user:
                 try:
                     self.user = user_model.objects.get(email__iexact=self.email)
                 except user_model.DoesNotExist:
                     self.user = user_model.objects.create_user(
                         username, email=self.email, password=password)
-            self.save()
             previously_inactive = has_invalid_password(self.user)
             needs_save = False
             if full_name:
@@ -715,26 +749,25 @@ class Contact(models.Model):
                 self.user.first_name = first_name
                 self.user.last_name = last_name
                 LOGGER.info('%s (first_name, last_name) needs '\
-                    'to be saved as ("%s", "%s")', verification_key,
+                    'to be saved as ("%s", "%s")', self.slug,
                     self.user.first_name, self.user.last_name)
                 needs_save = True
             if username:
                 self.user.username = username
                 LOGGER.info('%s username needs to be saved as "%s"',
-                    verification_key, self.user.username)
+                    self.slug, self.user.username)
                 needs_save = True
             if password:
                 self.user.set_password(password)
-                LOGGER.info('%s password needs to be saved',
-                    verification_key)
+                LOGGER.info('%s password needs to be saved', self.slug)
                 needs_save = True
             if not self.user.is_active:
                 self.user.is_active = True
-                LOGGER.info('%s user needs to be activated',
-                    verification_key)
+                LOGGER.info('%s user needs to be activated', self.slug)
                 needs_save = True
             if needs_save:
                 self.user.save()
+            self.save()
         return self.user, previously_inactive
 
 

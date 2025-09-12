@@ -45,6 +45,8 @@ DEFAULT_FROM_EMAIL = "admin@localhost.localdomain"
 EMAIL_HOST_USER = ""
 EMAIL_HOST_PASSWORD = ""
 
+LOG_FILE = None
+
 
 def load_config(confpath):
     '''

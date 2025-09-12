@@ -19,8 +19,10 @@ class Migration(migrations.Migration):
             name='Credentials',
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('api_pub_key', models.SlugField(max_length=32, unique=True)),
-                ('api_priv_key', models.CharField(max_length=128)),
+                ('api_pub_key', models.SlugField(max_length=32, unique=True,
+                    help_text='Unique public identifier for the API key')),
+                ('api_priv_key', models.CharField(max_length=128,
+                    help_text='Private portion of the API key')),
                 ('user', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='credentials', to=settings.AUTH_USER_MODEL)),
             ],
         ),

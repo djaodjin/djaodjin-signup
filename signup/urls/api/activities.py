@@ -28,13 +28,13 @@ from ...api.activities import (ActivityByAccountAPIView,
 from ...api.users import ActivityByAccountContactAPIView
 
 urlpatterns = [
-    path('profile/<slug:profile>/contacts',
+    path('activities/<slug:profile>/contacts',
         ActivityByAccountContactAPIView.as_view(),
         name='api_profile_activities_contacts'),
-    path('profile/<slug:profile>/activities',
+    path('activities/<slug:profile>',
         ActivityByAccountAPIView.as_view(),
         name='api_profile_activities'),
-    #path('profile/activities',
-    #    ActivityByAccountIndexAPIView.as_view(),
-    #    name='api_profile_activities_index'),
+    path('activities',
+        ActivityByAccountIndexAPIView.as_view(),
+        name='api_profile_activities_index'),
 ]

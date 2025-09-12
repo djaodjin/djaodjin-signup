@@ -16,12 +16,14 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='credentials',
             name='ends_at',
-            field=models.DateTimeField(blank=True, null=True),
+            field=models.DateTimeField(blank=True, null=True,
+                help_text='Date/time at which the API key expires (in ISO format)'),
         ),
         migrations.AddField(
             model_name='credentials',
             name='title',
-            field=models.CharField(blank=True, max_length=100),
+            field=models.CharField(blank=True, max_length=100,
+                help_text='Short description of the notification'),
         ),
         migrations.AlterField(
             model_name='credentials',

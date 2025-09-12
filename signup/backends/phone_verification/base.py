@@ -34,7 +34,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 def send_verification_phone(contact, request,
-                           next_url=None,
+                           next_url=None, back_url=None,
                            redirect_field_name=REDIRECT_FIELD_NAME):
     """
     Send a text message to the user to verify her phone number.

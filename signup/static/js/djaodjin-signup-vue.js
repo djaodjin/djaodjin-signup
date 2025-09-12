@@ -99,14 +99,12 @@ Vue.component('contact-update', {
     methods: {
         createActivity: function() {
             var vm = this;
-            var data = {
+            const data = {
                 text: vm.activityText,
-                account: vm.itemSelected.slug
+                account: vm.$refs.account ? vm.itemSelected.slug : null,
+                contact: vm.$refs.contact ? vm.itemSelected.slug : null
             }
-            vm.reqPost(vm.url, {
-                text: vm.activityText,
-                account: vm.itemSelected.slug
-            }, function(resp) {
+            vm.reqPost(vm.url, data, function(resp) {
                 vm.get();
             });
         },
@@ -119,6 +117,11 @@ Vue.component('contact-update', {
                 done(resp.results)
             });
         },
+        updateItemSelected: function(item) {
+            var vm = this;
+            vm.itemSelected = item;
+            vm.$refs.contact.query = item.printable_name;
+        }
     },
     mounted: function(){
         this.get();

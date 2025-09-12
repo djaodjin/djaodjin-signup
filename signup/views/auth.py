@@ -1,4 +1,4 @@
-# Copyright (c) 2023, Djaodjin Inc.
+# Copyright (c) 2025, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -28,7 +28,6 @@ from __future__ import unicode_literals
 import logging
 
 from django.contrib.auth import logout as auth_logout, REDIRECT_FIELD_NAME
-from django.forms.utils import ErrorDict
 from django.http import HttpResponseRedirect
 from django.views.decorators.cache import add_never_cache_headers
 from django.views.generic.base import TemplateResponseMixin, View
@@ -38,13 +37,14 @@ from rest_framework import exceptions, serializers
 from .. import settings
 from ..auth import validate_redirect
 from ..compat import gettext_lazy as _, reverse
-from ..forms import (ActivationForm, AuthenticationForm, FrictionlessSignupForm,
-    MFACodeForm, PasswordAuthForm, PasswordResetConfirmForm, RecoverForm,
+from ..forms import (ActivationForm, StartAuthenticationForm, FrictionlessSignupForm,
+    MFACodeForm, PasswordAuthForm, PasswordResetConfirmForm,
     VerifyEmailForm, VerifyPhoneForm)
-from ..helpers import update_context_urls
+from ..helpers import has_invalid_password, update_context_urls
 from ..mixins import (LoginMixin, PasswordResetConfirmMixin,
     RegisterMixin, VerifyMixin, VerifyCompleteMixin, AuthDisabled, OTPRequired,
-    PasswordRequired, VerifyRequired, SSORequired, RegistrationDisabled)
+    PasswordRequired, VerifyEmailRequired, VerifyPhoneRequired, SSORequired,
+    RegistrationDisabled)
 from ..models import Contact
 from ..utils import fill_form_errors, get_disabled_registration
 
@@ -58,14 +58,27 @@ class AuthResponseMixin(TemplateResponseMixin, FormMixin):
     is True.
     """
     success_url = settings.LOGIN_REDIRECT_URL
-    mfa_code_form_class = MFACodeForm
+    otp_code_form_class = MFACodeForm
+    verify_email_form_class = VerifyEmailForm
+    verify_phone_form_class = VerifyPhoneForm
 
-    def get_mfa_form(self):
-        form = self.mfa_code_form_class(**self.get_form_kwargs())
+    def get_otp_form(self):
+        form = self.get_form(form_class=self.otp_code_form_class)
+#        form = self.otp_code_form_class(**self.get_form_kwargs())
         # We must pass the username and password back to the browser
         # as hidden fields, but prevent calls to `form.non_field_errors()`
         # in the templates to inadvertently trigger a call
         # to `MFACodeForm.clean()`.
+        form._errors = {} #pylint:disable=protected-access
+        return form
+
+    def get_verify_email_form(self):
+        form = self.get_form(form_class=self.verify_email_form_class)
+        # form._errors = {} #pylint:disable=protected-access
+        return form
+
+    def get_verify_phone_form(self):
+        form = self.get_form(form_class=self.verify_phone_form_class)
         form._errors = {} #pylint:disable=protected-access
         return form
 
@@ -100,106 +113,7 @@ class AuthResponseMixin(TemplateResponseMixin, FormMixin):
         return context
 
 
-
-class RecoverView(VerifyMixin, AuthResponseMixin, View):
-    """
-    Enter email address or phone number to reset password.
-    """
-    form_class = RecoverForm
-    template_name = 'accounts/recover.html'
-
-    def get(self, request, *args, **kwargs):
-        return self.render_to_response(self.get_context_data())
-
-    def post(self, request, *args, **kwargs):
-        context = None
-        try:
-            self.run_pipeline()
-            return HttpResponseRedirect(self.get_success_url())
-        except serializers.ValidationError as err:
-            form = self.get_form()
-            fill_form_errors(form, err)
-            context = self.get_context_data(form=form)
-        except SSORequired as err:
-            form = self.get_form()
-            context = self.get_context_data(form=form)
-            context.update({'sso_required': err})
-        except VerifyRequired as err:
-            form = self.get_form()
-            fill_form_errors(form, err)
-            context = self.get_context_data(form=form)
-        except exceptions.AuthenticationFailed as err:
-            form = self.get_form()
-            fill_form_errors(form, err)
-            context = self.get_context_data(form=form)
-        except AuthDisabled:
-            context = self.get_context_data()
-            context.update({'disabled_authentication': True})
-            return self.response_class(
-                request=self.request,
-                template=['accounts/disabled.html'],
-                context=context,
-                using=self.template_engine,
-                content_type=self.content_type)
-
-        if not context:
-            context = self.get_context_data()
-        return self.render_to_response(context)
-
-
-class SignupView(RegisterMixin, AuthResponseMixin, View):
-    """
-    A frictionless registration backend With a full name and email
-    address, the user is immediately signed up and logged in.
-    """
-    form_class = FrictionlessSignupForm
-    fail_url = ('registration_register', (), {})
-    template_name = 'accounts/register.html'
-
-    def get(self, request, *args, **kwargs):
-        disabled_registration = get_disabled_registration(request)
-        if disabled_registration:
-            return self.response_class(
-                request=request,
-                template=['accounts/disabled.html'],
-                context=self.get_context_data(),
-                using=self.template_engine,
-                content_type=self.content_type)
-        return self.render_to_response(self.get_context_data())
-
-    def post(self, request, *args, **kwargs):
-        context = None
-        try:
-            self.run_pipeline()
-            return HttpResponseRedirect(self.get_success_url())
-        except serializers.ValidationError as err:
-            form = self.get_form()
-            fill_form_errors(form, err)
-            context = self.get_context_data(form=form)
-        except SSORequired as err:
-            form = self.get_form()
-            context = self.get_context_data(form=form)
-            context.update({'sso_required': err})
-        except exceptions.AuthenticationFailed as err:
-            # This could be an IncorrectPath or any other forms of
-            # bots activity.
-            form = self.get_form()
-            fill_form_errors(form, err)
-            context = self.get_context_data(form=form)
-        except RegistrationDisabled:
-            return self.response_class(
-                request=request,
-                template=['accounts/disabled.html'],
-                context=self.get_context_data(),
-                using=self.template_engine,
-                content_type=self.content_type)
-
-        if context is None:
-            context = self.get_context_data()
-        return self.render_to_response(context)
-
-
-class ActivationView(VerifyCompleteMixin, AuthResponseMixin, View):
+class ActivationView(VerifyCompleteMixin, AuthResponseMixin, ProcessFormView):
     """
     The user is now on the activation url that was sent in an email.
     It is time to complete the registration and activate the account.
@@ -207,6 +121,9 @@ class ActivationView(VerifyCompleteMixin, AuthResponseMixin, View):
     View that checks the hash in a password activation link and presents a
     form for entering a new password. We can activate the account for real
     once we know the email is valid and a password has been set.
+
+    URL paths
+    /activate/<verification_key>/
     """
     form_class = ActivationForm
     template_name = 'accounts/activate/verification_key.html'
@@ -276,7 +193,7 @@ class ActivationView(VerifyCompleteMixin, AuthResponseMixin, View):
             context = self.get_context_data(form=form)
             context.update({'sso_required': err})
         except OTPRequired:
-            form = self.get_mfa_form()
+            form = self.get_otp_form()
             context = self.get_context_data(form=form)
         except (exceptions.AuthenticationFailed,
                 serializers.ValidationError):
@@ -300,7 +217,7 @@ class ActivationView(VerifyCompleteMixin, AuthResponseMixin, View):
                 using=self.template_engine,
                 content_type=self.content_type)
 
-        if not context:
+        if context is None:
             context = self.get_context_data(form=self.get_form())
         return self.render_to_response(context)
 
@@ -315,7 +232,7 @@ class ActivationView(VerifyCompleteMixin, AuthResponseMixin, View):
             context = self.get_context_data(form=form)
             context.update({'sso_required': err})
         except OTPRequired:
-            form = self.get_mfa_form()
+            form = self.get_otp_form()
             context = self.get_context_data(form=form)
         except (exceptions.AuthenticationFailed,
                 serializers.ValidationError) as err:
@@ -348,6 +265,9 @@ class ActivationView(VerifyCompleteMixin, AuthResponseMixin, View):
 class PasswordResetConfirmView(PasswordResetConfirmMixin, ActivationView):
     """
     Specific view that will first reset a user's password so the form displays.
+
+    URL paths
+    `/reset/<verification_key>/`
     """
     password_form_class = PasswordResetConfirmForm
 
@@ -363,19 +283,36 @@ class PasswordResetConfirmView(PasswordResetConfirmMixin, ActivationView):
 
 class SigninView(LoginMixin, AuthResponseMixin, ProcessFormView):
     """
-    Check credentials and sign in the authenticated user.
+    Workflow page to authenticate a previously existing user,
+    or create a new user.
+
+    URL paths:
+    `/activate/`
+    `/login/`
+
+    Query parameters
+
+    `?check_email=1` Forces verification of e-mail address
+    `?check_phone=1` Forces verification of phone number
+
+    `?reset_password=1` Sets a new password after e-mail or phone number
+                        have been re-verified.
     """
-    form_class = AuthenticationForm
+    form_class = StartAuthenticationForm
     password_form_class = PasswordAuthForm
+    set_password_form_class = PasswordResetConfirmForm
     template_name = 'accounts/login.html'
 
     def get_form_class(self):
         if ('otp_code' in self.request.POST and
             not 'otp_code' in self.form_class.base_fields):
-            return self.mfa_code_form_class
+            return self.otp_code_form_class
         if ('password' in self.request.POST and
             not 'password' in self.form_class.base_fields):
             return self.password_form_class
+        if ('new_password' in self.request.POST and
+            not 'new_password' in self.form_class.base_fields):
+            return self.set_password_form_class
         return self.form_class
 
     def get_form_kwargs(self):
@@ -389,14 +326,15 @@ class SigninView(LoginMixin, AuthResponseMixin, ProcessFormView):
             initial.update({'password': ""})
         return initial
 
-    def get_password_form(self):
+    def get_password_form(self, user):
         form_class = self.get_form_class()
-        if not 'password' in form_class.base_fields:
-            form_class = self.password_form_class
-            form = form_class(**self.get_form_kwargs())
-            form._errors = ErrorDict() #pylint:disable=protected-access
+        if has_invalid_password(user):
+            if not 'new_password' in form_class.base_fields:
+                form_class = self.set_password_form_class
         else:
-            form = form_class(**self.get_form_kwargs())
+            if not 'password' in form_class.base_fields:
+                form_class = self.password_form_class
+        form = form_class(**self.get_form_kwargs())
         return form
 
     def get(self, request, *args, **kwargs):
@@ -411,43 +349,112 @@ class SigninView(LoginMixin, AuthResponseMixin, ProcessFormView):
             form = self.get_form()
             fill_form_errors(form, err)
             context = self.get_context_data(form=form)
-            context.update({'email_verification_link': True})
+            context.update({
+                'email_verification_link': reverse('password_reset')})
         except SSORequired as err:
             form = self.get_form()
             context = self.get_context_data(form=form)
             context.update({'sso_required': err})
         except OTPRequired as err:
-            form = self.get_mfa_form()
+            form = self.get_otp_form()
             context = self.get_context_data(form=form)
         except PasswordRequired as err:
-            form = self.get_password_form()
+            form = self.get_password_form(err.user)
             context = self.get_context_data(form=form)
-            context.update({
-                'email_verification_link': reverse('password_reset')})
-        except VerifyRequired as err:
-            form = self.get_form()
+            verification_link = self.request.path + '?check_email=1'
+            next_url = validate_redirect(self.request)
+            if next_url:
+                verification_link += '&next=' + next_url
+            context.update({'email_verification_link': verification_link})
+        except VerifyEmailRequired as err:
+            # `check_email_verified` lands here.
+            form = self.get_verify_email_form()
+            fill_form_errors(form, err)
+            context = self.get_context_data(form=form)
+        except VerifyPhoneRequired as err:
+            # `check_phone_verified` lands here.
+            form = self.get_verify_phone_form()
             fill_form_errors(form, err)
             context = self.get_context_data(form=form)
         except exceptions.AuthenticationFailed as err:
             form = self.get_form()
+            cleaned_data = self.validate_inputs(raise_exception=False)
             fill_form_errors(form, err)
             context = self.get_context_data(form=form)
-            disabled_registration = get_disabled_registration(self.request)
-            context.update({'register_link': (reverse('registration_register')
-                if not disabled_registration else None),})
+            next_url = validate_redirect(self.request)
+            if 'email' in cleaned_data and cleaned_data['email']:
+                verification_link = self.request.path + '?check_email=1'
+                if next_url:
+                    verification_link += '&next=' + next_url
+                context.update({'email_verification_link': verification_link})
+            elif 'phone' in cleaned_data and cleaned_data['phone']:
+                verification_link = self.request.path + '?check_phone=1'
+                if next_url:
+                    verification_link += '&next=' + next_url
+                context.update({'phone_verification_link': verification_link})
+            else:
+                disabled_registration = get_disabled_registration(self.request)
+                context.update({
+                    'register_link': (reverse('registration_register')
+                    if not disabled_registration else None),})
         except AuthDisabled:
             context = self.get_context_data()
             context.update({'disabled_authentication': True})
             return self.response_class(
-                request=self.request,
+                request=request,
+                template=['accounts/disabled.html'],
+                context=context,
+                using=self.template_engine,
+                content_type=self.content_type)
+        except RegistrationDisabled:
+            context = self.get_context_data()
+            return self.response_class(
+                request=request,
                 template=['accounts/disabled.html'],
                 context=context,
                 using=self.template_engine,
                 content_type=self.content_type)
 
-        if not context:
+        if context is None:
             context = self.get_context_data()
         return self.render_to_response(context)
+
+
+class RecoverView(VerifyMixin, SigninView):
+    """
+    Workflow page to authenticate by verifying an email address
+    or phone number instead of a password, then reset password.
+
+    URL paths:
+    `/recover/`
+    """
+    template_name = 'accounts/recover.html'
+
+
+class SignupView(RegisterMixin, SigninView):
+    """
+    Overrides the entry point to up-fron the full name and email
+    address field, as well as not present any form in case registration
+    has been disabled.
+
+    URL paths:
+    `/register/`
+    `/register/<var>`
+    `/register/frictionless/`
+    """
+    form_class = FrictionlessSignupForm
+    template_name = 'accounts/register.html'
+
+    def get(self, request, *args, **kwargs):
+        disabled_registration = get_disabled_registration(request)
+        if disabled_registration:
+            return self.response_class(
+                request=request,
+                template=['accounts/disabled.html'],
+                context=self.get_context_data(),
+                using=self.template_engine,
+                content_type=self.content_type)
+        return self.render_to_response(self.get_context_data())
 
 
 class SignoutView(AuthResponseMixin, View):

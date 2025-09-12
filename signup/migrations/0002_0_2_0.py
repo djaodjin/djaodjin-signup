@@ -17,7 +17,8 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='notification',
             name='description',
-            field=models.TextField(blank=True, null=True),
+            field=models.TextField(blank=True, null=True,
+                help_text='Long description of the notification'),
         ),
         migrations.AddField(
             model_name='notification',
@@ -27,7 +28,8 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='notification',
             name='title',
-            field=models.CharField(blank=True, max_length=100),
+            field=models.CharField(blank=True, max_length=100,
+                help_text='Short description of the notification'),
         ),
         migrations.AlterField(
             model_name='contact',

@@ -258,6 +258,12 @@ def get_picture_storage(request, account=None, **kwargs):
     return default_storage
 
 
+def get_phone_dynamic_validator():
+    if isinstance(settings.PHONE_DYNAMIC_VALIDATOR, six.string_types):
+        return import_string(settings.PHONE_DYNAMIC_VALIDATOR)
+    return None
+
+
 def get_user_otp_required(request, user):
     if isinstance(settings.USER_OTP_REQUIRED, six.string_types):
         return import_string(settings.USER_OTP_REQUIRED)(request, user)

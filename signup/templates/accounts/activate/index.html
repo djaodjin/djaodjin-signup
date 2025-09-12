@@ -10,7 +10,7 @@
   </p>
   <a href="{{sso_required.url}}">{{sso_required.printable_name}}</a>
   {% else %}
-  <form method="post" action=".{% if next %}/?next={{next}}{% endif %}">
+  <form method="post" action="{% if email_verification_link %}{{email_verification_link}}{% elif phone_verification_link %}{{phone_verification_link}}{% else %}./{% if next %}?next={{next}}{% endif %}{% endif %}">
         {% csrf_token %}
         {% with form.username as bound_field %}
         <label>{{ bound_field.label|safe }}</label>
@@ -24,6 +24,20 @@
           type="{{bound_field.field.widget.input_type}}"
         />
         {% endwith %}
+        {% if form.email_code %}
+        {% with form.email_code as bound_field %}
+        <label>{{ bound_field.label|safe }}</label>
+        <input name="{{bound_field.name}}"
+          {% if bound_field.value %}
+          value="{{bound_field.value}}"
+          {% endif %}
+          {% if bound_field.field.widget.attrs.placeholder %}
+          placeholder="{{bound_field.field.widget.attrs.placeholder}}"
+          {% endif %}
+          type="{{bound_field.field.widget.input_type}}"
+        />
+        {% endwith %}
+        {% endif %}
         {% if form.password %}
         {% with form.password as bound_field %}
         <label>{{ bound_field.label|safe }}</label>
@@ -38,18 +52,14 @@
         />
         {% endwith %}
         {% endif %}
+        {% if email_verification_link %}
+        <button id="email-verification-link" type="submit" name="submit">E-mail me a code</button>
+        {% elif phone_verification_link %}
+        <button id="phone-verification-link" type="submit" name="submit">Text me a code</button>
+        {% else %}
         <button type="submit" name="submit">Submit</button>
+        {% endif %}
   </form>
-  {% if email_verification_link %}
-  <form method="post" action="{{urls.user.password_reset}}?noreset=1{% if next %}&next={{next}}{% endif %}">
-    {% csrf_token %}
-    <input type="hidden" name="username" value="{{form.username.value}}" autocomplete="username">
-    <button id="email-verification-link">Email me a one-time link</button>
-  </form>
-  {% endif %}
-  {% if register_link %}
-  <a id="register-link" href="{{register_link}}{% if next %}?next={{next}}{% endif %}">Sign Up</a>
-  {% endif %}
   {% endif %}
 </div>
 {% endblock %}

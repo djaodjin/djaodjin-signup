@@ -1,4 +1,4 @@
-# Copyright (c) 2023, Djaodjin Inc.
+# Copyright (c) 2025, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -123,6 +123,7 @@ class FrictionlessSignupForm(forms.Form):
             _("Sorry we do not recognize some characters in your full name.")})
 
     def __init__(self, *args, **kwargs):
+        kwargs.pop('request')
         super(FrictionlessSignupForm, self).__init__(*args, **kwargs)
         if settings.REQUIRES_RECAPTCHA:
             self.fields['captcha'] = get_recaptcha_form_field()
@@ -180,8 +181,10 @@ class PasswordConfirmMixin(object):
 
     new_password = forms.CharField(strip=False,
         label=_("New password"),
-        widget=forms.PasswordInput(
-            attrs={'placeholder': _("New password")}),
+        min_length=settings.PASSWORD_MIN_LENGTH,
+        widget=forms.PasswordInput(attrs={
+            'minlength': settings.PASSWORD_MIN_LENGTH,
+            'placeholder': _("New password")}),
         help_text=password_validation.password_validators_help_text_html())
     new_password2 = forms.CharField(strip=False,
         label=_("Confirm password"),
@@ -237,8 +240,10 @@ class PasswordUpdateForm(PasswordConfirmMixin, forms.ModelForm):
 
     new_password = forms.CharField(strip=False,
         label=_("New password"),
-        widget=forms.PasswordInput(
-            attrs={'placeholder': _("New password")}),
+        min_length=settings.PASSWORD_MIN_LENGTH,
+        widget=forms.PasswordInput(attrs={
+            'minlength': settings.PASSWORD_MIN_LENGTH,
+            'placeholder': _("New password")}),
         help_text=password_validation.password_validators_help_text_html())
     new_password2 = forms.CharField(strip=False,
         label=_("Confirm password"),
@@ -293,13 +298,6 @@ class PasswordChangeForm(AuthenticatedUserPasswordMixin, PasswordUpdateForm):
         return self.user
 
 
-class RecoverForm(forms.Form):
-    """
-    Form displayed to authenticate through a verification link.
-    """
-    username = UsernameOrCommField()
-
-
 class ActivationForm(PasswordConfirmMixin, forms.Form):
     """
     Form to set password, and optionally user's profile information
@@ -330,7 +328,10 @@ class ActivationForm(PasswordConfirmMixin, forms.Form):
             " digits and -/_ characters. Spaces are not allowed.")})
     new_password = forms.CharField(strip=False,
         label=_("Password"),
-        widget=forms.PasswordInput(attrs={'placeholder': _("Password")}),
+        min_length=settings.PASSWORD_MIN_LENGTH,
+        widget=forms.PasswordInput(attrs={
+            'minlength': settings.PASSWORD_MIN_LENGTH,
+            'placeholder': _("Password")}),
         help_text=password_validation.password_validators_help_text_html())
     new_password2 = forms.CharField(strip=False,
         label=_("Confirm password"),
@@ -495,25 +496,19 @@ class MFACodeForm(PasswordAuthForm):
         self.fields['password'].widget = forms.HiddenInput()
 
 
-class VerifyEmailForm(forms.Form):
+class VerifyEmailForm(StartAuthenticationForm):
     """
     Form to verify an e-mail address
     """
-    email = forms.EmailField(label=_("E-mail address"),
-        widget=forms.TextInput(attrs={
-            'placeholder': _("ex: john@myorganization.com")}))
     email_code = forms.IntegerField(label=_("Email verification code"),
         widget=forms.TextInput(
             attrs={'placeholder': _("Email verification code")}))
 
 
-class VerifyPhoneForm(forms.Form):
+class VerifyPhoneForm(StartAuthenticationForm):
     """
-    Form to verify an e-mail address
+    Form to verify a phone number
     """
-    phone = PhoneField(label=_("Phone number"),
-        widget=forms.TextInput(attrs={
-            'placeholder': _("ex: +14155555555")}))
     phone_code = forms.IntegerField(label=_("Phone verification code"),
         widget=forms.TextInput(
             attrs={'placeholder': _("Phone verification code")}))

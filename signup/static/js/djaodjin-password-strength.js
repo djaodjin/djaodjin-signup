@@ -367,7 +367,7 @@
         passwordStrengthCallback: function(strength, requirements){
             return true;
         },
-        minLengthPassword: 8,
+        minLengthPassword: 10,
         additions: [
             {tester: "charactersStrength", cond: []},
             {tester: "uppercasesStrength", cond: []},

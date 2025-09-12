@@ -26,7 +26,7 @@ from django.views.generic import TemplateView
 
 from ... import settings
 from ...compat import include, path, re_path
-from ...forms import StartAuthenticationForm
+from ...forms import AuthenticationForm
 from ...views.auth import (ActivationView, PasswordResetConfirmView,
     RecoverView, SigninView, SignoutView, SignupView, VerificationView)
 from ...views.saml import saml_metadata_view
@@ -52,12 +52,11 @@ urlpatterns = [
         ActivationView.as_view(), name='registration_activate'),
     path('activate/',
         SigninView.as_view(
-            form_class=StartAuthenticationForm,
             template_name='accounts/activate/index.html'),
         name='registration_activate_start'),
     path('', include('social_django.urls', namespace='social')),
     path('login/',
-        SigninView.as_view(), name='login'),
+        SigninView.as_view(form_class=AuthenticationForm), name='login'),
     path('logout/',
         SignoutView.as_view(), name='logout'),
     path('recover/',
