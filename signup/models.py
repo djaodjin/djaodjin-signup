@@ -170,6 +170,11 @@ class ActivatedUserManager(UserManager):
         password.
         """
         phone = kwargs.pop('phone', None)
+        try:
+            if phone is not None:
+                validate_phone(phone)
+        except ValidationError:
+            phone = None
         lang = kwargs.pop('lang', None)
         extra = kwargs.pop('extra', None)
         uses_sso_provider = False
@@ -460,7 +465,8 @@ class ContactManager(models.Manager):
             contact = self.create(**kwargs)
         return contact, created
 
-    def finalize_email_verification(self, email, email_code, at_time=None):
+    def finalize_email_verification(self, email, email_code,
+                                    at_time=None, commit=True):
         """
         Checks the email_code matches the code that was sent
         to the email address.
@@ -477,14 +483,16 @@ class ContactManager(models.Manager):
             models.Q(email_verification_key=email_code))
         queryset = self.filter(email_filter).select_related('user')
         contact = queryset.get()
-        contact.email_verification_key = None
-        contact.email_verified_at = at_time
-        contact.email_code = None
-        contact.save()
+        if commit:
+            contact.email_verification_key = None
+            contact.email_verified_at = at_time
+            contact.email_code = None
+            contact.save()
         return contact
 
 
-    def finalize_phone_verification(self, phone, phone_code, at_time=None):
+    def finalize_phone_verification(self, phone, phone_code,
+                                    at_time=None, commit=True):
         """
         Checks the phone_code matches the code that was sent
         to the phone number.
@@ -500,10 +508,11 @@ class ContactManager(models.Manager):
             phone_filter &= (models.Q(phone_code=phone_code) |
                 models.Q(phone_verification_key=phone_code))
         contact = self.filter(phone_filter).select_related('user').get()
-        contact.phone_verification_key = None
-        contact.phone_verified_at = at_time
-        contact.phone_code = None
-        contact.save()
+        if commit:
+            contact.phone_verification_key = None
+            contact.phone_verified_at = at_time
+            contact.phone_code = None
+            contact.save()
         return contact
 
     def is_email_verified(self, email, at_time=None):

@@ -88,11 +88,13 @@ def check_has_credentials(request, user,
         #pylint:disable=unused-variable
         contact, created = Contact.objects.prepare_email_verification(
             user.email, user=user)
+        back_url = request.build_absolute_uri(reverse('registration_activate',
+            args=(contact.email_verification_key,)))
         if not next_url:
             next_url = validate_redirect(request)
-        send_verification_email(
-            contact, request, next_url=next_url,
-            redirect_field_name=redirect_field_name)
+        if next_url:
+            back_url += '?%s=%s' % (redirect_field_name, next_url)
+        send_verification_email(contact, request, back_url=back_url)
         return False
     return True
 
@@ -112,11 +114,13 @@ def check_email_verified(request, user,
     contact, created = Contact.objects.prepare_email_verification(
         user.email, user=user)
     # Let's send e-mail again.
+    back_url = request.build_absolute_uri(reverse('registration_activate',
+        args=(contact.email_verification_key,)))
     if not next_url:
         next_url = validate_redirect(request)
-    send_verification_email(
-        contact, request, next_url=next_url,
-        redirect_field_name=redirect_field_name)
+    if next_url:
+        back_url += '?%s=%s' % (redirect_field_name, next_url)
+    send_verification_email(contact, request, back_url=back_url)
     return contact
 
 
@@ -134,12 +138,14 @@ def check_phone_verified(request, user,
 
     contact, created = Contact.objects.prepare_phone_verification(
         user.phone, user=user) # XXX
-    # Let's send e-mail again.
+    # Let's send text message again.
+    back_url = request.build_absolute_uri(reverse('registration_activate',
+        args=(contact.phone_verification_key,)))
     if not next_url:
         next_url = validate_redirect(request)
-    send_verification_phone(
-        contact, request, next_url=next_url,
-        redirect_field_name=redirect_field_name)
+    if next_url:
+        back_url += '?%s=%s' % (redirect_field_name, next_url)
+    send_verification_phone(contact, request, back_url=back_url)
     return contact
 
 

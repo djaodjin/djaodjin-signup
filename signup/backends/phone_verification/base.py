@@ -1,4 +1,4 @@
-# Copyright (c) 2024, Djaodjin Inc.
+# Copyright (c) 2025, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -23,7 +23,6 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import logging
 
-from django.contrib.auth import REDIRECT_FIELD_NAME
 from django.core.exceptions import ImproperlyConfigured
 from django.utils import translation
 
@@ -33,9 +32,7 @@ from ..base import load_backend
 LOGGER = logging.getLogger(__name__)
 
 
-def send_verification_phone(contact, request,
-                           next_url=None, back_url=None,
-                           redirect_field_name=REDIRECT_FIELD_NAME):
+def send_verification_phone(contact, request, back_url=None):
     """
     Send a text message to the user to verify her phone number.
 
@@ -43,7 +40,6 @@ def send_verification_phone(contact, request,
     the verification email was sent from so that the user stays on her
     workflow once verification is completed.
     """
-    #pylint:disable=unused-argument
     phone = str(contact.phone) # insures we pass a string to the backend.
     if not settings.PHONE_VERIFICATION_BACKEND:
         LOGGER.error("Attempting to verify phone number '%s',"\
@@ -53,8 +49,8 @@ def send_verification_phone(contact, request,
 
     backend = load_backend(settings.PHONE_VERIFICATION_BACKEND)
     with translation.override(contact.lang):
-        backend.send(phone, contact.phone_code)
+        backend.send(phone, contact.phone_code, back_url=back_url)
 
-    LOGGER.info("text message verification code to phone %s", phone)
+    LOGGER.info("text verification code or link to %s", phone)
     signals.user_phone_verification.send(
         sender=__name__, contact=contact, request=request)

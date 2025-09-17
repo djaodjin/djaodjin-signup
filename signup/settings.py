@@ -89,7 +89,7 @@ _SETTINGS = {
         'github': {'name': 'GitHub'},
         'google-oauth2': {'name': 'Google'},
     },
-    'USE_VERIFICATION_LINKS': True,
+    'USE_VERIFICATION_LINKS': False,
     'USER_CONTACT_CALLABLE': None,  # XXX deprecated?
     'USER_OTP_REQUIRED': None,
     'USER_SERIALIZER': 'signup.serializers_overrides.UserSerializer',
@@ -169,7 +169,7 @@ LOGIN_REDIRECT_URL = getattr(settings, 'LOGIN_REDIRECT_URL')
 
 EMAIL_VERIFICATION_PAT = r'[a-f0-9]{40}'
 FULL_NAME_PAT = r"^([^\W\d_]|[ \.\'\-])+$"
-USERNAME_PAT = r'[\w.@+-]+'
+USERNAME_PAT = r"[-a-zA-Z0-9_]+"
 USER_API_KEY_LIFETIME_DAYS = _SETTINGS.get('USER_API_KEY_LIFETIME_DAYS')
 
 RANDOM_SEQUENCE_IDX = 0

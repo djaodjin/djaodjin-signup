@@ -10,48 +10,11 @@
   </p>
   <a href="{{sso_required.url}}">{{sso_required.printable_name}}</a>
   {% else %}
-  <form method="post" action="{% if email_verification_link %}{{email_verification_link}}{% elif phone_verification_link %}{{phone_verification_link}}{% else %}./{% if next %}?next={{next}}{% endif %}{% endif %}">
+  <form method="post" action="./{% if next %}?next={{next}}{% endif %}">
         {% csrf_token %}
-        {% with form.username as bound_field %}
-        <label>{{ bound_field.label|safe }}</label>
-        <input name="{{bound_field.name}}"
-          {% if bound_field.value %}
-          value="{{bound_field.value}}"
-          {% endif %}
-          {% if bound_field.field.widget.attrs.placeholder %}
-          placeholder="{{bound_field.field.widget.attrs.placeholder}}"
-          {% endif %}
-          type="{{bound_field.field.widget.input_type}}"
-        />
-        {% endwith %}
-        {% if form.email_code %}
-        {% with form.email_code as bound_field %}
-        <label>{{ bound_field.label|safe }}</label>
-        <input name="{{bound_field.name}}"
-          {% if bound_field.value %}
-          value="{{bound_field.value}}"
-          {% endif %}
-          {% if bound_field.field.widget.attrs.placeholder %}
-          placeholder="{{bound_field.field.widget.attrs.placeholder}}"
-          {% endif %}
-          type="{{bound_field.field.widget.input_type}}"
-        />
-        {% endwith %}
-        {% endif %}
-        {% if form.password %}
-        {% with form.password as bound_field %}
-        <label>{{ bound_field.label|safe }}</label>
-        <input name="{{bound_field.name}}"
-          {% if bound_field.value %}
-          value="{{bound_field.value}}"
-          {% endif %}
-          {% if bound_field.field.widget.attrs.placeholder %}
-          placeholder="{{bound_field.field.widget.attrs.placeholder}}"
-          {% endif %}
-          type="{{bound_field.field.widget.input_type}}"
-        />
-        {% endwith %}
-        {% endif %}
+
+        {{form.as_p}}
+
         {% if email_verification_link %}
         <button id="email-verification-link" type="submit" name="submit">E-mail me a code</button>
         {% elif phone_verification_link %}

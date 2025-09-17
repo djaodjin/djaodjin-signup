@@ -182,14 +182,18 @@ def update_db_row(instance, form):
     return None
 
 
-def fill_form_errors(form, err):
+def fill_form_errors(form, err, aliases=None):
     """
     Fill a Django form from DRF ValidationError exceptions.
     """
     if isinstance(err.detail, dict):
+        if not aliases:
+            aliases = {}
         for field, msg in six.iteritems(err.detail):
             if field in form.fields:
                 form.add_error(field, msg)
+            elif field in aliases:
+                form.add_error(aliases[field], msg)
             elif field == api_settings.NON_FIELD_ERRORS_KEY:
                 form.add_error(NON_FIELD_ERRORS, msg)
             else:

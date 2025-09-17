@@ -73,9 +73,9 @@ class UsernameOrCommField(CommField):
 
     default_validators = [validators.validate_username_or_email_or_phone]
     default_label = _("Username, e-mail address or phone number")
-    widget = forms.TextInput(
-        attrs={'placeholder': _("ex: john@myorganization.com"),
-               'maxlength': 75})
+    widget = forms.TextInput(attrs={
+        'autofocus': True, 'placeholder': _("ex: john@myorganization.com"),
+        'maxlength': 75})
 
     def __init__(self, **kwargs):
         super(UsernameOrCommField, self).__init__(**kwargs)
@@ -123,7 +123,6 @@ class FrictionlessSignupForm(forms.Form):
             _("Sorry we do not recognize some characters in your full name.")})
 
     def __init__(self, *args, **kwargs):
-        kwargs.pop('request')
         super(FrictionlessSignupForm, self).__init__(*args, **kwargs)
         if settings.REQUIRES_RECAPTCHA:
             self.fields['captcha'] = get_recaptcha_form_field()
@@ -259,6 +258,14 @@ class PasswordResetConfirmForm(PasswordUpdateForm):
     """
     Form displayed when a user clicked on the link sent in the reset e-mail.
     """
+    new_password = forms.CharField(strip=False,
+        label=_("New password"),
+        min_length=settings.PASSWORD_MIN_LENGTH,
+        widget=forms.PasswordInput(attrs={
+            'autofocus': True,
+            'minlength': settings.PASSWORD_MIN_LENGTH,
+            'placeholder': _("New password")}),
+        help_text=password_validation.password_validators_help_text_html())
 
 
 class PasswordChangeForm(AuthenticatedUserPasswordMixin, PasswordUpdateForm):
@@ -318,7 +325,8 @@ class ActivationForm(PasswordConfirmMixin, forms.Form):
             'placeholder': _("ex: +14155555555")}))
     full_name = forms.RegexField(label=_("Full name"),
         regex=r'^[\w\s]+$', max_length=60,
-        widget=forms.TextInput(attrs={'placeholder':'ex: John Smith'}),
+        widget=forms.TextInput(attrs={
+            'autofocus': True, 'placeholder':'ex: John Smith'}),
         error_messages={'invalid':
             _("Sorry we do not recognize some characters in your full name.")})
     username = forms.SlugField(widget=forms.TextInput(
@@ -349,6 +357,12 @@ class ActivationForm(PasswordConfirmMixin, forms.Form):
             self.fields['phone'].disabled = True
         if settings.REQUIRES_RECAPTCHA:
             self.fields['captcha'] = get_recaptcha_form_field()
+
+
+class CodeActivationForm(ActivationForm):
+
+    email_code = forms.IntegerField(required=False, widget=forms.HiddenInput())
+    phone_code = forms.IntegerField(required=False, widget=forms.HiddenInput())
 
 
 class PublicKeyForm(AuthenticatedUserPasswordMixin, forms.Form):
@@ -467,48 +481,43 @@ class StartAuthenticationForm(forms.Form):
     Form to present a user who may or may not have an account yet.
     """
     username = UsernameOrCommField()
+    check_email = forms.BooleanField(required=False, widget=forms.HiddenInput())
+    check_phone = forms.BooleanField(required=False, widget=forms.HiddenInput())
     submit_title = _("Submit")
-
-    def __init__(self, *args, **kwargs):
-        kwargs.pop('request')
-        super(StartAuthenticationForm, self).__init__(*args, **kwargs)
 
 
 class PasswordAuthForm(StartAuthenticationForm):
 
+    username = UsernameOrCommField(widget=forms.HiddenInput())
     password = forms.CharField(widget=forms.PasswordInput(
-        attrs={'placeholder': _("Password")}), label=_("Password"))
-
-    def __init__(self, *args, **kwargs):
-        super(PasswordAuthForm, self).__init__(*args, **kwargs)
-        self.fields['username'].widget = forms.HiddenInput()
+        attrs={'autofocus': True, 'placeholder': _("Password")}),
+        label=_("Password"))
 
 
-class MFACodeForm(PasswordAuthForm):
+class OTPCodeForm(PasswordAuthForm):
 
+    password = forms.CharField(widget=forms.HiddenInput())
     otp_code = forms.IntegerField(widget=forms.TextInput(
-        attrs={'placeholder': _("One-time authentication code"),
-            'autofocus': True}),
+        attrs={'autofocus': True,
+            'placeholder': _("One-time authentication code")}),
         label=_("One-time authentication code"))
-
-    def __init__(self, *args, **kwargs):
-        super(MFACodeForm, self).__init__(*args, **kwargs)
-        self.fields['password'].widget = forms.HiddenInput()
 
 
 class VerifyEmailForm(StartAuthenticationForm):
     """
     Form to verify an e-mail address
     """
-    email_code = forms.IntegerField(label=_("Email verification code"),
-        widget=forms.TextInput(
-            attrs={'placeholder': _("Email verification code")}))
+    username = UsernameOrCommField(widget=forms.HiddenInput())
+    email_code = forms.IntegerField(widget=forms.TextInput(
+        attrs={'autofocus': True, 'placeholder': _("ex: 888888")}),
+        label=_("Email verification code"))
 
 
 class VerifyPhoneForm(StartAuthenticationForm):
     """
     Form to verify a phone number
     """
-    phone_code = forms.IntegerField(label=_("Phone verification code"),
-        widget=forms.TextInput(
-            attrs={'placeholder': _("Phone verification code")}))
+    username = UsernameOrCommField(widget=forms.HiddenInput())
+    phone_code = forms.IntegerField(widget=forms.TextInput(
+        attrs={'autofocus': True, 'placeholder': _("ex: 888888")}),
+        label=_("Phone verification code"))

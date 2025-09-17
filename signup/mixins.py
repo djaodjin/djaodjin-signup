@@ -25,11 +25,11 @@
 import logging, re
 
 from django.http import Http404
-from django.contrib.auth import (authenticate, get_user_model,
-    login as auth_login)
+from django.contrib.auth import (REDIRECT_FIELD_NAME, authenticate,
+    get_user_model, login as auth_login)
 from django.core.exceptions import ImproperlyConfigured
 from django.core.validators import validate_email as validate_email_base
-from django.db import IntegrityError
+from django.db import IntegrityError, router, transaction
 from django.utils import translation
 from django.utils.http import urlencode
 from rest_framework import exceptions, serializers
@@ -173,17 +173,22 @@ class AuthMixin(object):
 
         if Contact.objects.email_verification_required(email):
             return True
-        if cleaned_email:
-            if user:
-                if has_invalid_password(user):
-                    # With an e-mail and no password, we use the email
-                    # verification workflow.
-                    return True
-            else:
-                # If we are going to register a new user
-                # through the authentication workflow,
-                # we must verify the e-mail address when provided.
-                return True
+
+        cleaned_phone = cleaned_data.get('phone')
+        if (user and has_invalid_password(user) and
+            email and not cleaned_phone):
+            # When we have a user with no password set, we will
+            # verify the email address unless we will verify
+            # the phone number instead.
+            return True
+
+        if not user and cleaned_email:
+            # XXX `and not Contact.objects.is_email_verified(cleaned_email)`
+            # If we are going to register a new user
+            # through the authentication workflow,
+            # we must verify the e-mail address when provided.
+            return True
+
         return False
 
 
@@ -203,25 +208,22 @@ class AuthMixin(object):
             if contact:
                 phone = contact.phone
 
-        force_phone_verification = self.get_query_param(
-            self.request, 'check_phone')
-        if force_phone_verification:
-            return True
-
         if Contact.objects.phone_verification_required(phone):
             return True
 
-        if cleaned_phone:
-            if user:
-                if has_invalid_password(user):
-                    # With a phone and no password, we use the phone
-                    # verification workflow.
-                    return True
-            else:
-                # If we are going to register a new user
-                # through the authentication workflow,
-                # we must verify the phone number when provided.
-                return True
+        cleaned_email = cleaned_data.get('email')
+        if (user and has_invalid_password(user) and
+            phone and not cleaned_email):
+            # When we have a user with no password set, we will
+            # verify the phone number unless we will verify
+            # the email address instead.
+            return True
+
+        if not user and cleaned_phone:
+            # If we are going to register a new user
+            # through the authentication workflow,
+            # we must verify the phone number when provided.
+            return True
 
         return False
 
@@ -299,9 +301,6 @@ class AuthMixin(object):
 
         return cleaned_data
 
-    def register_check_data(self, **cleaned_data):
-        # Override to check the registration data (ex: signed agreements)
-        pass
 
     def find_candidate(self, **cleaned_data):
         username = cleaned_data.get('username')
@@ -341,30 +340,22 @@ class AuthMixin(object):
                 {'detail': _("Authentication is disabled")})
 
     def get_verification_back_url(self, verification_key):
-        #pylint:disable=unused-argument
+        if settings.USE_VERIFICATION_LINKS:
+            return self.request.build_absolute_uri(reverse(
+                'registration_activate', args=(verification_key,)))
         return None
 
-    def check_email_verified(self, user, **cleaned_data):
+    def verify_email(self, user, **cleaned_data):
         email = cleaned_data.get('email')
         if not email and user:
             email = user.email
 
         email_code = cleaned_data.get('email_code')
-        if email_code:
-            try:
-                Contact.objects.finalize_email_verification(email, email_code)
-                if user and has_invalid_password(user):
-                    # Bypassing authentication here, we are doing frictionless
-                    # registration the first time around.
-                    user.backend = self.backend_path
-            except Contact.DoesNotExist:
-                raise serializers.ValidationError({'detail':
-                    _("E-mail verification code does not match.")})
 
         # send link through e-mail
-        elif email:
-            force_verification = self.get_query_param(
-                self.request, 'check_email', self.default_check_email)
+        if email and not email_code:
+            force_verification = cleaned_data.get('check_email',
+                self.default_check_email)
             requires_verification = self.email_verification_required(
                 user, **cleaned_data)
             if not user:
@@ -381,22 +372,48 @@ class AuthMixin(object):
 
             if force_verification or requires_verification:
 
-                next_url = cleaned_data.get('next_url')
                 #pylint:disable=unused-variable
                 contact, unused = Contact.objects.prepare_email_verification(
                     email, user=user)
                 #pylint:disable=assignment-from-none
                 back_url = self.get_verification_back_url(
                     contact.email_verification_key)
+                next_url = cleaned_data.get('next_url')
+                if back_url and next_url:
+                    back_url += '?%s=%s' % (REDIRECT_FIELD_NAME, next_url)
                 send_verification_email(contact, self.request,
-                    next_url=next_url, back_url=back_url)
-                raise VerifyEmailRequired({'detail': _(
-                        "We sent a one-time link to your e-mail address.")})
+                    back_url=back_url)
+                raise VerifyEmailRequired({'email': (
+                    _("We sent a one-time link to your e-mail address.")
+                    if back_url else
+                    _("We sent a one-time code to your e-mail address."))})
 
         return user
 
 
-    def check_phone_verified(self, user, **cleaned_data):
+    def check_email_verified(self, user, **cleaned_data):
+        email = cleaned_data.get('email')
+        if not email and user:
+            email = user.email
+
+        email_code = cleaned_data.get('email_code')
+        if email_code:
+            try:
+                commit = (user or cleaned_data.get('new_password'))
+                Contact.objects.finalize_email_verification(
+                    email, email_code, commit=commit)
+                if user and has_invalid_password(user):
+                    # Bypassing authentication here, we are doing frictionless
+                    # registration the first time around.
+                    user.backend = self.backend_path
+            except Contact.DoesNotExist:
+                raise serializers.ValidationError({'email_code':
+                    _("E-mail verification code does not match.")})
+
+        return user
+
+
+    def verify_phone(self, user, **cleaned_data):
         phone = cleaned_data.get('phone')
         if not phone and user:
             contact = user.contacts.exclude(phone__isnull=False).first()
@@ -404,21 +421,11 @@ class AuthMixin(object):
                 phone = contact.phone
 
         phone_code = cleaned_data.get('phone_code')
-        if phone_code:
-            try:
-                Contact.objects.finalize_phone_verification(phone, phone_code)
-                if user and has_invalid_password(user):
-                    # Bypassing authentication here, we are doing frictionless
-                    # registration the first time around.
-                    user.backend = self.backend_path
-            except Contact.DoesNotExist:
-                raise serializers.ValidationError({'detail':
-                    _("Phone verification code does not match.")})
 
         # send link through phone
-        elif phone:
-            force_verification = self.get_query_param(
-                self.request, 'check_phone', self.default_check_phone)
+        if phone and not phone_code:
+            force_verification = cleaned_data.get('check_phone',
+                self.default_check_phone)
             requires_verification = self.phone_verification_required(
                 user, **cleaned_data)
             if not user:
@@ -434,23 +441,51 @@ class AuthMixin(object):
                     raise exceptions.AuthenticationFailed()
 
             if force_verification or requires_verification:
-                next_url = cleaned_data.get('next_url')
                 #pylint:disable=unused-variable
                 contact, unused = Contact.objects.prepare_phone_verification(
                     phone, user=user)
                 #pylint:disable=assignment-from-none
                 back_url = self.get_verification_back_url(
                     contact.phone_verification_key)
+                next_url = cleaned_data.get('next_url')
+                if back_url and next_url:
+                    back_url += '?%s=%s' % (REDIRECT_FIELD_NAME, next_url)
                 try:
                     send_verification_phone(contact, self.request,
-                        next_url=next_url, back_url=back_url)
-                    raise VerifyPhoneRequired({'detail': _(
-                        "We sent a one-time code to your phone.")})
+                        back_url=back_url)
+                    raise VerifyPhoneRequired({'phone': (
+                        _("We sent a one-time link to your phone.")
+                        if back_url else
+                        _("We sent a one-time code to your phone."))})
                 except ImproperlyConfigured:
                     # Cannot send phone verification if we don't have a backend,
                     # so we fall through and will attempt to send an e-mail
                     # verification.
                     pass
+
+        return user
+
+
+    def check_phone_verified(self, user, **cleaned_data):
+        phone = cleaned_data.get('phone')
+        if not phone and user:
+            contact = user.contacts.exclude(phone__isnull=False).first()
+            if contact:
+                phone = contact.phone
+
+        phone_code = cleaned_data.get('phone_code')
+        if phone_code:
+            try:
+                commit = (user or cleaned_data.get('new_password'))
+                Contact.objects.finalize_phone_verification(
+                    phone, phone_code, commit=commit)
+                if user and has_invalid_password(user):
+                    # Bypassing authentication here, we are doing frictionless
+                    # registration the first time around.
+                    user.backend = self.backend_path
+            except Contact.DoesNotExist:
+                raise serializers.ValidationError({'phone_code':
+                    _("Phone verification code does not match.")})
 
         return user
 
@@ -471,13 +506,19 @@ class AuthMixin(object):
                     username=user.username, password=password)
             if not user_with_backend:
                 if not password and not cleaned_data.get('new_password'):
+                    field_name = (
+                        'new_password' if 'new_password' in cleaned_data
+                        else 'password')
                     raise PasswordRequired(user, detail={
-                        'password': _("Password is required.")})
+                        field_name: _("Password is required.")})
                 raise exceptions.AuthenticationFailed()
 
         else:
-            # We are going to register a user, so no password is OK.
-            pass
+            # We are going to register a user, let's give the opportunity
+            # to the created user to set a password.
+            if not cleaned_data.get('new_password'):
+                raise IncorrectUser({'detail':
+                    _("Please enter a few information about yourself.")})
 
         return user_with_backend
 
@@ -511,7 +552,7 @@ class AuthMixin(object):
                     'otp_code': _("OTP code is required.")})
             nb_attempts = OTPGenerator.objects.verify(user, otp_code)
             if nb_attempts >= settings.MFA_MAX_ATTEMPTS:
-                raise exceptions.PermissionDenied({'detail': _(
+                raise exceptions.PermissionDenied({'otp_code': _(
             "You have exceeded the number of attempts to enter the OTP code."\
                     " Please start again.")})
             if nb_attempts > 0:
@@ -533,8 +574,17 @@ class AuthMixin(object):
         return first_name, last_name
 
 
+    def create_models(self, *args, **cleaned_data):
+        return self.model.objects.create_user(*args, **cleaned_data)
+
+
     def create_user(self, contact, **cleaned_data):
         #pylint:disable=too-many-locals
+        cleaned_data.pop('check_email', None)
+        cleaned_data.pop('check_phone', None)
+
+        self.register_check_data(contact, **cleaned_data)
+
         first_name, last_name = self.first_and_last_names(**cleaned_data)
         full_name = cleaned_data.get('full_name', None)
         if not full_name:
@@ -547,34 +597,32 @@ class AuthMixin(object):
         if not phone and contact:
             phone = contact.phone
         username = cleaned_data.get('username')
+        #pylint:disable=too-many-nested-blocks
         if username:
-            if not re.match(r'^[a-zA-Z0-9_\-\+\.]+$', username) and not contact:
-                contact_kwargs = {}
-                try:
-                    validate_email_base(username)
-                    if not email:
-                        email = username
-                    contact_kwargs = {'email__iexact': username}
-                except serializers.ValidationError:
-                    pass
-                if not contact_kwargs:
+            if not re.match(r"^%s$" % settings.USERNAME_PAT, username):
+                if not contact:
+                    contact_kwargs = {}
                     try:
-                        contact_kwargs = {
-                            'phone__iexact': validate_phone(username)
-                        }
-                        if not phone:
-                            phone = username
+                        validate_email_base(username)
+                        if not email:
+                            email = username
+                        contact_kwargs = {'email__iexact': username}
                     except serializers.ValidationError:
                         pass
-                contact = Contact.objects.filter(**contact_kwargs).first()
-            if contact:
-                username = contact.slug
-            else:
-                username = generate_random_slug()
-
-        if not email and not phone:
-            raise exceptions.AuthenticationFailed({
-                'detail': _("Incorrect authentication credentials.")})
+                    if not contact_kwargs:
+                        try:
+                            contact_kwargs = {
+                                'phone__iexact': validate_phone(username)
+                            }
+                            if not phone:
+                                phone = username
+                        except serializers.ValidationError:
+                            pass
+                    contact = Contact.objects.filter(**contact_kwargs).first()
+                if contact:
+                    username = contact.slug
+                else:
+                    username = generate_random_slug()
 
         password = cleaned_data.get('new_password',
             cleaned_data.get('password'))
@@ -601,7 +649,7 @@ class AuthMixin(object):
                 # we won't be able to authenticate later.
                 # `activate_user` will reset the password.
                 user, previously_inactive = contact.activate_user(
-                    username=cleaned_data.get('username'),
+                    username=username,
                     password=cleaned_data.get('new_password'),
                     full_name=full_name)
             except IntegrityError as err:
@@ -609,12 +657,12 @@ class AuthMixin(object):
 
         if not user:
             try:
-                user = self.model.objects.create_user(username,
+                user = self.create_models(username,
                     email=email, password=password, phone=phone,
                     first_name=first_name, last_name=last_name,
                     lang=lang, extra=user_extra)
             except IntegrityError as err:
-                handle_uniq_error(err)
+                handle_uniq_error(err)#,renames={'slug': organization_selector})
 
         if user:
             if not user.last_login:
@@ -655,6 +703,25 @@ class AuthMixin(object):
         LOGGER.info("%s signed in.", user_with_backend,
             extra={'event': 'login', 'request': self.request})
 
+
+    def register_check_data(self, contact, **cleaned_data):
+        # Override to check the registration data (ex: signed agreements)
+        errors = {}
+
+        email = cleaned_data.get('email')
+        if not email and contact:
+            email = contact.email
+        phone = cleaned_data.get('phone')
+        if not phone and contact:
+            phone = contact.phone
+
+        if not email and not phone:
+            errors.update({
+                'email': _("At least one of email or phone is required."),
+                'phone': _("At least one of email or phone is required.")})
+
+        if errors:
+            raise serializers.ValidationError(errors)
 
     def run_pipeline(self):
         # Login, Verify, Register:
@@ -701,51 +768,62 @@ class AuthMixin(object):
         self.check_sso_required(email)
         LOGGER.debug("[run_pipeline] check_sso_required(email=%s)", email)
 
-        user = self.check_phone_verified(user, **cleaned_data)
-        LOGGER.debug("[run_pipeline] check_phone_verified(user=%s,"\
+        user = self.verify_phone(user, **cleaned_data)
+        LOGGER.debug("[run_pipeline] verify_phone(user=%s,"\
             " cleaned_data=%s) returned user.backend=%s", user,
             cleaned_data, getattr(user, 'backend', None))
 
-        user = self.check_email_verified(user, **cleaned_data)
-        LOGGER.debug("[run_pipeline] check_email_verified(user=%s,"\
+        user = self.verify_email(user, **cleaned_data)
+        LOGGER.debug("[run_pipeline] verify_email(user=%s,"\
             " cleaned_data=%s) returned user._backend=%s", user,
             cleaned_data, getattr(user, 'backend', None))
 
-        # Login: If login by verifying e-mail or phone, send code
-        #        Else check password
-        user = self.check_password(user, **cleaned_data)
-        LOGGER.debug("[run_pipeline] check_password(user=%s,"\
-            " cleaned_data=%s) returned user.backend=%s", user,
-            cleaned_data, getattr(user, 'backend', None))
+        with transaction.atomic(using=router.db_for_write(Contact)):
+            user = self.check_phone_verified(user, **cleaned_data)
+            LOGGER.debug("[run_pipeline] check_phone_verified(user=%s,"\
+                " cleaned_data=%s) returned user.backend=%s", user,
+                cleaned_data, getattr(user, 'backend', None))
 
-        # Login, Verify: If required, check 2FA
-        self.check_otp(user, **cleaned_data)
+            user = self.check_email_verified(user, **cleaned_data)
+            LOGGER.debug("[run_pipeline] check_email_verified(user=%s,"\
+                " cleaned_data=%s) returned user._backend=%s", user,
+                cleaned_data, getattr(user, 'backend', None))
 
-        # Verify: If does not exist, create User from Contact
-        # Register: Create User
-        if not user and self.request.method.lower() in ['post']:
-            # Some e-mail spam prevention tools like 'Barracuda Sentinel (EE)'
-            # will generate HEAD requests on one-time e-mail links. We don't
-            # want those to fall through `check_password`, end up here
-            # and render the link unusable before someone can click on it.
-            #pylint:disable=assignment-from-none
-            disabled_registration = get_disabled_registration(self.request)
-            if disabled_registration:
-                raise RegistrationDisabled(
-                    {'detail': _("Registration is disabled")})
-            LOGGER.debug("[run_pipeline] create_user("
-                "contact=%s, cleaned_data=%s)", contact, cleaned_data)
-            user = self.create_user(contact, **cleaned_data)
+            # Login: If login by verifying e-mail or phone, send code
+            #        Else check password
+            user = self.check_password(user, **cleaned_data)
+            LOGGER.debug("[run_pipeline] check_password(user=%s,"\
+                " cleaned_data=%s) returned user.backend=%s", user,
+                cleaned_data, getattr(user, 'backend', None))
 
-        if not getattr(user, 'backend', None):
-            # If for any reasons we don't have a user with an auth backend
-            # at this point, we can't continue.
-            raise exceptions.AuthenticationFailed()
+            # Login, Verify: If required, check 2FA
+            self.check_otp(user, **cleaned_data)
 
-        # Login, Verify, Register: Create session
-        LOGGER.debug("[run_pipeline] create session for user=%s", user)
+            # Verify: If does not exist, create User from Contact
+            # Register: Create User
+            if not user and self.request.method.lower() in ['post']:
+                # Some e-mail spam prevention tools like 'Barracuda Sentinel (EE)'
+                # will generate HEAD requests on one-time e-mail links. We don't
+                # want those to fall through `check_password`, end up here
+                # and render the link unusable before someone can click on it.
+                #pylint:disable=assignment-from-none
+                disabled_registration = get_disabled_registration(self.request)
+                if disabled_registration:
+                    raise RegistrationDisabled(
+                        {'detail': _("Registration is disabled")})
+                LOGGER.debug("[run_pipeline] create_user("
+                    "contact=%s, cleaned_data=%s)", contact, cleaned_data)
+                user = self.create_user(contact, **cleaned_data)
 
-        self.create_session(user)
+            if not getattr(user, 'backend', None):
+                # If for any reasons we don't have a user with an auth backend
+                # at this point, we can't continue.
+                raise exceptions.AuthenticationFailed()
+
+            # Login, Verify, Register: Create session
+            LOGGER.debug("[run_pipeline] create session for user=%s", user)
+            self.create_session(user)
+
         return user
 
 
@@ -758,8 +836,11 @@ class VerifyMixin(AuthMixin):
     default_check_phone = True
 
     def get_verification_back_url(self, verification_key):
-        return self.request.build_absolute_uri(reverse(
-            'password_reset_confirm', args=(verification_key,)))
+        back_url = None
+        if settings.USE_VERIFICATION_LINKS:
+            back_url = self.request.build_absolute_uri(reverse(
+                'password_reset_confirm', args=(verification_key,)))
+        return back_url
 
     def email_verification_required(self, user, **cleaned_data):
         email = cleaned_data.get('email')
@@ -799,23 +880,13 @@ class RegisterMixin(AuthMixin):
         return None
 
 
-class VerifyCompleteMixin(AuthMixin):
+class VerifyCompleteMixin(RegisterMixin):
     """
     Overrides the `check_password` step in URL `/activate/{verification_key}/`
     and `/api/auth/activate/{verification_key}` to raise `IncorrectUser`
     if the user has no password set.
     """
     key_url_kwarg = 'verification_key'
-
-    def email_verification_required(self, user, **cleaned_data):
-        return False
-
-    def phone_verification_required(self, user, **cleaned_data):
-        return False
-
-    def check_password(self, user, **cleaned_data):
-        #pylint:disable=unused-argument
-        return None
 
     @property
     def contact(self):
