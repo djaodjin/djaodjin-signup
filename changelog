@@ -1,3 +1,10 @@
+0.10.0
+
+  * enables use of codes or links to verify channels (email, phone)
+  * adds APIs to create account activities
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Wed, 17 Sep 2025 15:30:00 -0700
+
 0.9.11
 
   * fixes exception edge cases when DEFAULT_FROM_EMAIL is empty or None

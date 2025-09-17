@@ -69,9 +69,9 @@ Tested with
 - **Python:** 3.12, **Django:** 5.1 (next)
 - **Python:** 3.7, **Django:** 3.2 (legacy)
 
-0.9.11
+0.10.0
 
-  * fixes exception edge cases when DEFAULT_FROM_EMAIL is empty or None
-  * adds request context to `user_registered` signal
+  * enables use of codes or links to verify channels (email, phone)
+  * adds APIs to create account activities
 
 [previous release notes](changelog)
