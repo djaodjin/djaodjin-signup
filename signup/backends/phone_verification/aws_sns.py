@@ -41,7 +41,7 @@ class PhoneVerificationBackend(object):
         - SNS:Publish
     """
 
-    def send(self, phone, phone_code):
+    def send(self, phone, phone_code, back_url=None):
         """
         Send a text message to the user to verify her phone number.
         """

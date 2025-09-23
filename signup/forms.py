@@ -324,7 +324,7 @@ class ActivationForm(PasswordConfirmMixin, forms.Form):
         widget=forms.TextInput(attrs={
             'placeholder': _("ex: +14155555555")}))
     full_name = forms.RegexField(label=_("Full name"),
-        regex=r'^[\w\s]+$', max_length=60,
+        regex=settings.FULL_NAME_PAT, max_length=60,
         widget=forms.TextInput(attrs={
             'autofocus': True, 'placeholder':'ex: John Smith'}),
         error_messages={'invalid':

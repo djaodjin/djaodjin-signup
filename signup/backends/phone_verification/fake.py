@@ -1,4 +1,4 @@
-# Copyright (c) 2023, Djaodjin Inc.
+# Copyright (c) 2025, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -31,7 +31,7 @@ class PhoneVerificationBackend(object):
     Fake phone verification backend for tests purposes.
     """
 
-    def send(self, phone, phone_code):
+    def send(self, phone, phone_code, back_url=None):
         """
         Send a text message to the user to verify her phone number.
         """

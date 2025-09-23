@@ -162,6 +162,7 @@ class AuthMixin(object):
         'street_address',
         'username',
     )
+    renames = {}
     serializer_class = None
 
 
@@ -575,7 +576,22 @@ class AuthMixin(object):
 
 
     def create_models(self, *args, **cleaned_data):
-        return self.model.objects.create_user(*args, **cleaned_data)
+        user_extra = {}
+        for field_name, field_value in six.iteritems(cleaned_data):
+            if field_name not in self.registration_fields:
+                if field_name.startswith('user_'):
+                    user_extra.update({field_name[5:]: field_value})
+        if not user_extra:
+            user_extra = None
+        email = cleaned_data.get('email')
+        phone = cleaned_data.get('phone')
+        password = cleaned_data.get('password')
+        first_name = cleaned_data.get('first_name')
+        last_name = cleaned_data.get('last_name')
+        lang = cleaned_data.get('lang')
+        return self.model.objects.create_user(*args, email=email,
+            password=password, phone=phone, first_name=first_name,
+            last_name=last_name, lang=lang, extra=user_extra)
 
 
     def create_user(self, contact, **cleaned_data):
@@ -628,13 +644,6 @@ class AuthMixin(object):
             cleaned_data.get('password'))
         lang = cleaned_data.get('lang', cleaned_data.get('get_lang',
             translation.get_language_from_request(self.request)))
-        user_extra = {}
-        for field_name, field_value in six.iteritems(cleaned_data):
-            if field_name not in self.registration_fields:
-                if field_name.startswith('user_'):
-                    user_extra.update({field_name[5:]: field_value})
-        if not user_extra:
-            user_extra = None
 
         if settings.DISABLED_USER_UPDATE:
             raise exceptions.AuthenticationFailed({
@@ -656,13 +665,24 @@ class AuthMixin(object):
                 handle_uniq_error(err)
 
         if not user:
+            disabled_registration = get_disabled_registration(self.request)
+            if disabled_registration:
+                raise RegistrationDisabled(
+                    {'detail': _("Registration is disabled")})
+
             try:
-                user = self.create_models(username,
-                    email=email, password=password, phone=phone,
-                    first_name=first_name, last_name=last_name,
-                    lang=lang, extra=user_extra)
+                create_models_kwargs = cleaned_data.copy()
+                create_models_kwargs.update({
+                    'email': email,
+                    'password': password,
+                    'phone': phone,
+                    'first_name': first_name,
+                    'last_name': last_name,
+                    'lang': lang
+                })
+                user = self.create_models(username, **create_models_kwargs)
             except IntegrityError as err:
-                handle_uniq_error(err)#,renames={'slug': organization_selector})
+                handle_uniq_error(err, renames=self.renames)
 
         if user:
             if not user.last_login:
@@ -802,15 +822,12 @@ class AuthMixin(object):
             # Verify: If does not exist, create User from Contact
             # Register: Create User
             if not user and self.request.method.lower() in ['post']:
-                # Some e-mail spam prevention tools like 'Barracuda Sentinel (EE)'
+                # Some e-mail spam prevention tools like
+                # 'Barracuda Sentinel (EE)'
                 # will generate HEAD requests on one-time e-mail links. We don't
                 # want those to fall through `check_password`, end up here
                 # and render the link unusable before someone can click on it.
                 #pylint:disable=assignment-from-none
-                disabled_registration = get_disabled_registration(self.request)
-                if disabled_registration:
-                    raise RegistrationDisabled(
-                        {'detail': _("Registration is disabled")})
                 LOGGER.debug("[run_pipeline] create_user("
                     "contact=%s, cleaned_data=%s)", contact, cleaned_data)
                 user = self.create_user(contact, **cleaned_data)
