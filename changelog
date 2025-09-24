@@ -1,3 +1,9 @@
+0.10.1
+
+  * fixes regression for extensions hook points
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Tue, 23 Sep 2025 20:50:00 -0700
+
 0.10.0
 
   * enables use of codes or links to verify channels (email, phone)
