@@ -35,5 +35,6 @@ class PhoneVerificationBackend(object):
         """
         Send a text message to the user to verify her phone number.
         """
+        #pylint:disable=unused-argument
         LOGGER.warning("Fake phone verification backend sent code %s to %s.",
             phone_code, phone)

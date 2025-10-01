@@ -39,7 +39,7 @@ Optionally add URLs for User profiles:
 from ...compat import include, path
 
 urlpatterns = [
-    path('contacts/', include('signup.urls.views.contacts')),
+    path('activities/', include('signup.urls.views.contacts')),
     path('users/', include('signup.urls.views.users')),
     path('', include('signup.urls.views.accounts')),
 ]

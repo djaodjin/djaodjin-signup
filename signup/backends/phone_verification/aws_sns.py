@@ -1,4 +1,4 @@
-# Copyright (c) 2023, Djaodjin Inc.
+# Copyright (c) 2025, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -45,6 +45,7 @@ class PhoneVerificationBackend(object):
         """
         Send a text message to the user to verify her phone number.
         """
+        #pylint:disable=unused-argument
         client = boto3.client("sns")
         client.publish(PhoneNumber=phone, #E.164 format
             Message=_("one-time verification code: %(code)s") % {

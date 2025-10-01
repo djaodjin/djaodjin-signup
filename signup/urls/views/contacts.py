@@ -1,4 +1,4 @@
-# Copyright (c) 2023, Djaodjin Inc.
+# Copyright (c) 2025, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -23,11 +23,15 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from ...compat import path
-from ...views.contacts import ContactListView, ContactDetailView
+from ...views.contacts import (AccountDetailView, AccountListView,
+    ContactListView, ContactDetailView)
 
 urlpatterns = [
     # These three URLs must be protected.
-    path('<slug:user>/',
+    path('accounts/<slug:profile>/',
+        AccountDetailView.as_view(), name='signup_account_activities'),
+    path('accounts/', AccountListView.as_view(), name='signup_accounts'),
+    path('contacts/<slug:user>/',
         ContactDetailView.as_view(), name='signup_contact'),
-    path('', ContactListView.as_view(), name='signup_contacts'),
+    path('contacts/', ContactListView.as_view(), name='signup_contacts'),
 ]

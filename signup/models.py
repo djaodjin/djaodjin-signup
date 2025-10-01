@@ -790,7 +790,7 @@ class Activity(models.Model):
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL,
         null=True, on_delete=models.SET_NULL,
         help_text=_("User that created the activity"))
-    contact = models.ForeignKey(Contact, on_delete=models.CASCADE)
+    contact = models.ForeignKey(Contact, null=True, on_delete=models.CASCADE)
     text = models.TextField(blank=True,
         help_text=_("Free form text description of the activity"))
     account = models.ForeignKey(

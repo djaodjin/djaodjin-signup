@@ -51,7 +51,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='activity',
             name='contact',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='signup.Contact'),
+            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, to='signup.Contact'),
         ),
         migrations.AddField(
             model_name='activity',

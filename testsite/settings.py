@@ -304,6 +304,7 @@ SIGNUP = {
     'RANDOM_SEQUENCE': getattr(
         sys.modules[__name__], 'SIGNUP_RANDOM_SEQUENCE', []),
     # 'REQUIRES_RECAPTCHA': True,
+    # 'USE_VERIFICATION_LINKS': False,
     'SKIP_EXPIRATION_CHECK': SKIP_EXPIRATION_CHECK,
 }
 

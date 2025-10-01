@@ -105,6 +105,8 @@ Vue.component('contact-update', {
                 contact: vm.$refs.contact ? vm.itemSelected.slug : null
             }
             vm.reqPost(vm.url, data, function(resp) {
+                vm.itemSelected = {slug: ''};
+                vm.activityText = '';
                 vm.get();
             });
         },

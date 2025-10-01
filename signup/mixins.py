@@ -43,9 +43,10 @@ from .compat import gettext_lazy as _, is_authenticated, reverse, six
 from .helpers import (full_name_natural_split, has_invalid_password,
     update_context_urls)
 from .models import Contact, DelegateAuth, Notification, OTPGenerator
-from .utils import (generate_random_slug, get_disabled_authentication,
-    get_disabled_registration, get_email_dynamic_validator,
-    get_login_throttle, get_phone_dynamic_validator, handle_uniq_error)
+from .utils import (generate_random_slug, get_account_model,
+    get_disabled_authentication, get_disabled_registration,
+    get_email_dynamic_validator, get_login_throttle,
+    get_phone_dynamic_validator, handle_uniq_error)
 from .validators import as_email_or_phone, validate_phone
 
 LOGGER = logging.getLogger(__name__)
@@ -942,6 +943,21 @@ class AuthenticatedUserPasswordMixin(object):
 
         if not request.user.check_password(password):
             raise exceptions.AuthenticationFailed()
+
+
+class AccountMixin(settings.EXTRA_MIXIN):
+
+    lookup_field = 'slug'
+    lookup_url_kwarg = 'profile'
+    account_url_kwarg = 'profile'
+
+    @property
+    def account(self):
+        if not hasattr(self, '_account'):
+            kwargs = {self.lookup_field: self.kwargs.get(self.lookup_url_kwarg)}
+            self._account = get_object_or_404(
+                get_account_model().objects.all(), **kwargs)
+        return self._account
 
 
 class ContactMixin(settings.EXTRA_MIXIN):

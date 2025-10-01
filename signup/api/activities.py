@@ -30,25 +30,10 @@ from rest_framework import generics
 
 from .. import filters
 from ..models import Activity
+from ..mixins import AccountMixin
 from ..serializers import ActivitySerializer, ActivityByAccountCreateSerializer
-from ..utils import get_account_model
 
 LOGGER = logging.getLogger(__name__)
-
-
-class AccountMixin(object):
-
-    lookup_field = 'slug'
-    lookup_url_kwarg = 'profile'
-    account_url_kwarg = 'profile'
-
-    @property
-    def account(self):
-        if not hasattr(self, '_account'):
-            kwargs = {self.lookup_field: self.kwargs.get(self.lookup_url_kwarg)}
-            self._account = generics.get_object_or_404(
-                get_account_model().objects.all(), **kwargs)
-        return self._account
 
 
 class ActivityByAccountAPIView(AccountMixin, generics.ListCreateAPIView):
@@ -114,8 +99,12 @@ class ActivityByAccountAPIView(AccountMixin, generics.ListCreateAPIView):
     serializer_class = ActivitySerializer
 
     def get_queryset(self):
-        return Activity.objects.filter(
-            account__slug=self.kwargs.get(self.account_url_kwarg))
+        kwargs = {
+            'account__%s' % str(self.lookup_field): self.kwargs.get(
+                self.account_url_kwarg)
+        }
+        return Activity.objects.filter(**kwargs)
+
 
     def get_serializer_class(self):
         if self.request.method.lower() == 'post':

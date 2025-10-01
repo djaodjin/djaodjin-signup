@@ -31,6 +31,7 @@ from signup.api.auth import JWTLogout
 from signup.api.activities import (ActivityByAccountAPIView,
     ActivityByAccountIndexAPIView)
 from signup.api.contacts import (ActivityListCreateAPIView,
+
     ContactDetailAPIView, ContactListAPIView, ContactPictureAPIView)
 from signup.api.keys import (ListCreateAPIKeysAPIView, PublicKeyAPIView,
     DestroyAPIKeyAPIView)
@@ -41,7 +42,8 @@ from signup.api.users import (ActivityByAccountContactAPIView,
     UserPictureAPIView)
 from signup.decorators import active_required
 from signup.views.auth import SignupView
-from signup.views.contacts import ContactListView, ContactDetailView
+from signup.views.contacts import (AccountDetailView, AccountListView,
+    ContactListView, ContactDetailView)
 from signup.views.users import (PasswordChangeView,
     UserPublicKeyUpdateView, UserProfileView, UserNotificationsView,
     redirect_to_user_profile)
@@ -55,7 +57,8 @@ urlpatterns = \
         login_required(ActivityByAccountContactAPIView.as_view()),
         name='api_profile_activities_contacts'),
     path('api/activities/<slug:profile>',
-        login_required(ActivityByAccountAPIView.as_view()),
+        login_required(ActivityByAccountAPIView.as_view(
+            lookup_field='username')),
         name='api_profile_activities'),
     path('api/activities',
         login_required(ActivityByAccountIndexAPIView.as_view()),
@@ -120,10 +123,16 @@ urlpatterns = \
 
     # Views
     # signup.urls.views.contacts
-    path('contacts/<slug:user>/',
+    path('activities/accounts/<slug:profile>/',
+         login_required(AccountDetailView.as_view(lookup_field='username')),
+         name='signup_account_activities'),
+    path('activities/accounts/',
+         login_required(AccountListView.as_view()),
+         name='signup_accounts'),
+    path('activities/contacts/<slug:user>/',
          login_required(ContactDetailView.as_view()),
          name='signup_contact'),
-    path('contacts/',
+    path('activities/contacts/',
          login_required(ContactListView.as_view()),
          name='signup_contacts'),
     # signup.urls.views.users
