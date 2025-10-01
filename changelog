@@ -1,3 +1,9 @@
+0.10.2
+
+  * adds page for accounts activities
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Wed,  1 Oct 2025 09:45:00 -0700
+
 0.10.1
 
   * fixes regression for extensions hook points
