@@ -69,7 +69,7 @@ Tested with
 - **Python:** 3.12, **Django:** 5.1 (next)
 - **Python:** 3.7, **Django:** 3.2 (legacy)
 
-0.10.3
+0.10.4
 
   * adds hook to create additional resources after user is registered
 

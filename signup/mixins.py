@@ -595,7 +595,7 @@ class AuthMixin(object):
             last_name=last_name, lang=lang, extra=user_extra)
 
 
-    def register_finalize(self, user):
+    def register_finalize(self, user, **cleaned_data):
         # Hook for projects using this application to create additional
         # resources as necessary. ex: record signature of terms-of-service.
         pass
