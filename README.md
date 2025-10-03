@@ -69,10 +69,8 @@ Tested with
 - **Python:** 3.12, **Django:** 5.1 (next)
 - **Python:** 3.7, **Django:** 3.2 (legacy)
 
-0.10.2
+0.10.3
 
-  * enables use of codes or links to verify channels (email, phone)
-  * adds APIs to create account activities
-  * adds page for accounts activities
+  * adds hook to create additional resources after user is registered
 
 [previous release notes](changelog)

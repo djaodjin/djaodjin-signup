@@ -1,3 +1,9 @@
+0.10.3
+
+  * adds hook to create additional resources after user is registered
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Wed,  3 Oct 2025 15:15:00 -0700
+
 0.10.2
 
   * adds page for accounts activities

@@ -595,6 +595,11 @@ class AuthMixin(object):
             last_name=last_name, lang=lang, extra=user_extra)
 
 
+    def register_finalize(self, user):
+        # Hook for projects using this application to create additional
+        # resources as necessary. ex: record signature of terms-of-service.
+        pass
+
     def create_user(self, contact, **cleaned_data):
         #pylint:disable=too-many-locals
         cleaned_data.pop('check_email', None)
@@ -686,6 +691,7 @@ class AuthMixin(object):
                 handle_uniq_error(err, renames=self.renames)
 
         if user:
+            self.register_finalize(user, **cleaned_data)
             if not user.last_login:
                 phone = user.get_phone()
                 lang = user.get_lang()
