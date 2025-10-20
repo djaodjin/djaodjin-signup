@@ -16,7 +16,7 @@
       <button type="submit">Update</button>
 
       <hr />
-      <div>
+      <div id="verify-email-open">
         <h2>Verify e-mail</h2>
         <button type="button" id="verify-email-btn"
                 @click="verifyEmail">Send verification e-mail</button>
@@ -24,7 +24,7 @@
         <input type="text" name="email_code" v-model="emailCode"></input>
         <button id="verify-email-code" type="submit">Verify</button>
       </div>
-      <div>
+      <div id="verify-phone-open">
         <h2>Verify phone</h2>
         <button type="button" id="verify-phone-btn"
                 @click="verifyPhone">Send verification text message</button>
