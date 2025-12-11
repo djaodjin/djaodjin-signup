@@ -1,4 +1,4 @@
-# Copyright (c) 2024, Djaodjin Inc.
+# Copyright (c) 2025, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -128,7 +128,7 @@ class ActivatedUserManager(UserManager):
         raise err
 
     def create_user_from_phone(self, phone, password=None, **kwargs):
-        #pylint:disable=protected-access,unused-argument
+        #pylint:disable=protected-access
         field = self.model._meta.get_field('username')
         max_length = field.max_length
         prefix = 'user_'
@@ -137,7 +137,9 @@ class ActivatedUserManager(UserManager):
         try:
             field.run_validators(username)
         except ValidationError:
-            username = 'user'
+            prefix = 'user_'
+            username = generate_random_slug(
+                length=min(max_length - len(prefix), 40), prefix=prefix)
         err = IntegrityError()
         trials = 0
         username_base = username
@@ -169,6 +171,7 @@ class ActivatedUserManager(UserManager):
         login. Our definition of inactive is thus a user that has an invalid
         password.
         """
+        #pylint:disable=too-many-locals
         phone = kwargs.pop('phone', None)
         try:
             if phone is not None:
@@ -177,6 +180,9 @@ class ActivatedUserManager(UserManager):
             phone = None
         lang = kwargs.pop('lang', None)
         extra = kwargs.pop('extra', None)
+        picture = kwargs.pop('picture', None)
+        full_name = kwargs.pop('full_name', None)
+        nick_name = kwargs.pop('nick_name', None)
         uses_sso_provider = False
         if email:
             domain = email.split('@')[-1]
@@ -203,37 +209,59 @@ class ActivatedUserManager(UserManager):
                     phone, password=password, email=email, **kwargs)
             else:
                 raise ValueError("email or phone must be set.")
-            if email:
-                # Force is_active to True and create an email verification key
-                # (see above definition of active user).
-                # In case we delegate auth to a SSO provider, we assume
-                # the e-mail address has already been verified.
-                if uses_sso_provider:
-                    at_time = datetime_or_now()
-                    try:
-                        contact = Contact.objects.get(user=user,
-                            email__iexact=email)
-                        contact.email_verified_at = at_time
-                        contact.save()
-                    except Contact.DoesNotExist:
-                        create_kwargs = {
-                            'user': user,
-                            'email': email,
-                            'full_name': user.get_full_name(),
-                            'nick_name': user.first_name,
-                            'email_verified_at': at_time
-                        }
-                        Contact.objects.create(**create_kwargs)
-                else:
-                    Contact.objects.prepare_email_verification(email,
-                        user=user, phone=phone, lang=lang, extra=extra)
-            elif phone:
-                # Force is_active to True and create an email verification key
-                # (see above definition of active user).
-                Contact.objects.prepare_phone_verification(phone,
-                    user=user, email=email, lang=lang, extra=extra)
+            # Force is_active to `True` (see above definition of active user)
             user.is_active = True
             user.save()
+            # Connect dangling contacts (i.e. `contact.user is None`)
+            # with email and/or phone to user.
+            if phone:
+                Contact.objects.filter(
+                    phone=phone, user__isnull=True).update(user=user)
+            if email:
+                Contact.objects.filter(
+                    email__iexact=email, user__isnull=True).update(user=user)
+            # If we have extra fields, we must have a Contact to persist them.
+            #pylint:disable=too-many-boolean-expressions
+            if phone or full_name or nick_name or picture or lang or extra:
+                if not full_name:
+                    full_name = user.get_full_name()
+                if not nick_name:
+                    nick_name = user.first_name
+                contacts = Contact.objects.filter(user=user).order_by('pk')
+                if contacts.exists():
+                    email_contact_exists = Contact.objects.filter(
+                        email__iexact=email, user=user).exists()
+                    phone_contact_exists = Contact.objects.filter(
+                        phone=phone, user=user).exists()
+                    for contact in contacts:
+                        if email and not email_contact_exists:
+                            contact.email = email
+                            email_contact_exists = True
+                        if phone and not phone_contact_exists:
+                            contact.phone = phone
+                            phone_contact_exists = True
+                        if full_name and not contact.full_name:
+                            contact.full_name = full_name
+                        if nick_name and not contact.nick_name:
+                            contact.nick_name = nick_name
+                        if picture and not contact.picture:
+                            contact.picture = picture
+                        if lang and not contact.lang:
+                            contact.lang = lang
+                        if extra and not contact.extra:
+                            contact.extra = extra
+                        contact.save()
+                else:
+                    Contact.objects.create(
+                        user=user,
+                        email=email,
+                        phone=phone,
+                        full_name=full_name,
+                        nick_name=nick_name,
+                        picture=picture,
+                        lang=lang,
+                        extra=extra)
+
         return user
 
     def find_user(self, username):
@@ -321,7 +349,7 @@ class ContactManager(models.Manager):
 
     def prepare_email_verification(self, email, user=None, at_time=None,
                                    verification_key=None, reason=None,
-                                   **kwargs):
+                                   uses_sso_provider=False, **kwargs):
         #pylint:disable=too-many-arguments
         at_time = datetime_or_now(at_time)
         if verification_key is None:
@@ -357,37 +385,54 @@ class ContactManager(models.Manager):
                 # We have to wrap in a transaction.atomic here, otherwise
                 # we end-up with a TransactionManager error when Contact.slug
                 # already exists in db and we generate new one.
-                if not contact.email_verification_key:
-                    # If we already have a verification key, let's keep it.
-                    # We want to avoid users clicking multiple times on a link
-                    # that will trigger an activate url, then filling the first
-                    # form that showed up.
-                    contact.email_verification_key = verification_key
-                contact.email_code = generate_random_code()
-                contact.email_verification_at = at_time
-                # XXX It is possible a 'reason' field would be a better
-                # implementation.
-                if reason:
-                    contact.extra = reason
+                if uses_sso_provider:
+                    # In case we delegate auth to a SSO provider, we assume
+                    # the e-mail address has already been verified.
+                    contact.email_verified_at = at_time
+                else:
+                    if not contact.email_verification_key:
+                        # If we already have a verification key, let's keep it.
+                        # We want to avoid users clicking multiple times
+                        # on a link that will trigger an activate url, then
+                        # filling the first form that showed up.
+                        contact.email_verification_key = verification_key
+                    contact.email_code = generate_random_code()
+                    contact.email_verification_at = at_time
+                    # XXX It is possible a 'reason' field would be a better
+                    # implementation.
+                    if reason:
+                        contact.extra = reason
                 contact.save()
         else:
             created = True
             kwargs.update({
                 'user': user,
-                'email': email,
-                'email_verification_key': verification_key,
-                'email_code': generate_random_code(),
-                'email_verification_at': at_time
+                'email': email
             })
-            if user:
+            full_name = kwargs.get('full_name')
+            if not full_name and user:
+                kwargs.update({'full_name': user.get_full_name()})
+            nick_name = kwargs.get('nick_name')
+            if not nick_name and user:
+                kwargs.update({'nick_name': user.first_name})
+            # In case we delegate auth to a SSO provider, we assume
+            # the e-mail address has already been verified.
+            if uses_sso_provider:
+                # In case we delegate auth to a SSO provider, we assume
+                # the e-mail address has already been verified.
                 kwargs.update({
-                    'full_name': user.get_full_name(),
-                    'nick_name': user.first_name,
+                    'email_verified_at': at_time
                 })
-            if reason:
-                # XXX It is possible a 'reason' field would be a better
-                # implementation.
-                kwargs.update({'extra': reason})
+            else:
+                kwargs.update({
+                    'email_verification_key': verification_key,
+                    'email_code': generate_random_code(),
+                    'email_verification_at': at_time
+                })
+                if reason:
+                    # XXX It is possible a 'reason' field would be a better
+                    # implementation.
+                    kwargs.update({'extra': reason})
             contact = self.create(**kwargs)
 
         return contact, created
@@ -402,7 +447,7 @@ class ContactManager(models.Manager):
             random_key = str(random.random()).encode('utf-8')
             salt = hashlib.sha1(random_key).hexdigest()[:5]
             verification_key = hashlib.sha1(
-                (salt+phone).encode('utf-8')).hexdigest()
+                (salt+str(phone)).encode('utf-8')).hexdigest()
         # XXX The get() needs to be targeted at the write database in order
         # to avoid potential transaction consistency problems.
         contact = None
@@ -453,11 +498,12 @@ class ContactManager(models.Manager):
                 'phone_code': generate_random_code(),
                 'phone_verification_at': at_time
             })
-            if user:
-                kwargs.update({
-                    'full_name': user.get_full_name(),
-                    'nick_name': user.first_name,
-                })
+            full_name = kwargs.get('full_name')
+            if not full_name and user:
+                kwargs.update({'full_name': user.get_full_name()})
+            nick_name = kwargs.get('nick_name')
+            if not nick_name and user:
+                kwargs.update({'nick_name': user.first_name})
             if reason:
                 # XXX It is possible a 'reason' field would be a better
                 # implementation.

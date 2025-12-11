@@ -32,7 +32,7 @@ var userPasswordModalMixin = {
                 vm.passwordIncorrect = true;
             } else {
                 vm.modalHide();
-                vm.showErrorMessages(res);
+                showErrorMessages(res);
             }
         },
     },
@@ -153,7 +153,7 @@ Vue.component('user-update', {
             vm.reqPost(vm.api_activate_url,
             function(resp) {
                 if( resp.detail ) {
-                    vm.showMessages([resp.detail], "info");
+                    showMessages([resp.detail], "info");
                 }
             });
         },
@@ -198,13 +198,13 @@ Vue.component('user-update', {
                 // XXX should really be success but then it needs to be changed
                 // in Django views as well.
                 if( resp.detail ) {
-                    vm.showMessages([resp.detail], "info");
+                    showMessages([resp.detail], "info");
                 }
             }, function(resp) {
                 vm.codeSent = false;
                 vm.emailCode = null;
                 vm.phoneCode = null;
-                vm.showErrorMessages(resp);
+                showErrorMessages(resp);
             });
             if(vm.imageSelected){
                 vm.uploadProfilePicture();
@@ -221,7 +221,7 @@ Vue.component('user-update', {
                     vm.formFields.picture = resp.location;
                     vm.picture.remove();
                     vm.$forceUpdate();
-                    vm.showMessages(["Profile was updated."], "success");
+                    showMessages(["Profile was updated."], "success");
                 });
             }, 'image/png');
         },
@@ -250,12 +250,12 @@ Vue.component('user-update', {
             function(resp) {
                 vm.codeSent = true;
                 if( resp.detail ) {
-                    vm.showMessages([resp.detail], "success");
+                    showMessages([resp.detail], "success");
                 }
             }, function(resp) {
                 vm.codeSent = true;
                 if( resp.detail ) {
-                    vm.showMessages([resp.detail], "success");
+                    showMessages([resp.detail], "success");
                 }
             });
         },
@@ -268,12 +268,12 @@ Vue.component('user-update', {
             function(resp) {
                 vm.codeSent = true;
                 if( resp.detail ) {
-                    vm.showMessages([resp.detail], "success");
+                    showMessages([resp.detail], "success");
                 }
             }, function(resp) {
                 vm.codeSent = true;
                 if( resp.detail ) {
-                    vm.showMessages([resp.detail], "success");
+                    showMessages([resp.detail], "success");
                 }
             });
         },
@@ -332,7 +332,7 @@ Vue.component('user-update-password', {
                 vm.newPassword = '';
                 vm.newPassword2 = '';
                 if( resp.detail ) {
-                    vm.showMessages([resp.detail], "success");
+                    showMessages([resp.detail], "success");
                 }
             }, vm.failCb);
         },
@@ -358,7 +358,7 @@ Vue.component('user-update-password', {
                 QRCode.toCanvas(
                     document.getElementById('otp-qr-canvas'),
                     resp.provisioning_uri, function (error) {
-                        if (error) vm.showErrorMessages(error);
+                        if (error) showErrorMessages(error);
                     })
             })
         },
@@ -409,7 +409,7 @@ Vue.component('user-rotate-api-keys', {
                 vm.modalHide();
                 vm.get();
                 if( resp.detail ) {
-                    vm.showMessages([resp.detail], "success");
+                    showMessages([resp.detail], "success");
                 }
             }, function(resp){
                 if(resp.responseJSON && resp.responseJSON.length > 0) {
@@ -418,7 +418,7 @@ Vue.component('user-rotate-api-keys', {
                     vm.apiKey = resp.responseJSON[0];
                     return;
                 }
-                vm.showErrorMessages(resp);
+                showErrorMessages(resp);
             });
         },
         submitPassword: function(){
@@ -476,7 +476,7 @@ Vue.component('user-update-pubkey', {
             }, function(resp){
                 vm.modalHide();
                 if( resp.detail ) {
-                    vm.showMessages([resp.detail], "success");
+                    showMessages([resp.detail], "success");
                 }
             }, vm.failCb);
         },

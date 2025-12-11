@@ -27,6 +27,7 @@ from __future__ import unicode_literals
 
 import re, logging
 
+from django import forms
 from django.contrib.auth import logout as auth_logout, REDIRECT_FIELD_NAME
 from django.http import HttpResponseRedirect
 from django.views.decorators.cache import add_never_cache_headers
@@ -45,9 +46,11 @@ from ..helpers import update_context_urls
 from ..mixins import (LoginMixin, PasswordResetConfirmMixin,
     RegisterMixin, VerifyMixin, VerifyCompleteMixin, AuthDisabled,
     IncorrectUser, OTPRequired, PasswordRequired, RegistrationDisabled,
-    SSORequired, VerifyEmailRequired, VerifyPhoneRequired)
+    SSORequired, VerifyEmailFailed, VerifyEmailRequired, VerifyPhoneFailed,
+    VerifyPhoneRequired)
 from ..models import Contact
 from ..utils import fill_form_errors, get_disabled_registration
+from ..validators import as_email_or_phone
 
 
 LOGGER = logging.getLogger(__name__)
@@ -65,26 +68,19 @@ class AuthResponseMixin(TemplateResponseMixin, FormMixin):
     otp_code_form_class = OTPCodeForm
     set_password_form_class = CodeActivationForm
 
-    def get_form(self, form_class=None):
-        """Return an instance of the form to be used in this view."""
-        if form_class is None:
-            form_class = self.get_form_class()
-        kwargs = self.get_form_kwargs()
-        return form_class(**kwargs)
-
     def get_verify_email_form(self):
-        if settings.USE_VERIFICATION_LINKS:
-            form = self.get_form()
-        else:
-            form = self.get_form(form_class=self.verify_email_form_class)
-        return form
+        form_class = self.get_form_class()
+        if not settings.USE_VERIFICATION_LINKS:
+            if 'email_code' not in form_class.base_fields:
+                form_class = self.verify_email_form_class
+        return self.get_form(form_class=form_class)
 
     def get_verify_phone_form(self):
-        if settings.USE_VERIFICATION_LINKS:
-            form = self.get_form()
-        else:
-            form = self.get_form(form_class=self.verify_phone_form_class)
-        return form
+        form_class = self.get_form_class()
+        if not settings.USE_VERIFICATION_LINKS:
+            if 'phone_code' not in form_class.base_fields:
+                form_class = self.verify_phone_form_class
+        return self.get_form(form_class=form_class)
 
     def get_password_form(self):
         form = self.get_form(form_class=self.password_form_class)
@@ -326,6 +322,24 @@ class SigninView(LoginMixin, AuthResponseMixin, ProcessFormView):
         initial = super(SigninView, self).get_initial()
         if not 'password' in self.form_class.base_fields:
             initial.update({'password': ""})
+
+        if self.request.method in ("POST", "PUT"):
+            initial_data = self.request.POST
+            if 'email' in initial_data:
+                initial.update({'email': initial_data.get('email')})
+            if 'phone' in initial_data:
+                initial.update({'phone': initial_data.get('phone')})
+            if 'email' not in initial_data and 'phone' not in initial_data:
+                username = initial_data.get('username')
+                if username:
+                    email, phone = as_email_or_phone(username)
+                    initial.update({'email': email, 'phone': phone})
+            if 'phone' not in initial:
+                email = initial.get('email')
+                if email:
+                    email, phone = as_email_or_phone(email)
+                    initial.update({'email': email, 'phone': phone})
+
         return initial
 
     def get(self, request, *args, **kwargs):
@@ -400,41 +414,89 @@ class SigninView(LoginMixin, AuthResponseMixin, ProcessFormView):
             email = cleaned_data.get('email')
             if email:
                 form.data.setlist('email', [email])
+            phone = cleaned_data.get('phone')
+            if phone:
+                form.data.setlist('phone', [phone])
             username = cleaned_data.get('username')
             if not re.match(r"^%s$" % settings.USERNAME_PAT, username):
                 form.data.pop('username', None)
             context = self.get_context_data(form=form)
-        except exceptions.AuthenticationFailed as err:
-            cleaned_data = self.validate_inputs(raise_exception=False)
-            email_verification_link = None
-            phone_verification_link = None
-            register_link = None
+
+        except VerifyEmailFailed as err:
             form = self.get_form()
+            email_verification_link = None
+            cleaned_data = self.validate_inputs(raise_exception=False)
             if 'email' in cleaned_data and cleaned_data['email']:
                 form.data = form.data.copy()
                 form.data.setlist('check_email', [True])
-                form.add_error('username',
+                if 'email' in form.fields:
+                    field_name = 'email'
+                else:
+                    field_name = 'username'
+                form.add_error(field_name,
             _("This e-mail address must be verified before going any further."))
                 email_verification_link = self.request.path
-            elif 'phone' in cleaned_data and cleaned_data['phone']:
-                form.data = form.data.copy()
-                form.data.setlist('check_phone', [True])
-                phone_verification_link = self.request.path
-            else:
-                disabled_registration = get_disabled_registration(self.request)
-                register_link = (reverse('registration_register')
-                    if not disabled_registration else None)
             fill_form_errors(form, err)
             context = self.get_context_data(form=form)
             if email_verification_link:
                 context.update({
                     'email_verification_link': email_verification_link})
+
+        except VerifyPhoneFailed as err:
+            form = self.get_form()
+            phone_verification_link = None
+            cleaned_data = self.validate_inputs(raise_exception=False)
+            if 'phone' in cleaned_data and cleaned_data['phone']:
+                form.data = form.data.copy()
+                form.data.setlist('check_phone', [True])
+                if 'phone' in form.fields:
+                    field_name = 'phone'
+                else:
+                    field_name = 'username'
+                form.add_error(field_name,
+            _("This phone number must be verified before going any further."))
+                phone_verification_link = self.request.path
+            fill_form_errors(form, err)
+            context = self.get_context_data(form=form)
             if phone_verification_link:
                 context.update({
                     'phone_verification_link': phone_verification_link})
+
+        except exceptions.AuthenticationFailed as err:
+            form = self.get_form()
+            cleaned_data = self.validate_inputs(raise_exception=False)
+            register_link = None
+            disabled_registration = get_disabled_registration(self.request)
+            register_link = (reverse('registration_register')
+                if not disabled_registration else None)
+            fill_form_errors(form, err)
+            #pylint:disable=too-many-nested-blocks
+            if isinstance(form, ActivationForm):
+                # We are trying to register a new user, while email, phone,
+                # or username point to an already registered user.
+                for field_name in ['email', 'phone', 'username']:
+                    if field_name in form.fields:
+                        field_value = cleaned_data.get(field_name)
+                        if field_value:
+                            try:
+                                _unused = self.model.objects.find_user(
+                                    field_value)
+                                form.add_error(field_name,
+                                    _("This %(field_name)s is already taken.")
+                                    % {'field_name': field_name})
+                                if field_name == 'phone':
+                                    # reverts `CodeActivationForm.__init__`
+                                    form.fields['phone'].widget.attrs[
+                                        'readonly'] = False
+                                    form.fields['phone_code'].widget = \
+                                        forms.HiddenInput()
+                            except self.model.DoesNotExist:
+                                pass
+
+            context = self.get_context_data(form=form)
             if register_link:
-                context.update({
-                    'register_link': register_link})
+                context.update({'register_link': register_link})
+
         except AuthDisabled:
             context = self.get_context_data()
             context.update({'disabled_authentication': True})

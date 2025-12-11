@@ -1,4 +1,4 @@
-# Copyright (c) 2024, DjaoDjin inc.
+# Copyright (c) 2025, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -292,8 +292,12 @@ class UserDetailAPIView(UserMixin, generics.RetrieveUpdateDestroyAPIView):
                     'event': 'delete', 'request': self.request,
                     'username': username, 'email': email, 'pk': pkid})
             domain = None
-            if settings.DEFAULT_FROM_EMAIL:
-                look = re.match(r'.*@(\S+)', settings.DEFAULT_FROM_EMAIL)
+            # We force `django_settings.DEFAULT_FROM_EMAIL` to `str`
+            # as it is not done implicitely in the `re.match` statement,
+            # leading to 500 errors  when using a `settings_lazy`.
+            default_from_email = str(settings.DEFAULT_FROM_EMAIL)
+            if default_from_email:
+                look = re.match(r'.*@(\S+)', default_from_email)
                 if look:
                     domain = look.group(1)
             if not domain:

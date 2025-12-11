@@ -346,6 +346,9 @@ class ActivationForm(PasswordConfirmMixin, forms.Form):
         widget=forms.PasswordInput(attrs={
             'placeholder': _("Type password again")}))
 
+    check_email = forms.BooleanField(required=False, widget=forms.HiddenInput())
+    check_phone = forms.BooleanField(required=False, widget=forms.HiddenInput())
+
     def __init__(self, *args, **kwargs):
         initial = kwargs.get('initial')
         email_verification = initial.pop('email_verification', False)
@@ -361,8 +364,30 @@ class ActivationForm(PasswordConfirmMixin, forms.Form):
 
 class CodeActivationForm(ActivationForm):
 
-    email_code = forms.IntegerField(required=False, widget=forms.HiddenInput())
-    phone_code = forms.IntegerField(required=False, widget=forms.HiddenInput())
+    email_code = forms.IntegerField(required=False)
+    phone_code = forms.IntegerField(required=False)
+
+    def __init__(self, *args, **kwargs):
+        super(CodeActivationForm, self).__init__(*args, **kwargs)
+        initial = kwargs.get('initial')
+        data = kwargs.get('data')
+        if initial and data:
+            email = initial.get('email')
+            email_code = data.get('email_code')
+            if email:
+                self.fields['email'].widget.attrs['readonly'] = True
+                if email_code:
+                    self.fields['email_code'].widget = forms.HiddenInput()
+            else:
+                self.fields['email_code'].widget = forms.HiddenInput()
+            phone = initial.get('phone')
+            phone_code = data.get('phone_code')
+            if phone:
+                self.fields['phone'].widget.attrs['readonly'] = True
+                if phone_code:
+                    self.fields['phone_code'].widget = forms.HiddenInput()
+            else:
+                self.fields['phone_code'].widget = forms.HiddenInput()
 
 
 class PublicKeyForm(AuthenticatedUserPasswordMixin, forms.Form):
@@ -483,7 +508,6 @@ class StartAuthenticationForm(forms.Form):
     username = UsernameOrCommField()
     check_email = forms.BooleanField(required=False, widget=forms.HiddenInput())
     check_phone = forms.BooleanField(required=False, widget=forms.HiddenInput())
-    submit_title = _("Submit")
 
 
 class PasswordAuthForm(StartAuthenticationForm):
