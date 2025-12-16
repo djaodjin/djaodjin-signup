@@ -699,7 +699,11 @@ class Contact(models.Model):
         return self.username
 
     def get_full_name(self):
-        return self.full_name
+        if self.full_name:
+            return self.full_name
+        if self.user:
+            return ' '.join([self.user.first_name, self.user.last_name]).strip()
+        return ""
 
     def get_nick_name(self):
         if self.nick_name:
@@ -1014,6 +1018,18 @@ def get_user_contact(user):
     return None
 
 
+def get_full_name(obj):
+    if hasattr(obj, 'full_name'):
+        return obj.full_name
+    opk = obj.pk if hasattr(obj, 'pk') else None
+    if opk:
+        contact = obj.contacts.filter(full_name__isnull=False).order_by(
+            'created_at').first()
+        if contact:
+            return contact.full_name
+    return ' '.join([obj.first_name, obj.last_name]).strip()
+
+
 def get_nick_name(obj):
     if hasattr(obj, 'nick_name'):
         return obj.nick_name
@@ -1052,6 +1068,7 @@ def get_lang(obj):
 
 # Hack to install our create_user method.
 User = get_user_model() #pylint:disable=invalid-name
+User.get_full_name = get_full_name
 User.get_nick_name = get_nick_name
 User.get_phone = get_phone
 User.get_lang = get_lang
