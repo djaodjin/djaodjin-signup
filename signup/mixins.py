@@ -623,14 +623,15 @@ class AuthMixin(object):
         if not user_extra:
             user_extra = None
         email = cleaned_data.get('email')
-        phone = cleaned_data.get('phone')
         password = cleaned_data.get('password')
         first_name = cleaned_data.get('first_name')
         last_name = cleaned_data.get('last_name')
+        full_name = cleaned_data.get('full_name')
+        phone = cleaned_data.get('phone')
         lang = cleaned_data.get('lang')
         return self.model.objects.create_user(*args, email=email,
-            password=password, phone=phone, first_name=first_name,
-            last_name=last_name, lang=lang, extra=user_extra)
+            password=password, first_name=first_name, last_name=last_name,
+            full_name=full_name, phone=phone, lang=lang, extra=user_extra)
 
 
     def register_finalize(self, user, **cleaned_data):
@@ -715,13 +716,16 @@ class AuthMixin(object):
                     {'detail': _("Registration is disabled")})
 
             try:
+                # we pass all registration data + updated fields
+                # to `create_models`
                 create_models_kwargs = cleaned_data.copy()
                 create_models_kwargs.update({
                     'email': email,
                     'password': password,
-                    'phone': phone,
                     'first_name': first_name,
                     'last_name': last_name,
+                    'full_name': full_name,
+                    'phone': phone,
                     'lang': lang
                 })
                 user = self.create_models(username, **create_models_kwargs)

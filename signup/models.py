@@ -196,17 +196,34 @@ class ActivatedUserManager(UserManager):
             # By definition, all users created through a SSO provider
             # are active.
             password = "*****"
+        user_kwargs = {}
+        for field_name in self.model._meta.get_fields():
+            val = kwargs.get(field_name)
+            if val:
+                user_kwargs.update({field_name: val})
+        if 'email' in user_kwargs:
+            del user_kwargs['email']
+        if ('first_name' not in user_kwargs or
+            'last_name' not in user_kwargs):
+            if full_name:
+                first_name, _mid, last_name = \
+                    full_name_natural_split(full_name)
+                if 'first_name' not in user_kwargs:
+                    user_kwargs.update({'first_name': first_name})
+                if 'last_name' not in user_kwargs:
+                    user_kwargs.update({'last_name': last_name})
+
         using = self._db or router.db_for_write(self.model)
         with transaction.atomic(using=using):
             if username:
                 user = super(ActivatedUserManager, self).create_user(
-                    username, email=email, password=password, **kwargs)
+                    username, email=email, password=password, **user_kwargs)
             elif email:
                 user = self.create_user_from_email(
-                    email, password=password, **kwargs)
+                    email, password=password, **user_kwargs)
             elif phone:
                 user = self.create_user_from_phone(
-                    phone, password=password, email=email, **kwargs)
+                    phone, password=password, email=email, **user_kwargs)
             else:
                 raise ValueError("email or phone must be set.")
             # Force is_active to `True` (see above definition of active user)
