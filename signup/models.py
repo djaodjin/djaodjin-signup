@@ -89,6 +89,17 @@ def domain_name_validator(value):
 
 class ActivatedUserManager(UserManager):
 
+    # `create_user` will also create a `Contact` instance when those
+    # arguments are present in `kwargs`.
+    extra_fields = (
+        'phone',
+        'full_name',
+        'nick_name',
+        'picture',
+        'lang',
+        'extra'
+    )
+
     @classmethod
     def normalize_email(cls, email):
         if email is None:
