@@ -23,7 +23,7 @@ DEBUG = True
 SKIP_EXPIRATION_CHECK = False
 JS_FRAMEWORK = 'vuejs'
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ('*',)
 APPEND_SLASH = False # Django will return a 500 error by default on
                      # `POST /login/.` though that's what bots would do.
 
