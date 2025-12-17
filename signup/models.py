@@ -1019,14 +1019,19 @@ def get_user_contact(user):
 
 
 def get_full_name(obj):
+    full_name = ""
     if hasattr(obj, 'full_name'):
-        return obj.full_name
+        full_name = obj.full_name
+    if full_name:
+        return full_name
     opk = obj.pk if hasattr(obj, 'pk') else None
     if opk:
         contact = obj.contacts.filter(full_name__isnull=False).order_by(
             'created_at').first()
         if contact:
-            return contact.full_name
+            full_name = contact.full_name
+    if full_name:
+        return full_name
     return ' '.join([obj.first_name, obj.last_name]).strip()
 
 
