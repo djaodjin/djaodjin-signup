@@ -763,7 +763,9 @@ const djApi = {
             args.failureCallback);
     }
 
-}
+};
+
+window.djApi = djApi;
 
     // attach properties to the exports object to define
     // the exported module properties.
