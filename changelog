@@ -1,3 +1,10 @@
+0.10.5
+
+  * completes verification of email and phone through a 6-digits code
+  * keeps middle names entered during registration
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Wed, 17 Dec 2025 14:55:00 -0700
+
 0.10.4
 
   * adds hook to create additional resources after user is registered

@@ -66,11 +66,12 @@ Release Notes
 Tested with
 
 - **Python:** 3.10, **Django:** 4.2 ([LTS](https://www.djangoproject.com/download/))
-- **Python:** 3.12, **Django:** 5.1 (next)
-- **Python:** 3.7, **Django:** 3.2 (legacy)
+- **Python:** 3.12, **Django:** 5.2 (next)
+- **Python:** 3.9, **Django:** 3.2 (legacy)
 
-0.10.4
+0.10.5
 
-  * adds hook to create additional resources after user is registered
+  * completes verification of email and phone through a 6-digits code
+  * keeps middle names entered during registration
 
 [previous release notes](changelog)
