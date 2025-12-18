@@ -69,9 +69,8 @@ Tested with
 - **Python:** 3.12, **Django:** 5.2 (next)
 - **Python:** 3.9, **Django:** 3.2 (legacy)
 
-0.10.5
+0.10.6
 
-  * completes verification of email and phone through a 6-digits code
-  * keeps middle names entered during registration
+  * enables js to be processed by webpack
 
 [previous release notes](changelog)
