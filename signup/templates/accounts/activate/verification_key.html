@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block localheader_title %}Activate{% endblock %}
+{% block localheader_title %}{% if object %}Activate{% else %}Page not found{% endif %}{% endblock %}
 
 {% block content %}
 <div>
@@ -16,13 +16,31 @@ You are required to login through the following Single Sign On (SSO) provider:
       {{reason}}
     </p>
     {% else %}
-    <p>
-You are about to activate your account. Please set a password to secure it.
-    </p>
     <form method="post" action=".{% if next %}/?next={{next}}{% endif %}">
       {% csrf_token %}
       {{ form }}
-      <button type="submit" name="submit">Sign Up</button>
+
+      {% if form.new_password %}
+        {% if form.email or form.phone %}
+          <button type="submit">
+            Sign Up
+          </button>
+        {% else %}
+          <button type="submit">
+            Set New Password
+          </button>
+        {% endif %}
+      {% else %}
+        <button type="submit">
+          Yep, it is me.
+        </button>
+        <a href="{{urls.user.login}}{% if next %}?next={{next}}{% endif %}">
+              Huh, someone else?
+        </a>
+        <button type="submit" name="reset" value="1">
+          Please reset my password
+        </button>
+      {% endif %}
     </form>
     <p>Already have an account? <a href="{% url 'login' %}">Log in</a></p>
     {% endif %}

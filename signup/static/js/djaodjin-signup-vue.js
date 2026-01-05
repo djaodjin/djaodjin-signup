@@ -6,17 +6,49 @@ var userPasswordModalMixin = {
     data: function () {
         return {
             password: '',
-            // not the best solution, but no choice if we want
-            // to show the error inside a modal
-            passwordIncorrect: false
+            otpCode: '',
+            emailCode: '',
+            phoneCode: '',
+            // manage the display of the request user's credentials dialog.
+            usePassword: true,
+            useOTPCode: false,
+            useEmailCode: false,
+            usePhoneCode: false,
+            // email and phone verification requires a round-trip.
+            verify_url: this.$urls.api_recover + '?noreset=1',
+            codeSent: false,
         };
     },
     methods: {
+        appendAuth: function (data) {
+            var vm = this;
+            if( vm.usePassword || vm.password ) data['password'] = vm.password;
+            if( vm.useOTPCode || vm.otpCode ) data['otp_code'] = vm.otpCode;
+        if( vm.useEmailCode || vm.emailCode ) data['email_code'] = vm.emailCode;
+        if( vm.usePhoneCode || vm.phoneCode ) data['phone_code'] = vm.phoneCode;
+            return data;
+        },
         modalShow: function() {
             var vm = this;
+            clearMessages();
             vm.password = '';
-            vm.passwordIncorrect = false;
-            if(vm.dialog){
+            vm.otpCode = '';
+            vm.emailCode = '';
+            vm.phoneCode = '';
+            vm.codeSent = false;
+            if( vm.dialog ) {
+                vm.dialog.on('shown.bs.modal', function() {
+                    vm.$nextTick(function() {
+                        var fields = vm.$refs.password;
+                        if( typeof fields.length != 'undefined' ) {
+                            if( fields.length > 0 ) {
+                                fields[0].focus();
+                            }
+                        } else {
+                            fields.focus();
+                        }
+                    });
+                });
                 vm.dialog.modal("show");
             }
         },
@@ -25,15 +57,116 @@ var userPasswordModalMixin = {
                 this.dialog.modal("hide");
             }
         },
-        failCb: function(res){
+        failCb: function(resp){
             var vm = this;
-            if(res.status === 403){
-                // incorrect password
-                vm.passwordIncorrect = true;
+            showErrorMessages(resp);
+            if( resp.status === 400 || resp.status === 401 ) {
+                // Give a chance to the request user to correct the input value.
             } else {
                 vm.modalHide();
-                showErrorMessages(res);
             }
+        },
+        enableVerifyWithPassword: function() {
+            var vm = this;
+            vm.usePassword = true;
+            vm.useOTPCode = false;
+            vm.useEmailCode = false;
+            vm.usePhoneCode = false;
+        },
+        enableVerifyWithOTPCode: function() {
+            var vm = this;
+            vm.usePassword = false;
+            vm.useOTPCode = true;
+            vm.useEmailCode = false;
+            vm.usePhoneCode = false;
+        },
+        enableVerifyWithEmailCode: function() {
+            var vm = this;
+            vm.usePassword = false;
+            vm.useOTPCode = false;
+            vm.useEmailCode = true;
+            vm.usePhoneCode = false;
+        },
+        enableVerifyWithPhoneCode: function() {
+            var vm = this;
+            vm.usePassword = false;
+            vm.useOTPCode = false;
+            vm.useEmailCode = false;
+            vm.usePhoneCode = true;
+        },
+        verifyEmail: function() {
+            var vm = this;
+            const email = vm.$refs.email.value;
+            vm.reqPost(vm.verify_url, {email: email},
+            function(resp) {
+                vm.codeSent = true;
+                if( resp.detail ) {
+                    showMessages([resp.detail], "success");
+                }
+                vm.$nextTick(function() {
+                    var fields = vm.$refs.emailCode;
+                    if( typeof fields.length != 'undefined' ) {
+                        if( fields.length > 0 ) {
+                            fields[0].focus();
+                        }
+                    } else {
+                        fields.focus();
+                    }
+                });
+            }, function(resp) {
+                vm.codeSent = true;
+                // `/api/auth/recover` might not return a 200 OK, but still
+                // have send the email.
+                // showErrorMessages(resp);
+                vm.$nextTick(function() {
+                    var fields = vm.$refs.emailCode;
+                    if( typeof fields.length != 'undefined' ) {
+                        if( fields.length > 0 ) {
+                            fields[0].focus();
+                        }
+                    } else {
+                        fields.focus();
+                    }
+                });
+             });
+        },
+        verifyPhone: function() {
+            var vm = this;
+            // XXX We have extended the API such that `email` can be
+            // either an e-mail address or a phone number.
+            const phone = vm.$refs.phone.value;
+            vm.reqPost(vm.verify_url, {email: phone},
+            function(resp) {
+                vm.codeSent = true;
+                if( resp.detail ) {
+                    showMessages([resp.detail], "success");
+                }
+                vm.$nextTick(function() {
+                    var fields = vm.$refs.phoneCode;
+                    if( typeof fields.length != 'undefined' ) {
+                        if( fields.length > 0 ) {
+                            fields[0].focus();
+                        }
+                    } else {
+                        fields.focus();
+                    }
+                });
+            }, function(resp) {
+                vm.codeSent = true;
+                // `/api/auth/recover` might not return a 200 OK, but still
+                // have send the text message.
+                // showErrorMessages(resp);
+                vm.$nextTick(function() {
+                    var fields = vm.$refs.phoneCode;
+                    if( typeof fields.length != 'undefined' ) {
+                        if( fields.length > 0 ) {
+                            fields[0].focus();
+                        }
+                    } else {
+                        fields.focus();
+                    }
+                });
+            });
         },
     },
     computed: {
@@ -302,14 +435,9 @@ Vue.component('user-update-password', {
     data: function () {
         return {
             url: this.$urls.user.api_password_change,
-            otp_url: this.$urls.user.api_otp_change,
             modalSelector: '.user-password-modal',
             newPassword: '',
             newPassword2: '',
-            otpEnabled: true,
-            emailVerificationEnabled: false,
-            phoneVerificationEnabled: false,
-            otpPrivKey: '',
             nextCb: null
         };
     },
@@ -324,13 +452,14 @@ Vue.component('user-update-password', {
             // We are using the view (and not the API) so that the redirect
             // to the profile page is done correctly and a success message
             // shows up.
-            vm.reqPut(vm.url, {
-                password: vm.password,
+            vm.reqPut(vm.url, vm.appendAuth({
                 new_password: vm.newPassword,
-                new_password2: vm.newPassword2
-            }, function(resp) {
+                new_password2: vm.newPassword2 // XXX used?
+            }),
+            function(resp) {
                 vm.newPassword = '';
                 vm.newPassword2 = '';
+                vm.modalHide();
                 if( resp.detail ) {
                     showMessages([resp.detail], "success");
                 }
@@ -338,40 +467,87 @@ Vue.component('user-update-password', {
         },
         submitPassword: function(){
             var vm = this;
-            vm.modalHide();
             if( vm.nextCb ) {
                 vm[vm.nextCb]();
             } else {
                 vm.updatePassword();
             }
         },
-        enableOTP: function() {
+    },
+    mounted: function() {
+        var vm = this;
+        vm.$nextTick(function() {
+            var fields = vm.$refs.newPassword;
+            if( typeof fields.length != 'undefined' ) {
+                if( fields.length > 0 ) {
+                    fields[0].focus();
+                }
+            } else {
+                fields.focus();
+            }
+        });
+    }
+});
+
+
+Vue.component('user-update-otp', {
+    mixins: [
+        httpRequestMixin,
+        userPasswordModalMixin
+    ],
+    data: function () {
+        return {
+            otp_url: this.$urls.user.api_otp_change,
+            modalSelector: '.user-password-modal',
+            otpEnabled: true,
+            emailVerificationEnabled: false,
+            phoneVerificationEnabled: false,
+            otpPrivKey: '',
+            nextCb: null
+        };
+    },
+    methods: {
+        modalShowAndValidate: function(nextCb) {
             var vm = this;
-            vm.reqPut(vm.otp_url, {
-                password: vm.password,
-                otp_enabled: true,
-                email_verification_enabled: vm.emailVerificationEnabled,
-                phone_verification_enabled: vm.phoneVerificationEnabled,
-            }, function(resp){
-                vm.otpEnabled = true;
-                vm.otpPrivKey = resp.priv_key
-                QRCode.toCanvas(
-                    document.getElementById('otp-qr-canvas'),
-                    resp.provisioning_uri, function (error) {
-                        if (error) showErrorMessages(error);
-                    })
-            })
+            vm.nextCb = nextCb ? nextCb : null;
+            vm.modalShow();
         },
         disableOTP: function() {
             var vm = this;
-            vm.reqPut(vm.otp_url, {
-                password: vm.password,
+            vm.reqPut(vm.otp_url, vm.appendAuth({
                 otp_enabled: false,
                 email_verification_enabled: vm.emailVerificationEnabled,
-                phone_verification_enabled: vm.phoneVerificationEnabled,
-            }, function(resp){
+                phone_verification_enabled: vm.phoneVerificationEnabled
+            }),
+            function(resp){
                 vm.otpEnabled = false;
-            })
+            });
+        },
+        enableOTP: function() {
+            var vm = this;
+            vm.reqPut(vm.otp_url, vm.appendAuth({
+                otp_enabled: true,
+                email_verification_enabled: vm.emailVerificationEnabled,
+                phone_verification_enabled: vm.phoneVerificationEnabled
+            }),
+            function(resp){
+                vm.otpEnabled = true;
+                vm.otpPrivKey = resp.priv_key;
+                vm.$nextTick(function() {
+                    QRCode.toCanvas(
+                        document.getElementById('otp-qr-canvas'),
+                        resp.provisioning_uri, function (error) {
+                            if (error) showErrorMessages(error);
+                        });
+                });
+            });
+        },
+        submitPassword: function(){
+            var vm = this;
+            vm.modalHide();
+            if( vm.nextCb ) {
+                vm[vm.nextCb]();
+            }
         },
     },
     mounted: function() {
@@ -400,8 +576,9 @@ Vue.component('user-rotate-api-keys', {
     methods: {
         generateKey: function() {
             var vm = this;
-            vm.reqPost(vm.url,
-                { password: vm.password, title: vm.title },
+            vm.reqPost(vm.url, vm.appendAuth({
+                title: vm.title
+            }),
             function(resp) {
                 vm.apiKey = resp.secret;
                 vm.apiTitle = vm.title;
@@ -437,9 +614,9 @@ Vue.component('user-rotate-api-keys', {
         deleteKey: function() {
             var vm = this;
             if (vm.deleteKeyPending && vm.password) {
-                vm.reqPost(`${vm.url}/${vm.deleteKeyPending}`, {
-                    password: vm.password
-                }, function() {
+                vm.reqPost(`${vm.url}/${vm.deleteKeyPending}`, vm.appendAuth({
+                }),
+                function() {
                     vm.deleteKeyPending = null;
                     vm.modalHide();
                     vm.get();
@@ -470,10 +647,10 @@ Vue.component('user-update-pubkey', {
     methods: {
         updatePubkey: function(){
             var vm = this;
-            vm.reqPut(vm.url, {
+            vm.reqPut(vm.url, vm.appendAuth({
                 pubkey: vm.pubkey,
-                password: vm.password,
-            }, function(resp){
+            }),
+            function(resp){
                 vm.modalHide();
                 if( resp.detail ) {
                     showMessages([resp.detail], "success");

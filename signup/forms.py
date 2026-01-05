@@ -390,6 +390,14 @@ class CodeActivationForm(ActivationForm):
                 self.fields['phone_code'].widget = forms.HiddenInput()
 
 
+class ActivationAuthForm(forms.Form):
+    """
+    Form presented in the `ActivationView` when the user is already active.
+    This form is intended to login through a link sent either to an e-mail
+    address or a phone number.
+    """
+
+
 class PublicKeyForm(AuthenticatedUserPasswordMixin, forms.Form):
 
     submit_title = _("Update")

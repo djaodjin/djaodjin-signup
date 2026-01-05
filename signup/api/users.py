@@ -891,15 +891,13 @@ class PasswordChangeAPIView(AuthenticatedUserPasswordMixin,
         serializer = self.get_serializer(instance, data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        password = serializer.validated_data['password']
         new_password = serializer.validated_data.get('new_password')
         if new_password:
             if is_ldap_user(serializer.instance):
                 set_ldap_password(serializer.instance, new_password,
-                    bind_password=password)
+                    bind_password=serializer.validated_data.get('password'))
             else:
                 self.re_auth(request, serializer.validated_data)
-
                 serializer.instance.set_password(new_password)
                 serializer.instance.save()
             # Updating the password logs out all other sessions for the user

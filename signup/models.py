@@ -46,8 +46,7 @@ from . import settings
 from .backends.auth_ldap import is_ldap_user
 from .compat import (gettext_lazy as _, import_string,
     python_2_unicode_compatible, six)
-from .helpers import (datetime_or_now, full_name_natural_split,
-    has_invalid_password)
+from .helpers import datetime_or_now, full_name_natural_split
 from .utils import generate_random_code, generate_random_slug, handle_uniq_error
 from .validators import validate_phone
 
@@ -108,67 +107,6 @@ class ActivatedUserManager(UserManager):
             return email
         return super(ActivatedUserManager, cls).normalize_email(email)
 
-    def create_user_from_email(self, email, password=None, **kwargs):
-        #pylint:disable=protected-access
-        field = self.model._meta.get_field('username')
-        max_length = field.max_length
-        username = slugify(email.split('@')[0])
-        try:
-            field.run_validators(username)
-        except ValidationError:
-            prefix = 'user_'
-            username = generate_random_slug(
-                length=min(max_length - len(prefix), 40), prefix=prefix)
-        err = IntegrityError()
-        trials = 0
-        username_base = username
-        while trials < 10:
-            try:
-                using = self._db or router.db_for_write(self.model)
-                with transaction.atomic(using=using):
-                    return super(ActivatedUserManager, self).create_user(
-                        username, email=email, password=password, **kwargs)
-            except IntegrityError as exp:
-                err = exp
-                if len(username_base) + 4 > max_length:
-                    username_base = username_base[:(max_length - 4)]
-                username = generate_random_slug(
-                    length=len(username_base) + 4, prefix=username_base + '-',
-                    allowed_chars='0123456789')
-                trials = trials + 1
-        raise err
-
-    def create_user_from_phone(self, phone, password=None, **kwargs):
-        #pylint:disable=protected-access
-        field = self.model._meta.get_field('username')
-        max_length = field.max_length
-        prefix = 'user_'
-        username = generate_random_slug(
-            length=min(max_length - len(prefix), 40), prefix=prefix)
-        try:
-            field.run_validators(username)
-        except ValidationError:
-            prefix = 'user_'
-            username = generate_random_slug(
-                length=min(max_length - len(prefix), 40), prefix=prefix)
-        err = IntegrityError()
-        trials = 0
-        username_base = username
-        while trials < 10:
-            try:
-                using = self._db or router.db_for_write(self.model)
-                with transaction.atomic(using=using):
-                    return super(ActivatedUserManager, self).create_user(
-                        username, password=password, **kwargs)
-            except IntegrityError as exp:
-                err = exp
-                if len(username_base) + 4 > max_length:
-                    username_base = username_base[:(max_length - 4)]
-                username = generate_random_slug(
-                    length=len(username_base) + 4, prefix=username_base + '-',
-                    allowed_chars='0123456789')
-                trials = trials + 1
-        raise err
 
     def create_user(self, username, email=None, password=None, **kwargs):
         """
@@ -183,17 +121,6 @@ class ActivatedUserManager(UserManager):
         password.
         """
         #pylint:disable=too-many-locals
-        phone = kwargs.pop('phone', None)
-        try:
-            if phone is not None:
-                validate_phone(phone)
-        except ValidationError:
-            phone = None
-        lang = kwargs.pop('lang', None)
-        extra = kwargs.pop('extra', None)
-        picture = kwargs.pop('picture', None)
-        full_name = kwargs.pop('full_name', None)
-        nick_name = kwargs.pop('nick_name', None)
         uses_sso_provider = False
         if email:
             domain = email.split('@')[-1]
@@ -216,6 +143,7 @@ class ActivatedUserManager(UserManager):
             del user_kwargs['email']
         if ('first_name' not in user_kwargs or
             'last_name' not in user_kwargs):
+            full_name = kwargs.get('full_name')
             if full_name:
                 first_name, _mid, last_name = \
                     full_name_natural_split(full_name)
@@ -224,73 +152,55 @@ class ActivatedUserManager(UserManager):
                 if 'last_name' not in user_kwargs:
                     user_kwargs.update({'last_name': last_name})
 
+        field = self.model._meta.get_field('username')
+        max_length = field.max_length
+        prefix = 'user_'
+        nb_trials = 1
+        if not username:
+            # If the `username` is not explicitely set, we will try to derive
+            # one from the e-mail address, and default to generate a random one.
+            nb_trials = 10
+            if email:
+                try:
+                    validate_email_base(email)
+                    username = slugify(email.split('@')[0])
+                except ValidationError:
+                    pass
+            if not username:
+                username = generate_random_slug(
+                    length=min(max_length - len(prefix), 40), prefix=prefix)
+            field.run_validators(username)
+
+        err = IntegrityError()
+        trials = 0
+        username_base = username
         using = self._db or router.db_for_write(self.model)
         with transaction.atomic(using=using):
-            if username:
-                user = super(ActivatedUserManager, self).create_user(
-                    username, email=email, password=password, **user_kwargs)
-            elif email:
-                user = self.create_user_from_email(
-                    email, password=password, **user_kwargs)
-            elif phone:
-                user = self.create_user_from_phone(
-                    phone, password=password, email=email, **user_kwargs)
-            else:
-                raise ValueError("email or phone must be set.")
-            # Force is_active to `True` (see above definition of active user)
-            user.is_active = True
-            user.save()
+            while trials < nb_trials:
+                try:
+                    with transaction.atomic(using=using):
+                        # Force is_active to `True` (see above definition
+                        # of active user).
+                        user = super(ActivatedUserManager, self).create_user(
+                            username, email=email, password=password,
+                            is_active=True, **user_kwargs)
+                    break
+                except IntegrityError as exp:
+                    err = exp
+                    if len(username_base) + 4 > max_length:
+                        username_base = username_base[:(max_length - 4)]
+                    username = generate_random_slug(
+                        length=len(username_base) + 4,
+                        prefix=username_base + '-',
+                        allowed_chars='0123456789')
+                    trials = trials + 1
+            if trials >= nb_trials:
+                raise err
             # Connect dangling contacts (i.e. `contact.user is None`)
             # with email and/or phone to user.
-            if phone:
-                Contact.objects.filter(
-                    phone=phone, user__isnull=True).update(user=user)
-            if email:
-                Contact.objects.filter(
-                    email__iexact=email, user__isnull=True).update(user=user)
-            # If we have extra fields, we must have a Contact to persist them.
-            #pylint:disable=too-many-boolean-expressions
-            if phone or full_name or nick_name or picture or lang or extra:
-                if not full_name:
-                    full_name = user.get_full_name()
-                if not nick_name:
-                    nick_name = user.first_name
-                contacts = Contact.objects.filter(user=user).order_by('pk')
-                if contacts.exists():
-                    email_contact_exists = Contact.objects.filter(
-                        email__iexact=email, user=user).exists()
-                    phone_contact_exists = Contact.objects.filter(
-                        phone=phone, user=user).exists()
-                    for contact in contacts:
-                        if email and not email_contact_exists:
-                            contact.email = email
-                            email_contact_exists = True
-                        if phone and not phone_contact_exists:
-                            contact.phone = phone
-                            phone_contact_exists = True
-                        if full_name and not contact.full_name:
-                            contact.full_name = full_name
-                        if nick_name and not contact.nick_name:
-                            contact.nick_name = nick_name
-                        if picture and not contact.picture:
-                            contact.picture = picture
-                        if lang and not contact.lang:
-                            contact.lang = lang
-                        if extra and not contact.extra:
-                            contact.extra = extra
-                        contact.save()
-                else:
-                    Contact.objects.create(
-                        user=user,
-                        email=email,
-                        phone=phone,
-                        full_name=full_name,
-                        nick_name=nick_name,
-                        picture=picture,
-                        lang=lang,
-                        extra=extra)
-
+            Contact.objects.untangle_refs(user, **kwargs)
         return user
+
 
     def find_user(self, username):
         user_kwargs = {}
@@ -326,15 +236,91 @@ class ActivatedUserManager(UserManager):
 
 class ContactManager(models.Manager):
 
+    def untangle_refs(self, user, **kwargs):
+        """
+        Connnect dangling contacts (i.e. `contact.user is None`) to user,
+        and synchronize duplicate fields across contacts and user.
+        """
+        phone = kwargs.get('phone')
+        try:
+            if phone is not None:
+                validate_phone(phone)
+        except ValidationError:
+            phone = None
+        email = kwargs.get('email')
+        try:
+            if email is not None:
+                validate_email_base(email)
+        except ValidationError:
+            email = None
+        lang = kwargs.get('lang')
+        extra = kwargs.get('extra')
+        picture = kwargs.get('picture')
+        full_name = kwargs.get('full_name')
+        nick_name = kwargs.get('nick_name')
+
+        # Connect dangling contacts (i.e. `contact.user is None`)
+        # with email and/or phone to user.
+        if phone:
+            Contact.objects.filter(
+                phone=phone, user__isnull=True).update(user=user)
+        if email:
+            Contact.objects.filter(
+                email__iexact=email, user__isnull=True).update(user=user)
+        # If we have extra fields, we must have a Contact to persist them.
+        #pylint:disable=too-many-boolean-expressions
+        if phone or full_name or nick_name or picture or lang or extra:
+            if not full_name:
+                full_name = user.get_full_name()
+            if not nick_name:
+                nick_name = user.first_name
+            contacts = Contact.objects.filter(user=user).order_by('pk')
+            if contacts.exists():
+                email_contact_exists = Contact.objects.filter(
+                    email__iexact=email, user=user).exists()
+                phone_contact_exists = Contact.objects.filter(
+                    phone=phone, user=user).exists()
+                for contact in contacts:
+                    if email and not email_contact_exists:
+                        contact.email = email
+                        email_contact_exists = True
+                    if phone and not phone_contact_exists:
+                        contact.phone = phone
+                        phone_contact_exists = True
+                    if full_name and not contact.full_name:
+                        contact.full_name = full_name
+                    if nick_name and not contact.nick_name:
+                        contact.nick_name = nick_name
+                    if picture and not contact.picture:
+                        contact.picture = picture
+                    if lang and not contact.lang:
+                        contact.lang = lang
+                    if extra and not contact.extra:
+                        contact.extra = extra
+                    contact.save()
+            else:
+                Contact.objects.create(
+                    user=user,
+                    email=email,
+                    phone=phone,
+                    full_name=full_name,
+                    nick_name=nick_name,
+                    picture=picture,
+                    lang=lang,
+                    extra=extra)
+
+
     def email_verification_required(self, email):
         assert email is not None
         return self.filter(
             email=email, email_verification_required=True).exists()
 
+
     def phone_verification_required(self, phone):
         assert phone is not None
         return self.filter(
             phone=phone, phone_verification_required=True).exists()
+
 
     def find_by_username_or_comm(self, username):
         contact_kwargs = {}
@@ -424,7 +410,9 @@ class ContactManager(models.Manager):
                         # on a link that will trigger an activate url, then
                         # filling the first form that showed up.
                         contact.email_verification_key = verification_key
-                    contact.email_code = generate_random_code()
+                    if not (settings.SKIP_EXPIRATION_CHECK and
+                            contact.email_code):
+                        contact.email_code = generate_random_code()
                     contact.email_verification_at = at_time
                     # XXX It is possible a 'reason' field would be a better
                     # implementation.
@@ -510,7 +498,8 @@ class ContactManager(models.Manager):
                     # that will trigger an activate url, then filling the first
                     # form that showed up.
                     contact.phone_verification_key = verification_key
-                contact.phone_code = generate_random_code()
+                if not (settings.SKIP_EXPIRATION_CHECK and contact.phone_code):
+                    contact.phone_code = generate_random_code()
                 contact.phone_verification_at = at_time
                 # XXX It is possible a 'reason' field would be a better
                 # implementation.
@@ -549,12 +538,14 @@ class ContactManager(models.Manager):
         if not at_time:
             at_time = datetime_or_now()
         email_filter = models.Q(email__iexact=email)
+        if isinstance(email_code, str):
+            email_filter &= models.Q(email_verification_key=email_code)
+        else:
+            email_filter &= models.Q(email_code=email_code)
         if not settings.SKIP_EXPIRATION_CHECK:
             email_filter &= models.Q(email_verification_at__gt=at_time
                 - datetime.timedelta(days=settings.KEY_EXPIRATION))
             # set `SKIP_EXPIRATION_CHECK` to `True` **ONLY** in testing
-            email_filter &= (models.Q(email_code=email_code) |
-            models.Q(email_verification_key=email_code))
         queryset = self.filter(email_filter).select_related('user')
         contact = queryset.get()
         if commit:
@@ -575,12 +566,14 @@ class ContactManager(models.Manager):
         if not at_time:
             at_time = datetime_or_now()
         phone_filter = models.Q(phone=phone)
+        if isinstance(phone_code, str):
+            phone_filter &= models.Q(phone_verification_key=phone_code)
+        else:
+            phone_filter &= models.Q(phone_code=phone_code)
         if not settings.SKIP_EXPIRATION_CHECK:
             phone_filter &= models.Q(phone_verification_at__gt=at_time
                 - datetime.timedelta(days=settings.KEY_EXPIRATION))
             # set `SKIP_EXPIRATION_CHECK` to `True` **ONLY** in testing
-            phone_filter &= (models.Q(phone_code=phone_code) |
-                models.Q(phone_verification_key=phone_code))
         contact = self.filter(phone_filter).select_related('user').get()
         if commit:
             contact.phone_verification_key = None
@@ -806,58 +799,6 @@ class Contact(models.Model):
                 % {'base': slug_base}})
 
 
-    def activate_user(self, username=None, password=None,
-                      full_name=None, at_time=None):
-        """
-        Activate a user whose email address has been verified.
-        """
-        #pylint:disable=too-many-arguments
-        if not at_time:
-            at_time = datetime_or_now()
-        token_username = (self.user.username if self.user else self.slug)
-        LOGGER.info('active user %s through contact %s ...',
-            token_username, self.slug,
-            extra={'event': 'activate', 'username': token_username})
-        user_model = get_user_model()
-        with transaction.atomic(using=self._state.db):
-            if not self.user:
-                try:
-                    self.user = user_model.objects.get(email__iexact=self.email)
-                except user_model.DoesNotExist:
-                    self.user = user_model.objects.create_user(
-                        username, email=self.email, password=password)
-            previously_inactive = has_invalid_password(self.user)
-            needs_save = False
-            if full_name:
-                self.full_name = full_name
-                #pylint:disable=unused-variable
-                first_name, mid_name, last_name = full_name_natural_split(
-                    full_name)
-                self.user.first_name = first_name
-                self.user.last_name = last_name
-                LOGGER.info('%s (first_name, last_name) needs '\
-                    'to be saved as ("%s", "%s")', self.slug,
-                    self.user.first_name, self.user.last_name)
-                needs_save = True
-            if username:
-                self.user.username = username
-                LOGGER.info('%s username needs to be saved as "%s"',
-                    self.slug, self.user.username)
-                needs_save = True
-            if password:
-                self.user.set_password(password)
-                LOGGER.info('%s password needs to be saved', self.slug)
-                needs_save = True
-            if not self.user.is_active:
-                self.user.is_active = True
-                LOGGER.info('%s user needs to be activated', self.slug)
-                needs_save = True
-            if needs_save:
-                self.user.save()
-            self.save()
-        return self.user, previously_inactive
-
-
 @python_2_unicode_compatible
 class Activity(models.Model):
     """
@@ -987,6 +928,11 @@ class OTPGenerator(models.Model):
 
     def verify(self, code):
         totp = pyotp.TOTP(self.priv_key)
+        if settings.SKIP_EXPIRATION_CHECK:
+            # Set `SKIP_EXPIRATION_CHECK` to `True` **ONLY** in testing
+            # because this will enable to enter a predictable OTP code
+            # (which defies the purpose of OTP code except in testing).
+            return totp.verify(code, self.user.date_joined)
         return totp.verify(code)
 
     def clear_attempts(self):

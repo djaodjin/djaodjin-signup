@@ -1,4 +1,4 @@
-# Copyright (c) 2025, Djaodjin Inc.
+# Copyright (c) 2026, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -25,6 +25,7 @@
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.auth.decorators import login_required
+from django.contrib.staticfiles.views import serve as django_static_serve
 from django.views.generic.base import RedirectView, TemplateView
 from signup.compat import reverse_lazy, include, path, re_path
 from signup.api.auth import JWTLogout
@@ -52,6 +53,7 @@ from .forms import SignupWithCaptchaForm
 
 urlpatterns = \
     static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT) + [
+    re_path(r'(?P<path>favicon.ico)', django_static_serve),
     # signup.urls.api.activities
     path('api/activities/<slug:profile>/contacts',
         login_required(ActivityByAccountContactAPIView.as_view()),
