@@ -27,6 +27,16 @@
 },
 {
     "fields": {
+      "user": 2,
+      "created_at": "2020-01-01T00:00:00-09:00",
+      "email": "donny@localhost.localdomain",
+      "email_code": 654321,
+      "phone": "+14155551111",
+      "phone_code": 654322,
+      "slug": "donny"}, "model": "signup.Contact", "pk": 2
+},
+{
+    "fields": {
       "date_joined": "2020-01-01T00:00:00-09:00",
       "email": "xia@localhost.localdomain",
       "first_name": "Xia",
@@ -64,15 +74,6 @@
       "priv_key": "abc123"
     },
     "model": "signup.OTPGenerator", "pk": 3
-},
-{
-    "fields": {
-      "created_at": "2020-01-01T00:00:00-09:00",
-      "email": "donny@localhost.localdomain",
-      "email_code": 654321,
-      "phone": "+14155551111",
-      "phone_code": 654322,
-      "slug": "donny"}, "model": "signup.Contact", "pk": 4
 },
 {
     "fields": {

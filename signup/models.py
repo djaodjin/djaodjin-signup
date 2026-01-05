@@ -909,7 +909,7 @@ class OTPGeneratorManager(models.Manager):
                 user.otp.clear_attempts()
                 nb_attempts = 0
         except Exception as err:
-            LOGGER.error("fetching OTPGenerator: %s", err.__class__)
+            LOGGER.error("fetching OTPGenerator: %s", err)
         return nb_attempts
 
 
