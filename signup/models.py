@@ -932,6 +932,7 @@ class OTPGenerator(models.Model):
             # Set `SKIP_EXPIRATION_CHECK` to `True` **ONLY** in testing
             # because this will enable to enter a predictable OTP code
             # (which defies the purpose of OTP code except in testing).
+            LOGGER.warning("SKIP_EXPIRATION_CHECK enabled: pyotp.TOTP(priv_key=%s).verify(code=%s, date_joined=%s) is predictable.", self.priv_key, code, self.user.date_joined)
             return totp.verify(code, self.user.date_joined)
         return totp.verify(code)
 
