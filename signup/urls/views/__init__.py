@@ -1,4 +1,4 @@
-# Copyright (c) 2022, Djaodjin Inc.
+# Copyright (c) 2026, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,24 +22,9 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""
-URLconf for frictionless signup.
-
-If the default behavior of these views is acceptable to you, simply
-use a line like this in your root URLconf to set up the default URLs
-for registration:
-
-    (r'^accounts/', include('signup.urls.views.accounts')),
-
-Optionally add URLs for User profiles:
-
-    (r'^users/', include('signup.urls.views.users')),
-"""
-
 from ...compat import include, path
 
 urlpatterns = [
-    path('activities/', include('signup.urls.views.contacts')),
-    path('users/', include('signup.urls.views.users')),
-    path('', include('signup.urls.views.accounts')),
+    path('', include('signup.urls.views.dashboard')),
+    path('', include('signup.urls.views.auth')),
 ]

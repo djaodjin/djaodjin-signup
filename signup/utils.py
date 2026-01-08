@@ -228,18 +228,6 @@ def verify_token(token):
     return user
 
 
-def get_disabled_authentication(request, user):
-    if isinstance(settings.DISABLED_AUTHENTICATION, six.string_types):
-        return import_string(settings.DISABLED_AUTHENTICATION)(request, user)
-    return bool(settings.DISABLED_AUTHENTICATION)
-
-
-def get_disabled_registration(request):
-    if isinstance(settings.DISABLED_REGISTRATION, six.string_types):
-        return import_string(settings.DISABLED_REGISTRATION)(request)
-    return bool(settings.DISABLED_REGISTRATION)
-
-
 def get_email_dynamic_validator():
     if isinstance(settings.EMAIL_DYNAMIC_VALIDATOR, six.string_types):
         return import_string(settings.EMAIL_DYNAMIC_VALIDATOR)
@@ -268,7 +256,67 @@ def get_phone_dynamic_validator():
     return None
 
 
+def get_disabled_registration(request):
+    #pylint:disable=protected-access
+    if not hasattr(get_disabled_registration, '_disabled_registration'):
+        if isinstance(settings.DISABLED_REGISTRATION, six.string_types):
+            try:
+                get_disabled_registration._disabled_registration = \
+                    import_string(settings.DISABLED_REGISTRATION)
+            except ImportError:
+                get_disabled_registration._disabled_registration = None
+        else:
+            get_disabled_registration._disabled_registration = None
+    if callable(get_disabled_registration._disabled_registration):
+        return bool(get_disabled_registration._disabled_registration(
+            request))
+    return bool(settings.DISABLED_REGISTRATION)
+
+
+def get_disabled_authentication(request, user):
+    #pylint:disable=protected-access
+    if not hasattr(get_disabled_authentication, '_disabled_authentication'):
+        if isinstance(settings.DISABLED_AUTHENTICATION, six.string_types):
+            try:
+                get_disabled_authentication._disabled_authentication = \
+                    import_string(settings.DISABLED_AUTHENTICATION)
+            except ImportError:
+                get_disabled_authentication._disabled_authentication = None
+        else:
+            get_disabled_authentication._disabled_authentication = None
+    if callable(get_disabled_authentication._disabled_authentication):
+        return bool(get_disabled_authentication._disabled_authentication(
+            request, user))
+    return bool(settings.DISABLED_AUTHENTICATION)
+
+
+def get_user_api_key_lifetime(request, user):
+    #pylint:disable=protected-access
+    if not hasattr(get_user_api_key_lifetime, '_user_api_key_lifetime'):
+        if isinstance(settings.USER_API_KEY_LIFETIME, six.string_types):
+            try:
+                get_user_api_key_lifetime._user_api_key_lifetime = \
+                    import_string(settings.USER_API_KEY_LIFETIME)
+            except ImportError:
+                get_user_api_key_lifetime._user_api_key_lifetime = None
+        else:
+            get_user_api_key_lifetime._user_api_key_lifetime = None
+    if callable(get_user_api_key_lifetime._user_api_key_lifetime):
+        return get_user_api_key_lifetime._user_api_key_lifetime(request, user)
+    return settings.USER_API_KEY_LIFETIME
+
+
 def get_user_otp_required(request, user):
-    if isinstance(settings.USER_OTP_REQUIRED, six.string_types):
-        return import_string(settings.USER_OTP_REQUIRED)(request, user)
+    #pylint:disable=protected-access
+    if not hasattr(get_user_otp_required, '_user_otp_required'):
+        if isinstance(settings.USER_OTP_REQUIRED, six.string_types):
+            try:
+                get_user_otp_required._user_otp_required = \
+                    import_string(settings.USER_OTP_REQUIRED)
+            except ImportError:
+                get_user_otp_required._user_otp_required = None
+        else:
+            get_user_otp_required._user_otp_required = None
+    if callable(get_user_otp_required._user_otp_required):
+        return bool(get_user_otp_required._user_otp_required(request, user))
     return bool(settings.USER_OTP_REQUIRED)

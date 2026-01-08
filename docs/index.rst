@@ -6,10 +6,22 @@
 Welcome to djaodjin-signup's documentation!
 ===========================================
 
+djaodjin-signup is a Django application that implements the logic to support
+user authentication (intended as a replacement for the
+``django.contrib.auth.views`` pages), and user account pages.
+
+Major Features:
+
+- HTML forms and API-based authentication
+- Cookies, JWT, API Keys
+- OTP codes
+
+
 .. toctree::
    :maxdepth: 1
    :caption: Contents:
 
+   getting-started
    auth-workflows
    notifications
    api keys

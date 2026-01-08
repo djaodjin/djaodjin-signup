@@ -1,4 +1,4 @@
-# Copyright (c) 2023, Djaodjin Inc.
+# Copyright (c) 2026, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,22 +22,16 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from ...compat import path
-from ...api.users import (OTPChangeAPIView, PasswordChangeAPIView,
-    UserDetailAPIView, UserListCreateAPIView, UserNotificationsAPIView,
-    UserPictureAPIView)
+from ....compat import path
+from ....views.contacts import (AccountDetailView, AccountListView,
+    ContactListView, ContactDetailView)
 
 urlpatterns = [
-    path('users/<slug:user>/notifications',
-        UserNotificationsAPIView.as_view(), name='api_user_notifications'),
-    path('users/<slug:user>/picture',
-        UserPictureAPIView.as_view(), name='api_user_picture'),
-    path('users/<slug:user>/otp',
-        OTPChangeAPIView.as_view(), name='api_user_otp_change'),
-    path('users/<slug:user>/password',
-        PasswordChangeAPIView.as_view(), name='api_user_password_change'),
-    path('users/<slug:user>',
-        UserDetailAPIView.as_view(), name='api_user_profile'),
-    path('users',
-        UserListCreateAPIView.as_view(), name='saas_api_users'),
+    # These three URLs must be protected.
+    path('accounts/<slug:profile>/',
+        AccountDetailView.as_view(), name='signup_account_activities'),
+    path('accounts/', AccountListView.as_view(), name='signup_accounts'),
+    path('contacts/<slug:user>/',
+        ContactDetailView.as_view(), name='signup_contact'),
+    path('contacts/', ContactListView.as_view(), name='signup_contacts'),
 ]

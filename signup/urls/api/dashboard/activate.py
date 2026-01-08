@@ -22,10 +22,11 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from ...compat import include, path
+from ....compat import path
+from ....api.users import UserActivateAPIView
+
 
 urlpatterns = [
-    path('', include('signup.urls.api.dashboard')),
-    path('', include('signup.urls.api.tokens')),
-    path('', include('signup.urls.api.auth')), # Prefix to previous urls
+    path('users/<slug:user>/activate',
+        UserActivateAPIView.as_view(), name='api_user_activate'),
 ]

@@ -3,18 +3,16 @@ DjaoDjin-Signup
 
 [![PyPI version](https://badge.fury.io/py/djaodjin-signup.svg)](https://badge.fury.io/py/djaodjin-signup)
 
-This repository contains a Django App for frictionless signup.
+This repository contains a Django App for user authentication (intended
+as a replacement for the ``django.contrib.auth.views`` pages), and user account
+pages.
 
-The app will register and login a user with as little as only an email address.
+Major Features:
 
-When the user logs out and tries to logs back in with the same email address,
-the app will first verify the email address through an activation url send
-to the registered email address. Setting the password is deferred to after
-the email address has been verified.
+- HTML forms and API-based authentication
+- Cookies, JWT, API Keys
+- OTP codes
 
-If during the first login and/or subsequent login, the email address should
-be verified before moving forward (ex: before presenting a payment view),
-you should decorate the view with an *active_required* decorator.
 
 This project contains bare bone templates which are compatible with Django
 and Jinja2 template engines. To see djaodjin-signup in action as part

@@ -1,4 +1,4 @@
-# Copyright (c) 2023, Djaodjin Inc.
+# Copyright (c) 2026, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,20 +22,14 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from ...compat import path
-from ...views.users import (PasswordChangeView,
-    UserPublicKeyUpdateView, UserProfileView, UserNotificationsView,
-    redirect_to_user_profile)
+"""
+URLconf for pages that are typically included in a dashboard
+(user profile, etc.).
+"""
+
+from ....compat import include, path
 
 urlpatterns = [
-    # These three URLs must be protected.
-    path('<slug:user>/password/',
-        PasswordChangeView.as_view(), name='password_change'),
-    path('<slug:user>/pubkey/',
-        UserPublicKeyUpdateView.as_view(), name='pubkey_update'),
-    path('<slug:user>/notifications/',
-        UserNotificationsView.as_view(), name='users_notifications'),
-    path('<slug:user>/',
-        UserProfileView.as_view(), name='users_profile'),
-    path('', redirect_to_user_profile, name='accounts_profile'),
+    path('activities/', include('signup.urls.views.dashboard.contacts')),
+    path('users/', include('signup.urls.views.dashboard.users')),
 ]

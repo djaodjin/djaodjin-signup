@@ -1,4 +1,4 @@
-# Copyright (c) 2022, Djaodjin Inc.
+# Copyright (c) 2026, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,15 +22,22 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from ...compat import path
-from ...api.keys import (ListCreateAPIKeysAPIView, PublicKeyAPIView,
-    DestroyAPIKeyAPIView)
+from ....compat import path
+from ....api.users import (OTPChangeAPIView, PasswordChangeAPIView,
+    UserDetailAPIView, UserListCreateAPIView, UserNotificationsAPIView,
+    UserPictureAPIView)
 
 urlpatterns = [
-    path('users/<slug:user>/ssh-keys',
-        PublicKeyAPIView.as_view(), name='api_pubkey'),
-    path('users/<slug:user>/api-keys',
-        ListCreateAPIKeysAPIView.as_view(), name='api_generate_keys'),
-    path('users/<slug:user>/api-keys/<slug:key>',
-        DestroyAPIKeyAPIView.as_view(), name='api_destroy_key')
+    path('users/<slug:user>/notifications',
+        UserNotificationsAPIView.as_view(), name='api_user_notifications'),
+    path('users/<slug:user>/picture',
+        UserPictureAPIView.as_view(), name='api_user_picture'),
+    path('users/<slug:user>/otp',
+        OTPChangeAPIView.as_view(), name='api_user_otp_change'),
+    path('users/<slug:user>/password',
+        PasswordChangeAPIView.as_view(), name='api_user_password_change'),
+    path('users/<slug:user>',
+        UserDetailAPIView.as_view(), name='api_user_profile'),
+    path('users',
+        UserListCreateAPIView.as_view(), name='saas_api_users'),
 ]

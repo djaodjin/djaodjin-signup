@@ -7,9 +7,6 @@ composed of multiple Django applications.
 - Overriding models
 - Replacing default functions
 
-Overriding models
------------------
-
 ``Activity`` can be attached to a specific account. The definition of the
 underlying account model is specified by ``ACCOUNT_MODEL`` and serialized
 in APIs by an ``ACCOUNT_SERIALIZER``.
@@ -18,18 +15,28 @@ If the ``AUTH_USER_MODEL`` (as returned by ``get_user_model``) has been
 overridden, ``USER_SERIALIZER`` should be defined and implement
 a user model serialization as used in API calls.
 
+.. autodata:: signup.settings.ENCRYPTED_FIELD
 
-Replacing default functions
----------------------------
+.. autodata:: signup.settings.EXTRA_FIELD
 
-.. autodata:: signup.settings.DISABLED_AUTHENTICATION
+.. autodata:: signup.settings.EMAIL_VERIFICATION_BACKEND
 
-.. autodata:: signup.settings.DISABLED_REGISTRATION
-
-.. autodata:: signup.settings.EMAIL_DYNAMIC_VALIDATOR
-
-.. autodata:: signup.settings.LOGIN_THROTTLE
+.. autodata:: signup.settings.PHONE_VERIFICATION_BACKEND
 
 .. autodata:: signup.settings.PICTURE_STORAGE_CALLABLE
 
+.. autodata:: signup.settings.EXTRA_MIXIN
 
+.. autodata:: signup.settings.SSO_PROVIDERS
+
+
+Miscellaneous
+-------------
+
+.. autodata:: signup.settings.LOGOUT_CLEAR_COOKIES
+
+.. autodata:: signup.settings.NOTIFICATION_TYPE
+
+.. autodata:: signup.settings.NOTIFICATIONS_OPT_OUT
+
+.. autodata:: signup.settings.LANGUAGE_CODE

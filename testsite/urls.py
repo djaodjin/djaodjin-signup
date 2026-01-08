@@ -54,7 +54,7 @@ from .forms import SignupWithCaptchaForm
 urlpatterns = \
     static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT) + [
     re_path(r'(?P<path>favicon.ico)', django_static_serve),
-    # signup.urls.api.activities
+    # signup.urls.api.dashboard.activities
     path('api/activities/<slug:profile>/contacts',
         login_required(ActivityByAccountContactAPIView.as_view()),
         name='api_profile_activities_contacts'),
@@ -65,7 +65,7 @@ urlpatterns = \
     path('api/activities',
         login_required(ActivityByAccountIndexAPIView.as_view()),
         name='api_profile_activities_index'),
-    # signup.urls.api.contacts
+    # signup.urls.api.dashboard.contacts
     path('api/contacts/<slug:user>/activities',
          login_required(ActivityListCreateAPIView.as_view()),
          name='api_activities'),
@@ -78,7 +78,7 @@ urlpatterns = \
     path('api/contacts',
          login_required(ContactListAPIView.as_view()),
          name='api_contacts'),
-    # signup.urls.api.keys
+    # signup.urls.api.dashboard.keys
     path('api/users/<slug:user>/ssh-keys',
          login_required(PublicKeyAPIView.as_view()),
          name='api_pubkey'),
@@ -88,17 +88,7 @@ urlpatterns = \
     path('api/users/<slug:user>/api-keys/<slug:key>',
          login_required(DestroyAPIKeyAPIView.as_view()),
          name='api_destroy_key'),
-    # signup.urls.api.tokens
-    path('api/auth/tokens/verify',
-         login_required(JWTVerify.as_view()),
-         name='api_verify_token'),
-    path('api/auth/tokens',
-         login_required(JWTRefresh.as_view()),
-         name='api_refresh_token'),
-    path('api/auth/logout',
-         JWTLogout.as_view(),
-         name='api_logout'),
-    # signup.urls.api.users
+    # signup.urls.api.dashboard.users
     path('api/users/<slug:user>/notifications',
          login_required(UserNotificationsAPIView.as_view()),
          name='api_user_notifications'),
@@ -117,14 +107,24 @@ urlpatterns = \
     path('api/users',
          login_required(UserListCreateAPIView.as_view()),
          name='saas_api_users'),
+    # signup.urls.api.tokens
+    path('api/auth/tokens/verify',
+         login_required(JWTVerify.as_view()),
+         name='api_verify_token'),
+    path('api/auth/tokens',
+         login_required(JWTRefresh.as_view()),
+         name='api_refresh_token'),
+    path('api/auth/logout',
+         JWTLogout.as_view(),
+         name='api_logout'),
 
     path('api/',
-        include('signup.urls.api.activate')),
+        include('signup.urls.api.dashboard.activate')),
     path('api/',
         include('signup.urls.api.auth')),
 
     # Views
-    # signup.urls.views.contacts
+    # signup.urls.views.dashboard.contacts
     path('activities/accounts/<slug:profile>/',
          login_required(AccountDetailView.as_view(lookup_field='username')),
          name='signup_account_activities'),
@@ -137,7 +137,7 @@ urlpatterns = \
     path('activities/contacts/',
          login_required(ContactListView.as_view()),
          name='signup_contacts'),
-    # signup.urls.views.users
+    # signup.urls.views.dashboard.users
     path('users/<slug:user>/password/',
          login_required(PasswordChangeView.as_view()),
          name='password_change'),
@@ -154,13 +154,14 @@ urlpatterns = \
          redirect_to_user_profile,
          name='accounts_profile'),
 
+    # signup.urls.views.auth
     path('register/frictionless/',
         SignupView.as_view(),
         name='registration_frictionless'),
     re_path(r'register/((?P<path>\w+)/)?',
         SignupView.as_view(form_class=SignupWithCaptchaForm),
         name='registration_register'),
-    path('', include('signup.urls.views.accounts')),
+    path('', include('signup.urls.views.auth')),
     path('app/<slug:user>/',
          active_required(TemplateView.as_view(template_name='app.html'))),
     path('app/',

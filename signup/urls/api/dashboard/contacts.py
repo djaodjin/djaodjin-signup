@@ -1,4 +1,4 @@
-# Copyright (c) 2025, Djaodjin Inc.
+# Copyright (c) 2026, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,16 +22,16 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from ...compat import path
-from ...views.contacts import (AccountDetailView, AccountListView,
-    ContactListView, ContactDetailView)
+from ....compat import path
+from ....api.contacts import (ActivityListCreateAPIView, ContactDetailAPIView,
+    ContactListAPIView, ContactPictureAPIView)
 
 urlpatterns = [
-    # These three URLs must be protected.
-    path('accounts/<slug:profile>/',
-        AccountDetailView.as_view(), name='signup_account_activities'),
-    path('accounts/', AccountListView.as_view(), name='signup_accounts'),
-    path('contacts/<slug:user>/',
-        ContactDetailView.as_view(), name='signup_contact'),
-    path('contacts/', ContactListView.as_view(), name='signup_contacts'),
+    path('contacts/<slug:user>/activities',
+        ActivityListCreateAPIView.as_view(), name='api_activities'),
+    path('contacts/<slug:user>/picture',
+        ContactPictureAPIView.as_view(), name='api_contact_picture'),
+    path('contacts/<slug:user>',
+        ContactDetailAPIView.as_view(), name='api_contact'),
+    path('contacts', ContactListAPIView.as_view(), name='api_contacts'),
 ]

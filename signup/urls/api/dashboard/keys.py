@@ -1,4 +1,4 @@
-# Copyright (c) 2022, Djaodjin Inc.
+# Copyright (c) 2026, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,11 +22,15 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from ...compat import path
-from ...api.users import UserActivateAPIView
-
+from ....compat import path
+from ....api.keys import (ListCreateAPIKeysAPIView, PublicKeyAPIView,
+    DestroyAPIKeyAPIView)
 
 urlpatterns = [
-    path('users/<slug:user>/activate',
-        UserActivateAPIView.as_view(), name='api_user_activate'),
+    path('users/<slug:user>/ssh-keys',
+        PublicKeyAPIView.as_view(), name='api_pubkey'),
+    path('users/<slug:user>/api-keys',
+        ListCreateAPIKeysAPIView.as_view(), name='api_generate_keys'),
+    path('users/<slug:user>/api-keys/<slug:key>',
+        DestroyAPIKeyAPIView.as_view(), name='api_destroy_key')
 ]

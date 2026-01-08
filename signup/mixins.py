@@ -419,6 +419,14 @@ class AuthMixin(object):
 
 
     def check_email_verified(self, user, **cleaned_data):
+        """
+        Verify the user has access to the email inbox by checking a one-time
+        code that was sent to the email address earlier.
+
+        Unless additional information (password) are provided, this is
+        enough to authenticate the `user`. The OTP check might still kick the
+        user out.
+        """
         email = cleaned_data.get('email')
         if not email and user:
             email = user.email
@@ -507,6 +515,14 @@ class AuthMixin(object):
 
 
     def check_phone_verified(self, user, **cleaned_data):
+        """
+        Verify the user has access to the phone by checking a one-time code
+        that was sent to the phone number earlier.
+
+        Unless additional information (email, password) are provided, this is
+        enough to authenticate the `user`. The OTP check might still kick the
+        user out.
+        """
         phone = cleaned_data.get('phone')
         if not phone and user:
             phone = get_phone(user)
@@ -815,6 +831,12 @@ class AuthMixin(object):
 
 
     def pipeline_prefetch(self):
+        """
+        The `pipeline_prefetch` can be executed on GET and POST HTTP requests.
+
+        It will sanitize the input fields and retrieve the candidate user
+        (if any) that is trying to authenticate.
+        """
         # The authentication URLs are anonymously accessible, hence
         # prime candidates for bots. These will POST to '/login/.' for
         # example because there is a `action="."` in the <form> tag

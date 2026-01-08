@@ -1,4 +1,4 @@
-# Copyright (c) 2025, Djaodjin Inc.
+# Copyright (c) 2026, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,10 +22,10 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from ...compat import path
-from ...api.activities import (ActivityByAccountAPIView,
+from ....compat import path
+from ....api.activities import (ActivityByAccountAPIView,
     ActivityByAccountIndexAPIView)
-from ...api.users import ActivityByAccountContactAPIView
+from ....api.users import ActivityByAccountContactAPIView
 
 urlpatterns = [
     path('activities/<slug:profile>/contacts',

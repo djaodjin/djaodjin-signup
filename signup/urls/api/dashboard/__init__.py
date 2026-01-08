@@ -1,4 +1,4 @@
-# Copyright (c) 2022, Djaodjin Inc.
+# Copyright (c) 2026, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,16 +22,12 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from ...compat import path
-from ...api.contacts import (ActivityListCreateAPIView, ContactDetailAPIView,
-    ContactListAPIView, ContactPictureAPIView)
+from ....compat import include, path
 
 urlpatterns = [
-    path('contacts/<slug:user>/activities',
-        ActivityListCreateAPIView.as_view(), name='api_activities'),
-    path('contacts/<slug:user>/picture',
-        ContactPictureAPIView.as_view(), name='api_contact_picture'),
-    path('contacts/<slug:user>',
-        ContactDetailAPIView.as_view(), name='api_contact'),
-    path('contacts', ContactListAPIView.as_view(), name='api_contacts'),
+    path('', include('signup.urls.api.dashboard.activities')),
+    path('', include('signup.urls.api.dashboard.contacts')),
+    path('', include('signup.urls.api.dashboard.keys')),
+    path('', include('signup.urls.api.dashboard.activate')),
+    path('', include('signup.urls.api.dashboard.users')),
 ]

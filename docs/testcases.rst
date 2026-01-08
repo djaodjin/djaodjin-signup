@@ -1,3 +1,5 @@
+Configuration for various use cases
+===================================
 
 Disabling authentication and registration
 -----------------------------------------

@@ -1,4 +1,4 @@
-# Copyright (c) 2025, Djaodjin Inc.
+# Copyright (c) 2026, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -28,7 +28,7 @@ User Model for the signup app
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
-import datetime, hashlib, logging, random, re, string
+import hashlib, logging, random, re, string
 
 import pyotp
 from django.core.exceptions import ValidationError
@@ -348,13 +348,15 @@ class ContactManager(models.Manager):
             try:
                 at_time = datetime_or_now()
                 email_filter = models.Q(email_verification_key=verification_key)
-                if not settings.SKIP_EXPIRATION_CHECK:
+                if (settings.VERIFICATION_LIFETIME and
+                    not settings.SKIP_EXPIRATION_CHECK):
                     email_filter &= models.Q(email_verification_at__gt=at_time
-                        - datetime.timedelta(days=settings.KEY_EXPIRATION))
+                        - settings.VERIFICATION_LIFETIME)
                 phone_filter = models.Q(phone_verification_key=verification_key)
-                if not settings.SKIP_EXPIRATION_CHECK:
+                if (settings.VERIFICATION_LIFETIME and
+                    not settings.SKIP_EXPIRATION_CHECK):
                     phone_filter &= models.Q(phone_verification_at__gt=at_time
-                        - datetime.timedelta(days=settings.KEY_EXPIRATION))
+                        - settings.VERIFICATION_LIFETIME)
                 return self.filter(email_filter | phone_filter).select_related(
                     'user').get()
             except Contact.DoesNotExist:
@@ -542,9 +544,10 @@ class ContactManager(models.Manager):
             email_filter &= models.Q(email_verification_key=email_code)
         else:
             email_filter &= models.Q(email_code=email_code)
-        if not settings.SKIP_EXPIRATION_CHECK:
+        if (settings.VERIFICATION_LIFETIME and
+             not settings.SKIP_EXPIRATION_CHECK):
             email_filter &= models.Q(email_verification_at__gt=at_time
-                - datetime.timedelta(days=settings.KEY_EXPIRATION))
+                - settings.VERIFICATION_LIFETIME)
             # set `SKIP_EXPIRATION_CHECK` to `True` **ONLY** in testing
         queryset = self.filter(email_filter).select_related('user')
         contact = queryset.get()
@@ -570,9 +573,10 @@ class ContactManager(models.Manager):
             phone_filter &= models.Q(phone_verification_key=phone_code)
         else:
             phone_filter &= models.Q(phone_code=phone_code)
-        if not settings.SKIP_EXPIRATION_CHECK:
+        if (settings.VERIFICATION_LIFETIME and
+            not settings.SKIP_EXPIRATION_CHECK):
             phone_filter &= models.Q(phone_verification_at__gt=at_time
-                - datetime.timedelta(days=settings.KEY_EXPIRATION))
+                - settings.VERIFICATION_LIFETIME)
             # set `SKIP_EXPIRATION_CHECK` to `True` **ONLY** in testing
         contact = self.filter(phone_filter).select_related('user').get()
         if commit:
@@ -587,10 +591,10 @@ class ContactManager(models.Manager):
         Returns True if the user is reachable by email.
         """
         verified_filter = models.Q(email_verified_at__isnull=True)
-        if settings.VERIFICATION_LIFETIME:
+        if settings.VERIFIED_LIFETIME:
             at_time = datetime_or_now(at_time)
             verified_filter |= models.Q(email_verified_at__lt=at_time
-                - settings.VERIFICATION_LIFETIME)
+                - settings.VERIFIED_LIFETIME)
         queryset = self.filter(email=email).exclude(verified_filter)
         return queryset.exists()
 
@@ -600,10 +604,10 @@ class ContactManager(models.Manager):
         Returns True if the user is reachable by phone.
         """
         verified_filter = models.Q(phone_verified_at__isnull=True)
-        if settings.VERIFICATION_LIFETIME:
+        if settings.VERIFIED_LIFETIME:
             at_time = datetime_or_now(at_time)
             verified_filter |= models.Q(phone_verified_at__lt=at_time
-                - settings.VERIFICATION_LIFETIME)
+                - settings.VERIFIED_LIFETIME)
         queryset = self.filter(phone=phone).exclude(verified_filter)
         return queryset.exists()
 
@@ -613,10 +617,10 @@ class ContactManager(models.Manager):
         Returns True if the user is reachable by email.
         """
         verified_filter = models.Q(email_verified_at__isnull=True)
-        if settings.VERIFICATION_LIFETIME:
+        if settings.VERIFIED_LIFETIME:
             at_time = datetime_or_now(at_time)
             verified_filter |= models.Q(email_verified_at__lt=at_time
-                - settings.VERIFICATION_LIFETIME)
+                - settings.VERIFIED_LIFETIME)
         return self.filter(user=user).exclude(verified_filter).exists()
 
 
@@ -625,10 +629,10 @@ class ContactManager(models.Manager):
         Returns True if the user is reachable by phone.
         """
         verified_filter = models.Q(phone_verified_at__isnull=True)
-        if settings.VERIFICATION_LIFETIME:
+        if settings.VERIFIED_LIFETIME:
             at_time = datetime_or_now(at_time)
             verified_filter |= models.Q(phone_verified_at__lt=at_time
-                - settings.VERIFICATION_LIFETIME)
+                - settings.VERIFIED_LIFETIME)
         return self.filter(user=user).exclude(verified_filter).exists()
 
 
@@ -933,7 +937,7 @@ class OTPGenerator(models.Model):
             # Set `SKIP_EXPIRATION_CHECK` to `True` **ONLY** in testing
             # because this will enable to enter a predictable OTP code
             # (which defies the purpose of OTP code except in testing).
-            LOGGER.warning("SKIP_EXPIRATION_CHECK enabled: pyotp.TOTP(priv_key=%s).verify(code=%s, date_joined=%s) is predictable.", self.priv_key, code, self.user.date_joined)
+            LOGGER.warning("SKIP_EXPIRATION_CHECK enabled: OTP is predictable.")
             return totp.verify(code, self.user.date_joined)
         return totp.verify(code)
 

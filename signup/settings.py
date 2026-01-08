@@ -46,15 +46,12 @@ from django.conf import settings
 _DEFAULT_ENCRYPTED_FIELD = 'fernet_fields.EncryptedCharField'
 
 _SETTINGS = {
-    'ACCOUNT_ACTIVATION_DAYS': getattr(settings, 'ACCOUNT_ACTIVATION_DAYS', 2),
     'ACCOUNT_MODEL': getattr(settings, 'AUTH_USER_MODEL', None),
     'ACCOUNT_SERIALIZER': 'signup.serializers_overrides.UserSerializer',
     'AUTH_USER_MODEL': getattr(settings, 'AUTH_USER_MODEL'),
-    'AWS_ACCOUNT_ID': None,
     'AWS_EXTERNAL_ID': "",
     'AWS_REGION': getattr(settings, 'AWS_REGION', None),
     'AWS_UPLOAD_ROLE': None,
-    'AWS_S3_BUCKET_NAME': getattr(settings, 'AWS_S3_BUCKET_NAME', None),
     'SKIP_EXPIRATION_CHECK': False,
     'DEFAULT_FROM_EMAIL': getattr(settings, 'DEFAULT_FROM_EMAIL'),
     'DISABLED_AUTHENTICATION': False,
@@ -93,83 +90,178 @@ _SETTINGS = {
     'USER_CONTACT_CALLABLE': None,  # XXX deprecated?
     'USER_OTP_REQUIRED': None,
     'USER_SERIALIZER': 'signup.serializers_overrides.UserSerializer',
-    'USER_API_KEY_LIFETIME_DAYS': getattr(settings,
-        'USER_API_KEY_LIFETIME_DAYS', 365),
-    'VERIFICATION_LIFETIME': None # ex: `datetime.timedelta(days=365)`
+    'USER_API_KEY_LIFETIME': None, # ex: `datetime.timedelta(days=365)`
+    'VERIFICATION_LIFETIME': None, # ex: `datetime.timedelta(hours=24)`
+    'VERIFIED_LIFETIME': None # ex: `datetime.timedelta(days=365)`
 }
 _SETTINGS.update(getattr(settings, 'SIGNUP', {}))
 
+#: specifies the model that stores profile accounts linked to ``Activity``
 ACCOUNT_MODEL = _SETTINGS.get('ACCOUNT_MODEL')
+
+#: specifies the serializer for ``ACCOUNT_MODEL``
 ACCOUNT_SERIALIZER = _SETTINGS.get('ACCOUNT_SERIALIZER')
+
 AUTH_USER_MODEL = _SETTINGS.get('AUTH_USER_MODEL')
-AWS_REGION = _SETTINGS.get('AWS_REGION')
-AWS_UPLOAD_ROLE = _SETTINGS.get('AWS_UPLOAD_ROLE')
-AWS_ACCOUNT_ID = _SETTINGS.get('AWS_ACCOUNT_ID')
-AWS_EXTERNAL_ID = _SETTINGS.get('AWS_EXTERNAL_ID')
-AWS_S3_BUCKET_NAME = _SETTINGS.get('AWS_S3_BUCKET_NAME')
-SKIP_EXPIRATION_CHECK = _SETTINGS.get('SKIP_EXPIRATION_CHECK')
-DEFAULT_FROM_EMAIL = _SETTINGS.get('DEFAULT_FROM_EMAIL')
+USER_SERIALIZER = _SETTINGS.get('USER_SERIALIZER')
 
-#: When `True`, authentication on the site is disabled.
-#: This settings can either be a boolean value or a callable function.
-DISABLED_AUTHENTICATION = _SETTINGS.get('DISABLED_AUTHENTICATION')
+#: specifies the Django class to use for encrypted fields in a model
+#: Keys (ex: ``OTPGenerator.priv_key``) are best stored encrypted
+#: in the database.
+#: This setting defaults to ``fernet_fields.EncryptedCharField``.
+ENCRYPTED_FIELD = _SETTINGS.get('ENCRYPTED_FIELD')
 
-#: When `True`, registration of new users on the site is disabled.
-#: This settings can either be a boolean value or a callable function.
-DISABLED_REGISTRATION = _SETTINGS.get('DISABLED_REGISTRATION')
+#: In the circumstances where you want to leverage postgresql JSON fields
+#: for example, you can override the Django class used for ``extra`` fields
+#: in the models defined in this app.
+#: This setting defaults to ``models.TextField``.
+EXTRA_FIELD = _SETTINGS.get('EXTRA_FIELD')
 
-DISABLED_USER_UPDATE = _SETTINGS.get('DISABLED_USER_UPDATE')
+#: This setting enables a project to integrate the ``View``s of multiple apps
+#: into a single class hierarchy. This is useful when you are building
+#: a dashboard with links in a sidebar menu that are `reverse` from different
+#: Django apps (see djaoapp for an example of user).
+#: This setting defaults to ``object``.
+EXTRA_MIXIN = _SETTINGS.get('EXTRA_MIXIN')
+
+#: Backend class used to e-mail verification codes
+#: This setting defaults to
+#: ``signup.backends.email_verification.base.EmailVerificationBackend``.
+EMAIL_VERIFICATION_BACKEND = _SETTINGS.get('EMAIL_VERIFICATION_BACKEND')
+
+#: Backend class used to text verification codes to a phone number
+#: This setting defaults to ``None``, disabling phone verification.
+PHONE_VERIFICATION_BACKEND = _SETTINGS.get('PHONE_VERIFICATION_BACKEND')
+
+#: A callable function which returns a `Storage` object that will be used
+#: to upload a contact picture
+PICTURE_STORAGE_CALLABLE = _SETTINGS.get('PICTURE_STORAGE_CALLABLE')
+
+#: A dictionnary of SSO providers that are enabled on the site
+SSO_PROVIDERS = _SETTINGS.get('SSO_PROVIDERS')
+
+
+# Bot prevention
+# --------------
 
 #: A callable function which is passed an email address and that returns `False`
 #: when the email suspiciously looks like it belongs to a bot.
 EMAIL_DYNAMIC_VALIDATOR = _SETTINGS.get('EMAIL_DYNAMIC_VALIDATOR')
-EMAIL_VERIFICATION_BACKEND = _SETTINGS.get('EMAIL_VERIFICATION_BACKEND')
 
-ENCRYPTED_FIELD = _SETTINGS.get('ENCRYPTED_FIELD')
-EXTRA_FIELD = _SETTINGS.get('EXTRA_FIELD')
-EXTRA_MIXIN = _SETTINGS.get('EXTRA_MIXIN')
-JWT_SECRET_KEY = _SETTINGS.get('JWT_SECRET_KEY')
-JWT_ALGORITHM = _SETTINGS.get('JWT_ALGORITHM')
-KEY_EXPIRATION = _SETTINGS.get('ACCOUNT_ACTIVATION_DAYS')
-LDAP_SERVER_URI = _SETTINGS.get('LDAP', {}).get('SERVER_URI', None)
-LDAP_USER_SEARCH_DN = _SETTINGS.get('LDAP', {}).get('USER_SEARCH_DN', None)
+#: A callable function which is passed a phone number and that returns `False`
+#: when the phone suspiciously looks like it belongs to a bot.
+PHONE_DYNAMIC_VALIDATOR = _SETTINGS.get('PHONE_DYNAMIC_VALIDATOR')
 
 #: A callable function, which is passed a triplet (request, view, user), and
 #: that throttles the HTTP request when there are too many attempts for that
 #: particular user to login.
 LOGIN_THROTTLE = _SETTINGS.get('LOGIN_THROTTLE')
 
-LOGOUT_CLEAR_COOKIES = _SETTINGS.get('LOGOUT_CLEAR_COOKIES')
-MFA_MAX_ATTEMPTS = _SETTINGS.get('MFA_MAX_ATTEMPTS')
-NOTIFICATION_TYPE = _SETTINGS.get('NOTIFICATION_TYPE')
-NOTIFICATIONS_OPT_OUT = _SETTINGS.get('NOTIFICATIONS_OPT_OUT')
-PASSWORD_MIN_LENGTH = _SETTINGS.get('PASSWORD_MIN_LENGTH')
 
-#: A callable function which returns a `Storage` object that will be used
-#: to upload a contact picture
-PICTURE_STORAGE_CALLABLE = _SETTINGS.get('PICTURE_STORAGE_CALLABLE')
+# Configuring authentication pipeline
+# -----------------------------------
 
-#: A callable function which is passed a phone number and that returns `False`
-#: when the phone suspiciously looks like it belongs to a bot.
-PHONE_DYNAMIC_VALIDATOR = _SETTINGS.get('PHONE_DYNAMIC_VALIDATOR')
-PHONE_VERIFICATION_BACKEND = _SETTINGS.get('PHONE_VERIFICATION_BACKEND')
-RANDOM_SEQUENCE = _SETTINGS.get('RANDOM_SEQUENCE')
-REQUIRES_RECAPTCHA = _SETTINGS.get('REQUIRES_RECAPTCHA')
-SEARCH_FIELDS_PARAM = _SETTINGS.get('SEARCH_FIELDS_PARAM')
-SSO_PROVIDERS = _SETTINGS.get('SSO_PROVIDERS')
-USE_VERIFICATION_LINKS = _SETTINGS.get('USE_VERIFICATION_LINKS')
-USER_CONTACT_CALLABLE = _SETTINGS.get('USER_CONTACT_CALLABLE')
-USER_OTP_REQUIRED = _SETTINGS.get('USER_OTP_REQUIRED')
-USER_SERIALIZER = _SETTINGS.get('USER_SERIALIZER')
+#: When `True`, authentication on the site is disabled.
+#: This setting can either be a boolean value or a callable function.
+DISABLED_AUTHENTICATION = _SETTINGS.get('DISABLED_AUTHENTICATION')
+
+#: When `True`, registration of new users on the site is disabled.
+#: This setting can either be a boolean value or a callable function.
+DISABLED_REGISTRATION = _SETTINGS.get('DISABLED_REGISTRATION')
+
+#: When `True`, modifications of user fields is disabled. This will
+#: also disable registration of new users.
+#: This setting is useful to provide interactive demos publicly accessible.
+DISABLED_USER_UPDATE = _SETTINGS.get('DISABLED_USER_UPDATE')
+
+#: Secret key used to sign JSON Web Tokens
+JWT_SECRET_KEY = _SETTINGS.get('JWT_SECRET_KEY')
+
+#: Algorithm used to sign JSON Web Tokens
+JWT_ALGORITHM = _SETTINGS.get('JWT_ALGORITHM')
+
+# A ``datetime.timedelta`` that specifies how long a verification link
+# or verification code is valid after it was created. When `None`,
+# verification links and codes never expire.
 VERIFICATION_LIFETIME = _SETTINGS.get('VERIFICATION_LIFETIME')
 
+#: Maximum number of attempts a user has to verify a one-time code
+#: before being kicked out.
+MFA_MAX_ATTEMPTS = _SETTINGS.get('MFA_MAX_ATTEMPTS')
+
+#: When `True`, validates ReCaptcha before continuing with authentication.
+REQUIRES_RECAPTCHA = _SETTINGS.get('REQUIRES_RECAPTCHA')
+
+#: When `True`, email verification links instead of verification codes.
+USE_VERIFICATION_LINKS = _SETTINGS.get('USE_VERIFICATION_LINKS')
+
+#: A ``datetime.timedelta`` that specifies how long before an email address
+#: or phone number needs to be verified again. When `None`, email addresses
+#: and phone numbers need to be verified only once.
+VERIFIED_LIFETIME = _SETTINGS.get('VERIFIED_LIFETIME')
+
+
+# Cybersecurity policies
+# ----------------------
+
+#: Minimum password length
+PASSWORD_MIN_LENGTH = _SETTINGS.get('PASSWORD_MIN_LENGTH')
+
+#: Default number of days before an API Key expires
+#: A ``datetime.timedelta`` that specifies how long a newly created API Key
+#: is valid for. When `None`, API keys never expire.
+USER_API_KEY_LIFETIME = _SETTINGS.get('USER_API_KEY_LIFETIME')
+
+#: When `True` user is required to setup OTP.
+USER_OTP_REQUIRED = _SETTINGS.get('USER_OTP_REQUIRED')
+
+
+# Debugging
+# ---------
+
+#: When `True`, skips the expiration of verification code and links.
+#: This setting is only intended to simplify automated testing and should
+#: never be set to `True` in a production environment.
+SKIP_EXPIRATION_CHECK = _SETTINGS.get('SKIP_EXPIRATION_CHECK')
+
+#: List to fetch from when a random slug is required.
+#: This setting is only intended to simplify automated testing and should
+#: never be set to `True` in a production environment.
+RANDOM_SEQUENCE = _SETTINGS.get('RANDOM_SEQUENCE')
+
+# Miscellaneous
+# -------------
+
+#: List of HTTP Cookie to clear when a user logs out
+LOGOUT_CLEAR_COOKIES = _SETTINGS.get('LOGOUT_CLEAR_COOKIES')
+
+#: List of notifications that a user can opt in or out of.
+NOTIFICATION_TYPE = _SETTINGS.get('NOTIFICATION_TYPE')
+
+#: `True` if the database records opt-outs, and `False` if the database
+#: records opt-ins.
+NOTIFICATIONS_OPT_OUT = _SETTINGS.get('NOTIFICATIONS_OPT_OUT')
+
+#: The default language code when registering a new user.
 LANGUAGE_CODE = getattr(settings, 'LANGUAGE_CODE')
+
+
+AWS_REGION = _SETTINGS.get('AWS_REGION')
+AWS_UPLOAD_ROLE = _SETTINGS.get('AWS_UPLOAD_ROLE')
+AWS_EXTERNAL_ID = _SETTINGS.get('AWS_EXTERNAL_ID')
+LDAP_SERVER_URI = _SETTINGS.get('LDAP', {}).get('SERVER_URI', None)
+LDAP_USER_SEARCH_DN = _SETTINGS.get('LDAP', {}).get('USER_SEARCH_DN', None)
+
+DEFAULT_FROM_EMAIL = _SETTINGS.get('DEFAULT_FROM_EMAIL')
 LOGIN_URL = getattr(settings, 'LOGIN_URL')
 LOGIN_REDIRECT_URL = getattr(settings, 'LOGIN_REDIRECT_URL')
+SEARCH_FIELDS_PARAM = _SETTINGS.get('SEARCH_FIELDS_PARAM')
+
+# XXX Not used anymore?
+USER_CONTACT_CALLABLE = _SETTINGS.get('USER_CONTACT_CALLABLE')
 
 EMAIL_VERIFICATION_PAT = r'[a-f0-9]{40}'
 FULL_NAME_PAT = r"^([^\W\d_]|[ \.\'\-])+$"
 USERNAME_PAT = r"[-a-zA-Z0-9_]+"
-USER_API_KEY_LIFETIME_DAYS = _SETTINGS.get('USER_API_KEY_LIFETIME_DAYS')
 
 RANDOM_SEQUENCE_IDX = 0

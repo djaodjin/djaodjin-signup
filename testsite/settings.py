@@ -281,9 +281,6 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'testsite', 'media')
 MEDIA_URL = '/media/'
 STATIC_URL = '/static/'
 
-
-ACCOUNT_ACTIVATION_DAYS = 2
-
 LOGIN_URL = reverse_lazy('login')
 LOGIN_REDIRECT_URL = '/app/'
 

@@ -1,4 +1,4 @@
-# Copyright (c) 2023, Djaodjin Inc.
+# Copyright (c) 2026, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,7 +22,7 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import datetime, logging
+import logging
 
 from django.contrib.auth.hashers import make_password
 from django.core.exceptions import PermissionDenied
@@ -32,7 +32,7 @@ from rest_framework.generics import (GenericAPIView, ListAPIView,
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
 
-from .. import filters, settings
+from .. import filters
 from ..backends.auth_ldap import is_ldap_user, set_ldap_pubkey
 from ..compat import gettext_lazy as _
 from ..docs import extend_schema, OpenApiResponse
@@ -42,7 +42,7 @@ from ..models import Credentials
 from ..serializers import (AuthenticatedUserPasswordSerializer,
     APIKeypairSerializer, APIKeySeralizer, NewKeypairSerializer,
     PublicKeySerializer, ValidationErrorSerializer)
-from ..utils import generate_random_slug
+from ..utils import generate_random_slug, get_user_api_key_lifetime
 
 
 LOGGER = logging.getLogger(__name__)
@@ -147,12 +147,13 @@ class ListCreateAPIKeysAPIView(AuthenticatedUserPasswordMixin,
             length=Credentials.API_PASSWORD_LENGTH,
             allowed_chars=allowed_chars)
         title = serializer.validated_data.get('title', "")
+        api_key_lifetime = get_user_api_key_lifetime(request, self.user)
         Credentials.objects.create(
             user=self.user,
             api_pub_key=api_pub_key,
             api_password=make_password(api_password),
-            ends_at=datetime_or_now() + datetime.timedelta(
-                days=settings.USER_API_KEY_LIFETIME_DAYS),
+            ends_at=(datetime_or_now() + api_key_lifetime
+                if api_key_lifetime else None),
             title=title
         )
         return Response(APIKeypairSerializer().to_representation({

@@ -1,4 +1,4 @@
-# Copyright (c) 2025, Djaodjin Inc.
+# Copyright (c) 2026, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -36,17 +36,17 @@ LOGGER = logging.getLogger(__name__)
 class EmailVerificationBackend(object):
 
     def send(self, email, email_code,
-             back_url=None, expiration_days=settings.KEY_EXPIRATION):
+             back_url=None, lifetime=settings.VERIFICATION_LIFETIME):
         """
         Send an e-mail message to the user to verify her e-mail address.
         """
         send_mail(
             _("E-mail verification code"),
             _("%(back_url)s\nE-mail verification code: %(code)s\n"\
-              "Expires in %(expiration_days)d days.") % {
+              "Expires in %(lifetime)s.") % {
                   'back_url': back_url,
                   'code': "{:0>6}".format(email_code) if email_code else None,
-                  'expiration_days': expiration_days
+                  'lifetime': lifetime
               },
             settings.DEFAULT_FROM_EMAIL, [email])
 
