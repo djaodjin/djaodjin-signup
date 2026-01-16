@@ -67,8 +67,10 @@ Tested with
 - **Python:** 3.12, **Django:** 5.2 (next)
 - **Python:** 3.9, **Django:** 3.2 (legacy)
 
-0.10.6
+0.11.0
 
-  * enables js to be processed by webpack
+  * replaces 'register/', 'activate/', and 'recover/' pages by 'login/'
+  * re-auths with password, email_code or phone_code
+  * renames SKIP_EXPIRATION_CHECK to SKIP_VERIFICATION_CHECK
 
 [previous release notes](changelog)
