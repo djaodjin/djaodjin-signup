@@ -46,11 +46,11 @@ us to redesign authentication around a single flexible workflow.
 | address, and we do not have it.     | ``settings.VERIFIED_LIFETIME``         |
 |                                     | ``Contact.email_verification_required``|
 +-------------------------------------+----------------------------------------+
-| Check the one-time code on record   | ``settings.SKIP_EXPIRATION_CHECK``     |
+| Check the one-time code on record   | ``settings.SKIP_VERIFICATION_CHECK``   |
 | for the phone number matches the one| ``settings.VERIFICATION_LIFETIME``     |
 | provided as input.                  |                                        |
 +-------------------------------------+----------------------------------------+
-| Check the one-time code on record   | ``settings.SKIP_EXPIRATION_CHECK``     |
+| Check the one-time code on record   | ``settings.SKIP_VERIFICATION_CHECK``   |
 | for the email address matches       | ``settings.VERIFICATION_LIFETIME``     |
 | the one provided as input.          |                                        |
 +-------------------------------------+----------------------------------------+
@@ -146,7 +146,7 @@ Debugging
 
 .. autodata:: signup.settings.RANDOM_SEQUENCE
 
-.. autodata:: signup.settings.SKIP_EXPIRATION_CHECK
+.. autodata:: signup.settings.SKIP_VERIFICATION_CHECK
 
 
 .. _djaodjin-signup-vue.js: https://github.com/djaodjin/djaodjin-signup/blob/main/signup/static/js/djaodjin-signup-vue.js

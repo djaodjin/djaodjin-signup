@@ -22,7 +22,7 @@ DB_NAME = os.path.join(RUN_DIR, 'db.sqlite')
 DEBUG = True
 DISABLED_VERIFY_EMAIL_ON_REGISTRATION = True
 DISABLED_VERIFY_PHONE_ON_REGISTRATION = True
-SKIP_EXPIRATION_CHECK = False
+SKIP_VERIFICATION_CHECK = False
 VERIFICATION_LIFETIME = None
 JS_FRAMEWORK = 'vuejs'
 
@@ -84,9 +84,14 @@ load_config(os.path.join(
 load_config(os.path.join(
     os.getenv('TESTSITE_SETTINGS_LOCATION', RUN_DIR), 'site.conf'))
 
-for env_var in ['DEBUG', 'SKIP_EXPIRATION_CHECK']:
+for env_var in ['DEBUG']:
     if os.getenv(env_var):
         setattr(sys.modules[__name__], env_var, (int(os.getenv(env_var)) > 0))
+
+for env_var in ['SKIP_VERIFICATION_CHECK']:
+    if os.getenv(env_var):
+        setattr(sys.modules[__name__], env_var, int(os.getenv(env_var)))
+
 
 if not hasattr(sys.modules[__name__], "SECRET_KEY"):
     from random import choice
@@ -309,7 +314,7 @@ SIGNUP = {
         DISABLED_VERIFY_PHONE_ON_REGISTRATION,
     # 'REQUIRES_RECAPTCHA': True,
     # 'USE_VERIFICATION_LINKS': False,
-    'SKIP_EXPIRATION_CHECK': SKIP_EXPIRATION_CHECK,
+    'SKIP_VERIFICATION_CHECK': SKIP_VERIFICATION_CHECK,
     'VERIFICATION_LIFETIME': VERIFICATION_LIFETIME
 }
 

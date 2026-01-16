@@ -39,7 +39,7 @@ _SETTINGS = {
     'AWS_EXTERNAL_ID': "",
     'AWS_REGION': getattr(settings, 'AWS_REGION', None),
     'AWS_UPLOAD_ROLE': None,
-    'SKIP_EXPIRATION_CHECK': False,
+    'SKIP_VERIFICATION_CHECK': False,
     'DEFAULT_FROM_EMAIL': getattr(settings, 'DEFAULT_FROM_EMAIL'),
     'DISABLED_AUTHENTICATION': False,
     'DISABLED_REGISTRATION': False,
@@ -220,7 +220,7 @@ USER_OTP_REQUIRED = _SETTINGS.get('USER_OTP_REQUIRED')
 #: When `True`, skips the expiration of verification code and links.
 #: This setting is only intended to simplify automated testing and should
 #: never be set to `True` in a production environment.
-SKIP_EXPIRATION_CHECK = _SETTINGS.get('SKIP_EXPIRATION_CHECK')
+SKIP_VERIFICATION_CHECK = _SETTINGS.get('SKIP_VERIFICATION_CHECK')
 
 #: List to fetch from when a random slug is required.
 #: This setting is only intended to simplify automated testing and should

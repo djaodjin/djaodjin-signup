@@ -405,15 +405,15 @@ class ContactManager(models.Manager):
                         contact.email_verification_key = verification_key
                     if not contact.email_code:
                         contact.email_code = generate_random_code()
-                        if settings.SKIP_EXPIRATION_CHECK:
-                            # Set `SKIP_EXPIRATION_CHECK` to `True` **ONLY**
+                        if settings.SKIP_VERIFICATION_CHECK:
+                            # Set `SKIP_VERIFICATION_CHECK` to 6-digit **ONLY**
                             # in testing because this will enable to enter
                             # a predictable verification code (which defies
                             # the purpose of verification codes except
                             # in testing).
-                            LOGGER.warning("SKIP_EXPIRATION_CHECK enabled:"\
+                            LOGGER.warning("SKIP_VERIFICATION_CHECK enabled:"\
                                 " email_code is predictable.")
-                            contact.email_code = settings.SKIP_EXPIRATION_CHECK
+                            contact.email_code = settings.SKIP_VERIFICATION_CHECK
                     contact.email_verification_at = at_time
                     # XXX It is possible a 'reason' field would be a better
                     # implementation.
@@ -442,15 +442,15 @@ class ContactManager(models.Manager):
                 })
             else:
                 email_code = generate_random_code()
-                if settings.SKIP_EXPIRATION_CHECK:
-                    # Set `SKIP_EXPIRATION_CHECK` to `True` **ONLY**
+                if settings.SKIP_VERIFICATION_CHECK:
+                    # Set `SKIP_VERIFICATION_CHECK` to 6-digit **ONLY**
                     # in testing because this will enable to enter
                     # a predictable verification code (which defies
                     # the purpose of verification codes except
                     # in testing).
-                    LOGGER.warning("SKIP_EXPIRATION_CHECK enabled:"\
+                    LOGGER.warning("SKIP_VERIFICATION_CHECK enabled:"\
                         " email_code is predictable.")
-                    email_code = settings.SKIP_EXPIRATION_CHECK
+                    email_code = settings.SKIP_VERIFICATION_CHECK
                 kwargs.update({
                     'email_verification_key': verification_key,
                     'email_code': email_code,
@@ -502,15 +502,15 @@ class ContactManager(models.Manager):
                     contact.phone_verification_key = verification_key
                 if not contact.phone_code:
                     contact.phone_code = generate_random_code()
-                    if settings.SKIP_EXPIRATION_CHECK:
-                        # Set `SKIP_EXPIRATION_CHECK` to `True` **ONLY**
+                    if settings.SKIP_VERIFICATION_CHECK:
+                        # Set `SKIP_VERIFICATION_CHECK` to 6-digit **ONLY**
                         # in testing because this will enable to enter
                         # a predictable verification code (which defies
                         # the purpose of verification codes except
                         # in testing).
-                        LOGGER.warning("SKIP_EXPIRATION_CHECK enabled:"\
+                        LOGGER.warning("SKIP_VERIFICATION_CHECK enabled:"\
                             " phone_code is predictable.")
-                        contact.phone_code = settings.SKIP_EXPIRATION_CHECK
+                        contact.phone_code = settings.SKIP_VERIFICATION_CHECK
                 contact.phone_verification_at = at_time
                 # XXX It is possible a 'reason' field would be a better
                 # implementation.
@@ -520,15 +520,15 @@ class ContactManager(models.Manager):
         else:
             created = True
             phone_code = generate_random_code()
-            if settings.SKIP_EXPIRATION_CHECK:
-                # Set `SKIP_EXPIRATION_CHECK` to `True` **ONLY**
+            if settings.SKIP_VERIFICATION_CHECK:
+                # Set `SKIP_VERIFICATION_CHECK` to 6-digit **ONLY**
                 # in testing because this will enable to enter
                 # a predictable verification code (which defies
                 # the purpose of verification codes except
                 # in testing).
-                LOGGER.warning("SKIP_EXPIRATION_CHECK enabled:"\
+                LOGGER.warning("SKIP_VERIFICATION_CHECK enabled:"\
                     " phone_code is predictable.")
-                phone_code = settings.SKIP_EXPIRATION_CHECK
+                phone_code = settings.SKIP_VERIFICATION_CHECK
             kwargs.update({
                 'user': user,
                 'phone': phone,
@@ -948,11 +948,12 @@ class OTPGenerator(models.Model):
 
     def verify(self, code):
         totp = pyotp.TOTP(self.priv_key)
-        if settings.SKIP_EXPIRATION_CHECK:
-            # Set `SKIP_EXPIRATION_CHECK` to `True` **ONLY** in testing
+        if settings.SKIP_VERIFICATION_CHECK:
+            # Set `SKIP_VERIFICATION_CHECK` to a 6-digit **ONLY** in testing
             # because this will enable to enter a predictable OTP code
             # (which defies the purpose of OTP code except in testing).
-            LOGGER.warning("SKIP_EXPIRATION_CHECK enabled: OTP is predictable.")
+            LOGGER.warning("SKIP_VERIFICATION_CHECK enabled:"\
+                " OTP is predictable.")
             return totp.verify(code, self.user.date_joined)
         return totp.verify(code)
 
