@@ -1,0 +1,10 @@
+{% extends "login/index.html" %}
+
+{% block register_form %}
+{% if form.email %}
+{{form.email}}
+{% endif %}
+<label>Full name</label>
+<input type="text" name="full_name" value="" autofocus>
+<input type="hidden" name="new_password" value="">
+{% endblock %}

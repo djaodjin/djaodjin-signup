@@ -28,7 +28,6 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.staticfiles.views import serve as django_static_serve
 from django.views.generic.base import RedirectView, TemplateView
 from signup.compat import reverse_lazy, include, path, re_path
-from signup.api.auth import JWTLogout
 from signup.api.activities import (ActivityByAccountAPIView,
     ActivityByAccountIndexAPIView)
 from signup.api.contacts import (ActivityListCreateAPIView,
@@ -42,14 +41,12 @@ from signup.api.users import (ActivityByAccountContactAPIView,
     UserDetailAPIView, UserListCreateAPIView, UserNotificationsAPIView,
     UserPictureAPIView)
 from signup.decorators import active_required
-from signup.views.auth import SignupView
 from signup.views.contacts import (AccountDetailView, AccountListView,
     ContactListView, ContactDetailView)
 from signup.views.users import (PasswordChangeView,
     UserPublicKeyUpdateView, UserProfileView, UserNotificationsView,
     redirect_to_user_profile)
 
-from .forms import SignupWithCaptchaForm
 
 urlpatterns = \
     static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT) + [
@@ -114,9 +111,6 @@ urlpatterns = \
     path('api/auth/tokens',
          login_required(JWTRefresh.as_view()),
          name='api_refresh_token'),
-    path('api/auth/logout',
-         JWTLogout.as_view(),
-         name='api_logout'),
 
     path('api/',
         include('signup.urls.api.dashboard.activate')),
@@ -155,17 +149,13 @@ urlpatterns = \
          name='accounts_profile'),
 
     # signup.urls.views.auth
-    path('register/frictionless/',
-        SignupView.as_view(),
-        name='registration_frictionless'),
-    re_path(r'register/((?P<path>\w+)/)?',
-        SignupView.as_view(form_class=SignupWithCaptchaForm),
-        name='registration_register'),
     path('', include('signup.urls.views.auth')),
+
+    # testsite application views
     path('app/<slug:user>/',
          active_required(TemplateView.as_view(template_name='app.html'))),
     path('app/',
          login_required(TemplateView.as_view(template_name='app.html'))),
-    path('', RedirectView.as_view(url=reverse_lazy('registration_register')),
+    path('', RedirectView.as_view(url=reverse_lazy('login')),
         name='homepage'),
 ]

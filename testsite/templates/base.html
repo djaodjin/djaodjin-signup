@@ -13,7 +13,7 @@
     <a id="authenticated-user" href="{% url 'accounts_profile' %}">profile</a>
     <a href="{% url 'logout' %}">sign out</a>
     {% else %}
-    <a href="{% url 'login' %}">sign in</a>
+    <a id="login" href="{{urls.user.login}}">sign in</a>
     {% endif %}
   </div>
   {% endblock %}

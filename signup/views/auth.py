@@ -1,4 +1,4 @@
-# Copyright (c) 2025, Djaodjin Inc.
+# Copyright (c) 2026, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -31,7 +31,7 @@ from django import forms
 from django.contrib.auth import logout as auth_logout, REDIRECT_FIELD_NAME
 from django.http import HttpResponseRedirect
 from django.views.decorators.cache import add_never_cache_headers
-from django.views.generic.base import TemplateResponseMixin, View
+from django.views.generic.base import TemplateResponseMixin, RedirectView
 from django.views.generic.edit import FormMixin, ProcessFormView
 from rest_framework import exceptions, serializers
 
@@ -39,16 +39,13 @@ from .. import settings
 from ..auth import validate_redirect
 from ..compat import gettext_lazy as _, reverse
 from ..forms import (ActivationForm, ActivationAuthForm, CodeActivationForm,
-    FrictionlessSignupForm, OTPCodeForm, PasswordAuthForm,
-    PasswordResetConfirmForm, StartAuthenticationForm,
-    VerifyEmailForm, VerifyPhoneForm)
+    OTPCodeForm, PasswordAuthForm, PasswordResetConfirmForm,
+    StartAuthenticationForm, VerifyEmailForm, VerifyPhoneForm)
 from ..helpers import has_invalid_password, update_context_urls
-from ..mixins import (LoginMixin, PasswordResetConfirmMixin,
-    RegisterMixin, VerifyMixin, VerifyCompleteMixin, AuthDisabled,
-    IncorrectUser, OTPRequired, PasswordRequired, RegistrationDisabled,
-    SSORequired, VerifyEmailFailed, VerifyEmailRequired, VerifyPhoneFailed,
-    VerifyPhoneRequired)
-from ..models import Contact
+from ..mixins import (LoginMixin, RegisterMixin, VerifyCompleteMixin,
+    AuthDisabled, IncorrectUser, OTPRequired, PasswordRequired,
+    RegistrationDisabled, SSORequired, VerifyEmailFailed, VerifyEmailRequired,
+    VerifyPhoneFailed, VerifyPhoneRequired)
 from ..utils import fill_form_errors, get_disabled_registration
 from ..validators import as_email_or_phone
 
@@ -67,6 +64,31 @@ class AuthResponseMixin(TemplateResponseMixin, FormMixin):
     password_form_class = PasswordAuthForm
     otp_code_form_class = OTPCodeForm
     set_password_form_class = CodeActivationForm
+
+    def _update_form_focus(self, form, field_focus):
+        for field_name, field in form.fields.items():
+            if field_name == field_focus:
+                form.fields[field_name].widget.attrs['autofocus'] = True
+            else:
+                form.fields[field_name].widget.attrs['autofocus'] = False
+
+
+    def _update_form_errors(self, form, err, aliases=None):
+        fill_form_errors(form, err, aliases=aliases)
+        if 'email_code' in form.fields:
+            check_email = (form.data.get('check_email') and
+                not form.data.get('email_code'))
+            if check_email or 'email_code' in form.errors:
+                self._update_form_focus(form, 'email_code')
+            else:
+                form.fields['email_code'].widget = forms.HiddenInput()
+        if 'phone_code' in form.fields:
+            check_phone = (form.data.get('check_phone') and
+                not form.data.get('phone_code'))
+            if check_phone or 'phone_code' in form.errors:
+                self._update_form_focus(form, 'phone_code')
+            else:
+                form.fields['phone_code'].widget = forms.HiddenInput()
 
     def get_verify_email_form(self):
         form_class = self.get_form_class()
@@ -97,31 +119,33 @@ class AuthResponseMixin(TemplateResponseMixin, FormMixin):
         return next_url
 
     def get_context_data(self, **kwargs):
-        context = super(AuthResponseMixin, self).get_context_data(
-            **kwargs)
+        context = super(AuthResponseMixin, self).get_context_data(**kwargs)
+        sep = ""
+        query = ""
         next_url = validate_redirect(self.request)
         if next_url:
-            context.update({REDIRECT_FIELD_NAME: next_url})
+            query = "%s%s=%s" % (sep, REDIRECT_FIELD_NAME, next_url)
+            sep = "&"
+        if query:
+            context.update({'query': query})
+
         # URLs for user
         disabled_registration = get_disabled_registration(self.request)
         context.update({'disabled_registration': disabled_registration})
         update_context_urls(context, {
             'api': {
                 'login': reverse('api_login'),
-                'recover': reverse('api_recover'),
                 'register': (reverse('api_register')
                     if not disabled_registration else None),
             },
             'user': {
-                'login': reverse('login'),
-                'password_reset': reverse('password_reset'),
-                'register': (reverse('registration_register')
-                    if not disabled_registration else None),
+                'login': str(settings.LOGIN_URL),
         }})
         return context
 
 
-class ActivationView(VerifyCompleteMixin, AuthResponseMixin, ProcessFormView):
+class VerifyCompleteView(VerifyCompleteMixin, AuthResponseMixin,
+                         ProcessFormView):
     """
     The user is now on the activation url that was sent in an email.
     It is time to complete the registration and activate the account.
@@ -142,10 +166,10 @@ class ActivationView(VerifyCompleteMixin, AuthResponseMixin, ProcessFormView):
     password_form_class = ActivationAuthForm
     set_password_form_class = PasswordResetConfirmForm
 
-    template_name = 'accounts/activate/verification_key.html'
+    template_name = 'login/verification_key.html'
 
     def get_context_data(self, **kwargs):
-        context = super(ActivationView, self).get_context_data(**kwargs)
+        context = super(VerifyCompleteView, self).get_context_data(**kwargs)
         context.update({'object': self.contact})
         if self.contact and self.contact.extra:
             # XXX 'reason' might be best as a separate field.
@@ -191,12 +215,12 @@ class ActivationView(VerifyCompleteMixin, AuthResponseMixin, ProcessFormView):
         # We put the code inline instead of using method_decorator() otherwise
         # kwargs is interpreted as parameters in sensitive_post_parameters.
         request.sensitive_post_parameters = '__ALL__'
-        response = super(ActivationView, self).dispatch(
+        response = super(VerifyCompleteView, self).dispatch(
             request, *args, **kwargs)
         add_never_cache_headers(response)
         return response
 
-    def get(self, request, *args, **kwargs): # ActivationView
+    def get(self, request, *args, **kwargs): # VerifyCompleteView
         context = None
         if not self.contact:
             # We return a custom 404 page such that a user has a chance
@@ -220,7 +244,7 @@ class ActivationView(VerifyCompleteMixin, AuthResponseMixin, ProcessFormView):
             context.update({'disabled_authentication': True})
             return self.response_class(
                 request=self.request,
-                template=['accounts/disabled.html'],
+                template=['login/disabled.html'],
                 context=context,
                 using=self.template_engine,
                 content_type=self.content_type)
@@ -230,7 +254,7 @@ class ActivationView(VerifyCompleteMixin, AuthResponseMixin, ProcessFormView):
         return self.render_to_response(context)
 
 
-    def post(self, request, *args, **kwargs): # ActivationView
+    def post(self, request, *args, **kwargs): # VerifyCompleteView
         context = None
         try:
             if self.request.POST.get('reset'):
@@ -252,14 +276,14 @@ class ActivationView(VerifyCompleteMixin, AuthResponseMixin, ProcessFormView):
         except (exceptions.AuthenticationFailed,
                 serializers.ValidationError) as err:
             form = self.get_form()
-            fill_form_errors(form, err)
+            self._update_form_errors(form, err)
             context = self.get_context_data(form=form)
         except AuthDisabled:
             context = self.get_context_data()
             context.update({'disabled_authentication': True})
             return self.response_class(
                 request=self.request,
-                template=['accounts/disabled.html'],
+                template=['login/disabled.html'],
                 context=context,
                 using=self.template_engine,
                 content_type=self.content_type)
@@ -267,7 +291,7 @@ class ActivationView(VerifyCompleteMixin, AuthResponseMixin, ProcessFormView):
             context = self.get_context_data()
             return self.response_class(
                 request=request,
-                template=['accounts/disabled.html'],
+                template=['login/disabled.html'],
                 context=context,
                 using=self.template_engine,
                 content_type=self.content_type)
@@ -275,16 +299,6 @@ class ActivationView(VerifyCompleteMixin, AuthResponseMixin, ProcessFormView):
         if context is None:
             context = self.get_context_data(form=self.get_form())
         return self.render_to_response(context)
-
-
-class PasswordResetConfirmView(PasswordResetConfirmMixin, ActivationView):
-    """
-    Specific view that will first reset a user's password so the form displays.
-
-    URL paths
-    `/reset/<verification_key>/`
-    """
-    password_form_class = PasswordResetConfirmForm
 
 
 class SigninView(LoginMixin, AuthResponseMixin, ProcessFormView):
@@ -297,24 +311,44 @@ class SigninView(LoginMixin, AuthResponseMixin, ProcessFormView):
     `/login/`
     """
     form_class = StartAuthenticationForm
-    template_name = 'accounts/login.html'
+    template_name = 'login/index.html'
+    landing_query_param = 'landing'
+
+
+    def get_context_data(self, **kwargs):
+        context = super(SigninView, self).get_context_data(**kwargs)
+        sep = ""
+        query = ""
+        next_url = validate_redirect(self.request)
+        if next_url:
+            query = "%s%s=%s" % (sep, REDIRECT_FIELD_NAME, next_url)
+            sep = "&"
+        landing = self.get_landing()
+        if landing:
+            query = "%s%s=%s" % (sep, self.landing_query_param, landing)
+            sep = "&"
+        if query:
+            context.update({'query': query})
+        return context
+
 
     def get_form_class(self):
+        form_class = self.form_class
         if 'new_password' in self.request.POST:
-            return self.set_password_form_class
-        if ('otp_code' in self.request.POST and
+            form_class = self.set_password_form_class
+        elif ('otp_code' in self.request.POST and
             not 'otp_code' in self.form_class.base_fields):
-            return self.otp_code_form_class
-        if ('email_code' in self.request.POST and
+            form_class = self.otp_code_form_class
+        elif ('email_code' in self.request.POST and
             not 'email_code' in self.form_class.base_fields):
-            return self.verify_email_form_class
-        if ('phone_code' in self.request.POST and
+            form_class = self.verify_email_form_class
+        elif ('phone_code' in self.request.POST and
             not 'phone_code' in self.form_class.base_fields):
-            return self.verify_phone_form_class
-        if ('password' in self.request.POST and
+            form_class = self.verify_phone_form_class
+        elif ('password' in self.request.POST and
             not 'password' in self.form_class.base_fields):
-            return self.password_form_class
-        return self.form_class
+            form_class = self.password_form_class
+        return form_class
 
     def get_initial(self):
         initial = super(SigninView, self).get_initial()
@@ -340,6 +374,20 @@ class SigninView(LoginMixin, AuthResponseMixin, ProcessFormView):
 
         return initial
 
+    def get_landing(self):
+        page_name = self.request.GET.get(self.landing_query_param, None)
+        if page_name and re.match(r"^[a-zA-Z\-]+$", page_name):
+            return page_name
+        return None
+
+    def get_template_names(self):
+        candidates = super(SigninView, self).get_template_names()
+        page_name = self.get_landing()
+        if page_name:
+            candidates = ["login/%s.html" % page_name] + candidates
+        return candidates
+
+
     def get(self, request, *args, **kwargs):
         return self.render_to_response(self.get_context_data())
 
@@ -350,12 +398,11 @@ class SigninView(LoginMixin, AuthResponseMixin, ProcessFormView):
             self.run_pipeline()
             return HttpResponseRedirect(self.get_success_url())
         except serializers.ValidationError as err:
-            LOGGER.debug("[SigninView/ValidationError] %s", err)
             form = self.get_form()
-            fill_form_errors(form, err)
+            LOGGER.debug("[SigninView/ValidationError] %s form is %s",
+                err, form.__class__)
+            self._update_form_errors(form, err)
             context = self.get_context_data(form=form)
-            context.update({
-                'email_verification_link': reverse('password_reset')})
         except SSORequired as err:
             LOGGER.debug("[SigninView/SSORequired] %s", err)
             form = self.get_form()
@@ -364,27 +411,26 @@ class SigninView(LoginMixin, AuthResponseMixin, ProcessFormView):
         except OTPRequired as err:
             LOGGER.debug("[SigninView/OTPRequired] %s", err)
             form = self.get_otp_form()
-            fill_form_errors(form, err, aliases={
+            self._update_form_errors(form, err, aliases={
                 'email': 'username', 'phone': 'username'})
             form._errors.pop('otp_code', None)
             context = self.get_context_data(form=form)
         except PasswordRequired as err:
             LOGGER.debug("[SigninView/PasswordRequired] %s", err)
             form = self.get_password_form()
-            fill_form_errors(form, err, aliases={
+            self._update_form_errors(form, err, aliases={
                 'email': 'username', 'phone': 'username'})
             form._errors.pop('password', None)
             form._errors.pop('new_password', None)
             form._errors.pop('new_password2', None)
             context = self.get_context_data(form=form)
-            verification_link = self.request.path
-            context.update({'email_verification_link': verification_link})
+            context.update({'check_email': True})
         except VerifyEmailRequired as err:
             # `verify_email` lands here.
             LOGGER.debug("[SigninView/VerifyEmailRequired] %s", err)
             cleaned_data = self.validate_inputs(raise_exception=False)
             form = self.get_verify_email_form()
-            fill_form_errors(form, err, aliases={'email': 'username'})
+            self._update_form_errors(form, err, aliases={'email': 'username'})
             form._errors.pop('email_code', None)
             if 'email_code' in form:
                 username = cleaned_data.get('email')
@@ -398,7 +444,7 @@ class SigninView(LoginMixin, AuthResponseMixin, ProcessFormView):
             # `verify_phone` lands here.
             LOGGER.debug("[SigninView/VerifyPhoneRequired] %s", err)
             form = self.get_verify_phone_form()
-            fill_form_errors(form, err, aliases={'phone': 'username'})
+            self._update_form_errors(form, err, aliases={'phone': 'username'})
             form._errors.pop('phone_code', None)
             if 'phone_code' in form:
                 username = cleaned_data.get('phone')
@@ -414,6 +460,7 @@ class SigninView(LoginMixin, AuthResponseMixin, ProcessFormView):
             LOGGER.debug("[SigninView/IncorrectUser] %s", err)
             cleaned_data = self.validate_inputs(raise_exception=False)
             form = self.get_form(form_class=self.set_password_form_class)
+            self._update_form_errors(form, err)
             form._errors = {}
             form.data = form.data.copy()
             email = cleaned_data.get('email')
@@ -423,61 +470,51 @@ class SigninView(LoginMixin, AuthResponseMixin, ProcessFormView):
             if phone:
                 form.data.setlist('phone', [phone])
             username = cleaned_data.get('username')
-            if not re.match(r"^%s$" % settings.USERNAME_PAT, username):
+            if (username and
+                not re.match(r"^%s$" % settings.USERNAME_PAT, username)):
                 form.data.pop('username', None)
             context = self.get_context_data(form=form)
+            context.update({'requires_registration': True})
 
         except VerifyEmailFailed as err:
             LOGGER.debug("[SigninView/VerifyEmailFailed] %s", err)
             form = self.get_form()
-            email_verification_link = None
             cleaned_data = self.validate_inputs(raise_exception=False)
-            if 'email' in cleaned_data and cleaned_data['email']:
+            aliases = {}
+            check_email = (
+                'email' in cleaned_data and cleaned_data['email'])
+            if check_email:
                 form.data = form.data.copy()
                 form.data.setlist('check_email', [True])
-                if 'email' in form.fields:
-                    field_name = 'email'
-                else:
-                    field_name = 'username'
-                form.add_error(field_name,
-            _("This e-mail address must be verified before going any further."))
-                email_verification_link = self.request.path
-            fill_form_errors(form, err)
+                if 'email' not in form.fields:
+                    aliases = {'email': 'username'}
+            self._update_form_errors(form, err, aliases=aliases)
             context = self.get_context_data(form=form)
-            if email_verification_link:
-                context.update({
-                    'email_verification_link': email_verification_link})
+            if check_email:
+                context.update({'check_email': check_email})
 
         except VerifyPhoneFailed as err:
             LOGGER.debug("[SigninView/VerifyPhoneFailed] %s", err)
             form = self.get_form()
-            phone_verification_link = None
             cleaned_data = self.validate_inputs(raise_exception=False)
-            if 'phone' in cleaned_data and cleaned_data['phone']:
+            aliases = {}
+            check_phone = (
+                'phone' in cleaned_data and cleaned_data['phone'])
+            if check_phone:
                 form.data = form.data.copy()
                 form.data.setlist('check_phone', [True])
-                if 'phone' in form.fields:
-                    field_name = 'phone'
-                else:
-                    field_name = 'username'
-                form.add_error(field_name,
-            _("This phone number must be verified before going any further."))
-                phone_verification_link = self.request.path
-            fill_form_errors(form, err)
+                if 'phone' not in form.fields:
+                    aliases = {'phone': 'username'}
+            self._update_form_errors(form, err, aliases=aliases)
             context = self.get_context_data(form=form)
-            if phone_verification_link:
-                context.update({
-                    'phone_verification_link': phone_verification_link})
+            if check_phone:
+                context.update({'check_phone': check_phone})
 
         except exceptions.AuthenticationFailed as err:
             LOGGER.debug("[SigninView/AuthenticationFailed] %s", err)
             form = self.get_form()
             cleaned_data = self.validate_inputs(raise_exception=False)
-            register_link = None
-            disabled_registration = get_disabled_registration(self.request)
-            register_link = (reverse('registration_register')
-                if not disabled_registration else None)
-            fill_form_errors(form, err)
+            self._update_form_errors(form, err)
             #pylint:disable=too-many-nested-blocks
             if isinstance(form, ActivationForm):
                 # We are trying to register a new user, while email, phone,
@@ -502,8 +539,6 @@ class SigninView(LoginMixin, AuthResponseMixin, ProcessFormView):
                                 pass
 
             context = self.get_context_data(form=form)
-            if register_link:
-                context.update({'register_link': register_link})
 
         except AuthDisabled as err:
             LOGGER.debug("[SigninView/AuthDisabled] %s", err)
@@ -511,7 +546,7 @@ class SigninView(LoginMixin, AuthResponseMixin, ProcessFormView):
             context.update({'disabled_authentication': True})
             return self.response_class(
                 request=request,
-                template=['accounts/disabled.html'],
+                template=['login/disabled.html'],
                 context=context,
                 using=self.template_engine,
                 content_type=self.content_type)
@@ -520,7 +555,7 @@ class SigninView(LoginMixin, AuthResponseMixin, ProcessFormView):
             context = self.get_context_data()
             return self.response_class(
                 request=request,
-                template=['accounts/disabled.html'],
+                template=['login/disabled.html'],
                 context=context,
                 using=self.template_engine,
                 content_type=self.content_type)
@@ -528,17 +563,6 @@ class SigninView(LoginMixin, AuthResponseMixin, ProcessFormView):
         if context is None:
             context = self.get_context_data()
         return self.render_to_response(context)
-
-
-class RecoverView(VerifyMixin, SigninView):
-    """
-    Workflow page to authenticate by verifying an email address
-    or phone number instead of a password, then reset password.
-
-    URL paths:
-    `/recover/`
-    """
-    template_name = 'accounts/recover.html'
 
 
 class SignupView(RegisterMixin, SigninView):
@@ -549,91 +573,32 @@ class SignupView(RegisterMixin, SigninView):
 
     URL paths:
     `/register/`
-    `/register/<var>`
-    `/register/frictionless/`
     """
-    form_class = FrictionlessSignupForm
-    template_name = 'accounts/register.html'
 
     def get(self, request, *args, **kwargs):
         disabled_registration = get_disabled_registration(request)
         if disabled_registration:
             return self.response_class(
                 request=request,
-                template=['accounts/disabled.html'],
+                template=['login/disabled.html'],
                 context=self.get_context_data(),
                 using=self.template_engine,
                 content_type=self.content_type)
         return self.render_to_response(self.get_context_data())
 
 
-class SignoutView(AuthResponseMixin, View):
+class SignoutView(AuthResponseMixin, RedirectView):
     """
     Log out the authenticated user.
     """
-    template_name = 'accounts/logout.html'
+    url = settings.LOGIN_URL
 
     def get(self, request, *args, **kwargs): #pylint:disable=unused-argument
         LOGGER.info("%s signed out.", self.request.user,
             extra={'event': 'logout', 'request': request})
         auth_logout(request)
-        next_url = self.get_success_url()
-        response = HttpResponseRedirect(next_url)
+        resp = super(SignoutView, self).get(request, *args, **kwargs)
         if settings.LOGOUT_CLEAR_COOKIES:
             for cookie in settings.LOGOUT_CLEAR_COOKIES:
-                response.delete_cookie(cookie)
-        return response
-
-
-class VerificationView(AuthResponseMixin, ProcessFormView):
-    """
-    The user is now on the verification url. We are waiting for an e-mail code.
-    """
-    form_class = VerifyEmailForm
-    template_name = 'accounts/verify.html'
-
-    @property
-    def contact(self):
-        if not hasattr(self, '_contact'):
-            #pylint:disable=attribute-defined-outside-init
-            self._contact = Contact.objects.get_token(
-                self.kwargs.get(self.key_url_kwarg))
-        return self._contact
-
-    @property
-    def phone_code_expected(self):
-        if not hasattr(self, '_phone_code_expected'):
-            #pylint:disable=attribute-defined-outside-init
-            self._phone_code_expected = (self.contact.phone_verification_key
-                == self.kwargs.get(self.key_url_kwarg))
-        return self._phone_code_expected
-
-    def get_form_class(self):
-        if self.phone_code_expected:
-            return VerifyPhoneForm
-        return self.form_class
-
-    def get_initial(self):
-        return {
-            'email': self.contact.email,
-            'phone': self.contact.phone
-         }
-
-    def form_valid(self, form):
-        if self.phone_code_expected:
-            try:
-                Contact.objects.finalize_phone_verification(
-                    form.cleaned_data['phone'], form.cleaned_data['phone_code'])
-            except Contact.DoesNotExist:
-                form.add_error('phone_code',
-                    _("Phone verification code does not match."))
-                return self.form_invalid(form)
-            return HttpResponseRedirect(self.get_success_url())
-        try:
-            Contact.objects.finalize_email_verification(
-                form.cleaned_data['email'], form.cleaned_data['email_code'])
-        except Contact.DoesNotExist:
-            form.add_error('email_code',
-                _("Email verification code does not match."))
-            return self.form_invalid(form)
-        return HttpResponseRedirect(self.get_success_url())
+                resp.delete_cookie(cookie)
+        return resp

@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block localheader_title %}Get started!{% endblock %}
+
+{% block content %}
+<div>
+  {% if sso_required %}
+  <p>
+  You are required to login through the following Single Sign On (SSO) provider:
+  </p>
+  <a href="{{sso_required.url}}">{{sso_required.printable_name}}</a>
+  {% else %}
+  <form method="post" action="./{% if query %}?{{query}}{% endif %}">
+        {% csrf_token %}
+        {% if requires_registration %}
+          {% block register_form %}
+          {{form.as_p}}
+          {% endblock %}
+        {% else %}
+          {{form.as_p}}
+        {% endif %}
+
+        {% if not form.password and check_email %}
+        <button id="email-verification-link" type="submit" name="submit">E-mail me a code</button>
+        {% elif not form.password and check_phone %}
+        <button id="phone-verification-link" type="submit" name="submit">Text me a code</button>
+        {% elif requires_registration %}
+        <button type="submit" name="submit">Sign Up</button>
+        {% else %}
+        <button type="submit" name="submit">Continue</button>
+        {% endif %}
+  </form>
+  {% if form.password and check_email %}
+  <hr />
+  <div class="text-center">
+    <p>
+      Or
+    </p>
+    <form method="post" action="./{% if query %}?{{query}}{% endif %}">
+      <input type="hidden" name="csrfmiddlewaretoken" value="{{csrf_token}}">
+      <input type="hidden" name="check_email" value="1">
+      <input type="hidden" name="username" value="{{form.username.value}}">
+      <button id="email-verification-link">E-mail me a code or a link</button>
+        </div>
+      </div>
+    </form>
+  </div>
+  {% endif %}
+  {% endif %}
+</div>
+{% endblock %}

@@ -72,6 +72,28 @@ us to redesign authentication around a single flexible workflow.
 | Create an authenticated session for the user.                                |
 +-------------------------------------+----------------------------------------+
 
+Multi-factor authentication
+---------------------------
+
+The :doc:`authentication workflow<auth-workflows>` will authenticate a user
+with either a password, verified email address, or verified phone number
+(when a ``settings.PHONE_VERIFICATION_BACKEND`` is set).
+
+To enable OTP as a second factor for a user, you need to create an
+``OTPGenerator`` instance. This can be done by passing ``"otp_enabled": true``
+when calling the ``OTPChangeAPIView`` API endpoint.
+
+The ``otp_generator.priv_key`` field contains the key used to generate an OTP
+at a specified time. The key can be used on the command line with a tool
+like *oathtool* to generate a one-time code. Example:
+
+    /opt/local/bin/oathtool --totp -b *priv_key*
+
+Or the key can be imported into an Authenticator App. The Vue component
+``'user-update-otp'`` in `djaodjin-signup-vue.js`_ uses ``QRCode`` to generate
+a QR code of the OTP key that Google Authenticator recognizes.
+
+
 Configuring authentication pipeline
 -----------------------------------
 
@@ -95,6 +117,10 @@ On/Off Toggles
 .. autodata:: signup.settings.DISABLED_USER_UPDATE
 
 .. autodata:: signup.settings.MFA_MAX_ATTEMPTS
+
+.. autodata:: signup.settings.DISABLED_VERIFY_EMAIL_ON_REGISTRATION
+
+.. autodata:: signup.settings.DISABLED_VERIFY_PHONE_ON_REGISTRATION
 
 .. autodata:: signup.settings.REQUIRES_RECAPTCHA
 
@@ -121,3 +147,6 @@ Debugging
 .. autodata:: signup.settings.RANDOM_SEQUENCE
 
 .. autodata:: signup.settings.SKIP_EXPIRATION_CHECK
+
+
+.. _djaodjin-signup-vue.js: https://github.com/djaodjin/djaodjin-signup/blob/main/signup/static/js/djaodjin-signup-vue.js

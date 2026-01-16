@@ -158,15 +158,6 @@ def fail_authenticated(request):
     return False
 
 
-def fail_registered(request):
-    """
-    Registered
-    """
-    if not is_authenticated(request):
-        return str(reverse('registration_register'))
-    return False
-
-
 def fail_active(request):
     """
     Active with valid credentials
@@ -188,10 +179,7 @@ def fail_verified_email(request):
     """
     contact = check_email_verified(request, request.user)
     if contact:
-        if settings.USE_VERIFICATION_LINKS:
-            return str(reverse('email_verification_link'))
-        return str(reverse('verify_channel', args=(
-            contact.email_verification_key,)))
+        return str(settings.LOGIN_URL) + '?check_email=1'
     return False
 
 
@@ -201,10 +189,7 @@ def fail_verified_phone(request):
     """
     contact = check_phone_verified(request, request.user)
     if contact:
-        if settings.USE_VERIFICATION_LINKS:
-            return str(reverse('phone_verification_link'))
-        return str(reverse('verify_channel', args=(
-            contact.phone_verification_key,)))
+        return str(settings.LOGIN_URL) + '?check_phone=1'
     return False
 
 

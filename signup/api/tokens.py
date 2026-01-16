@@ -1,4 +1,4 @@
-# Copyright (c) 2023, DjaoDjin inc.
+# Copyright (c) 2026, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -25,10 +25,13 @@
 import logging
 
 from django.core.exceptions import PermissionDenied
+from django.contrib.auth import logout as auth_logout
+from rest_framework import status
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
 
+from .. import settings
 from .auth import CreateTokenMixin
 from ..docs import OpenApiResponse, extend_schema
 from ..serializers import TokenSerializer, ValidationErrorSerializer
@@ -138,3 +141,32 @@ class JWTRefresh(JWTVerify):
             if self.request.user == user:
                 return self.create_token(user)
         raise PermissionDenied()
+
+
+    @extend_schema(request=None, responses={
+        204: OpenApiResponse(None)})
+    def delete(self, request, *args, **kwargs):#pylint:disable=unused-argument
+        """
+        Deletes authentication cookies
+
+        Removes all cookies associated with the session.
+
+        This API endpoint is only useful when the user is using Cookie-based
+        authentication. Tokens expire; they cannot be revoked.
+
+        **Tags: auth, user, usermodel
+
+        **Example
+
+        .. code-block:: http
+
+            DELETE /api/auth/tokens  HTTP/1.1
+        """
+        LOGGER.info("%s signed out.", self.request.user,
+            extra={'event': 'logout', 'request': request})
+        auth_logout(request)
+        response = Response(status=status.HTTP_204_NO_CONTENT)
+        if settings.LOGOUT_CLEAR_COOKIES:
+            for cookie in settings.LOGOUT_CLEAR_COOKIES:
+                response.delete_cookie(cookie)
+        return response

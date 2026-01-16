@@ -1,4 +1,4 @@
-# Copyright (c) 2025, Djaodjin Inc.
+# Copyright (c) 2026, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -103,79 +103,6 @@ class AuthenticatedUserPasswordMixin(object):
         label=_("Phone verification code"))
 
 
-class FrictionlessSignupForm(forms.Form):
-    """
-    Form for frictionless registration of a new user. Just supply
-    a full name and a way to notify user (email or phone) and you are in.
-    We will ask for username and password later.
-    """
-    email = forms.EmailField(label=_("E-mail address"), required=False,
-        widget=forms.TextInput(attrs={
-            'placeholder': _("ex: john@myorganization.com")}))
-    phone = PhoneField(label=_("Phone number"), required=False,
-        widget=forms.TextInput(attrs={
-            'placeholder': _("ex: +14155555555")}))
-    full_name = forms.RegexField(label=_("Full name"), required=False,
-        regex=settings.FULL_NAME_PAT, max_length=60,
-        widget=forms.TextInput(attrs={
-            'placeholder': 'ex: John Smith'}),
-        error_messages={'invalid':
-            _("Sorry we do not recognize some characters in your full name.")})
-
-    def __init__(self, *args, **kwargs):
-        super(FrictionlessSignupForm, self).__init__(*args, **kwargs)
-        if settings.REQUIRES_RECAPTCHA:
-            self.fields['captcha'] = get_recaptcha_form_field()
-
-    def clean_full_name(self):
-        if not self.cleaned_data['full_name']:
-            self.cleaned_data['full_name'] = (
-                "%s %s" % (self.data.get('first_name', ""),
-                    self.data.get('last_name', ""))).strip()
-        return self.cleaned_data['full_name']
-
-    def clean_email(self):
-        # If we don't convert `''` to `None`, the database will later complain
-        # unique constraints are not respected.
-        email = self.cleaned_data['email']
-        if not email:
-            self.cleaned_data['email'] = None
-        return self.cleaned_data['email']
-
-    def clean_phone(self):
-        # If we don't convert `''` to `None`, the database will later complain
-        # unique constraints are not respected.
-        phone = self.cleaned_data['phone']
-        if not phone:
-            self.cleaned_data['phone'] = None
-        return self.cleaned_data['phone']
-
-    def clean(self):
-        super(FrictionlessSignupForm, self).clean()
-        if not ('email' in self._errors or 'phone' in self._errors):
-            if 'email' in self.data and 'phone' in self.data:
-                email = self.cleaned_data['email']
-                phone = self.cleaned_data['phone']
-                if not (email or phone):
-                    raise forms.ValidationError(
-                        {'email': _("Either email or phone must be valid."),
-                         'phone': _("Either email or phone must be valid.")})
-            elif 'email' in self.data:
-                email = self.cleaned_data['email']
-                if not email:
-                    raise forms.ValidationError(
-                        {'email': _("An email must be valid.")})
-            elif 'phone' in self.data:
-                phone = self.cleaned_data['phone']
-                if not phone:
-                    raise forms.ValidationError(
-                        {'phone': _("A phone must be valid.")})
-            else:
-                raise forms.ValidationError(
-                    _("Either email or phone must be present."))
-        return self.cleaned_data
-
-
 class PasswordConfirmMixin(object):
 
     new_password = forms.CharField(strip=False,
@@ -191,20 +118,25 @@ class PasswordConfirmMixin(object):
             attrs={'placeholder': _("Type password again")}))
 
     def clean_new_password(self):
-        password = ""
+        password = None
+        required = self.fields['new_password'].required
         if 'new_password' in self.data:
-            password = self.cleaned_data['new_password']
-            if not password:
-                raise forms.ValidationError(_("Password cannot be empty."))
-            user = self.user if hasattr(self, 'user') else None
-            password_validation.validate_password(password, user=user)
+            try:
+                user = self.user if hasattr(self, 'user') else None
+                password_validation.validate_password(
+                    self.cleaned_data['new_password'], user=user)
+                password = self.cleaned_data['new_password']
+            except forms.ValidationError:
+                if required:
+                    raise
         return password
 
     def clean_new_password2(self):
-        password = ""
+        password = None
+        required = self.fields['new_password2'].required
         if 'new_password2' in self.data:
             password = self.cleaned_data['new_password2']
-            if not password:
+            if required and not password:
                 raise forms.ValidationError(
                     _("Password confirmation cannot be empty."))
         return password
@@ -234,8 +166,6 @@ class PasswordConfirmMixin(object):
 
 
 class PasswordUpdateForm(PasswordConfirmMixin, forms.ModelForm):
-
-    submit_title = _("Update")
 
     new_password = forms.CharField(strip=False,
         label=_("New password"),
@@ -310,8 +240,6 @@ class ActivationForm(PasswordConfirmMixin, forms.Form):
     Form to set password, and optionally user's profile information
     in an activation view.
     """
-    submit_title = _("Activate")
-
     error_messages = {
         'password_mismatch': _("Password and password confirmation"\
         " do not match."),
@@ -329,20 +257,22 @@ class ActivationForm(PasswordConfirmMixin, forms.Form):
             'autofocus': True, 'placeholder':'ex: John Smith'}),
         error_messages={'invalid':
             _("Sorry we do not recognize some characters in your full name.")})
-    username = forms.SlugField(widget=forms.TextInput(
+    username = forms.SlugField(label=_("Username"), required=False,
+        max_length=30,
+        widget=forms.TextInput(
         attrs={'placeholder': _("ex: john")}),
-        max_length=30, label=_("Username"),
         error_messages={'invalid': _("Username may only contain letters,"\
-            " digits and -/_ characters. Spaces are not allowed.")})
-    new_password = forms.CharField(strip=False,
-        label=_("Password"),
+            " digits and -/_ characters. Spaces are not allowed.")}
+    )
+    new_password = forms.CharField(label=_("Password"), required=False,
+        strip=False,
         min_length=settings.PASSWORD_MIN_LENGTH,
         widget=forms.PasswordInput(attrs={
             'minlength': settings.PASSWORD_MIN_LENGTH,
             'placeholder': _("Password")}),
         help_text=password_validation.password_validators_help_text_html())
-    new_password2 = forms.CharField(strip=False,
-        label=_("Confirm password"),
+    new_password2 = forms.CharField(label=_("Confirm password"), required=False,
+        strip=False,
         widget=forms.PasswordInput(attrs={
             'placeholder': _("Type password again")}))
 
@@ -367,40 +297,16 @@ class CodeActivationForm(ActivationForm):
     email_code = forms.IntegerField(required=False)
     phone_code = forms.IntegerField(required=False)
 
-    def __init__(self, *args, **kwargs):
-        super(CodeActivationForm, self).__init__(*args, **kwargs)
-        initial = kwargs.get('initial')
-        data = kwargs.get('data')
-        if initial and data:
-            email = initial.get('email')
-            email_code = data.get('email_code')
-            if email:
-                self.fields['email'].widget.attrs['readonly'] = True
-                if email_code:
-                    self.fields['email_code'].widget = forms.HiddenInput()
-            else:
-                self.fields['email_code'].widget = forms.HiddenInput()
-            phone = initial.get('phone')
-            phone_code = data.get('phone_code')
-            if phone:
-                self.fields['phone'].widget.attrs['readonly'] = True
-                if phone_code:
-                    self.fields['phone_code'].widget = forms.HiddenInput()
-            else:
-                self.fields['phone_code'].widget = forms.HiddenInput()
-
 
 class ActivationAuthForm(forms.Form):
     """
-    Form presented in the `ActivationView` when the user is already active.
+    Form presented in the `VerifyCompleteView` when the user is already active.
     This form is intended to login through a link sent either to an e-mail
     address or a phone number.
     """
 
 
 class PublicKeyForm(AuthenticatedUserPasswordMixin, forms.Form):
-
-    submit_title = _("Update")
 
     pubkey = forms.CharField(widget=forms.Textarea)
 
@@ -413,8 +319,6 @@ class UserForm(forms.ModelForm):
     """
     Form to update a ``User`` profile.
     """
-    submit_title = _("Update")
-
     username = forms.SlugField(widget=forms.TextInput(
         attrs={'placeholder': _("Username")}),
         max_length=30, label=_("Username"),
@@ -478,8 +382,6 @@ class UserNotificationsForm(forms.Form):
     """
     Form to update a ``User`` notification preferences.
     """
-    submit_title = _("Update")
-
     def __init__(self, instance, *args, **kwargs):
         #pylint:disable=unused-argument
         super(UserNotificationsForm, self).__init__(*args, **kwargs)

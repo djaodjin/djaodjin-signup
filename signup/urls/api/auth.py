@@ -1,4 +1,4 @@
-# Copyright (c) 2023, Djaodjin Inc.
+# Copyright (c) 2026, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -24,18 +24,16 @@
 
 from ... import settings
 from ...compat import path, re_path
-from ...api.auth import (JWTActivate, JWTLogin, JWTPasswordConfirm, JWTRegister,
-    RecoverAPIView)
+from ...api.auth import JWTActivate, JWTLogin, JWTRegister, RecoverAPIView
 
 
 urlpatterns = [
-    re_path(r'^auth/reset/(?P<verification_key>%s)$'
-        % settings.EMAIL_VERIFICATION_PAT,
-        JWTPasswordConfirm.as_view(), name='api_password_confirm'),
-    re_path(r'^auth/activate/(?P<verification_key>%s)$'
-        % settings.EMAIL_VERIFICATION_PAT,
-        JWTActivate.as_view(), name='api_activate'),
     path('auth/register', JWTRegister.as_view(), name='api_register'),
+    # api_recover is used to send a verification code in the user profile
+    # pages.
     path('auth/recover', RecoverAPIView.as_view(), name='api_recover'),
+    re_path(r'^auth/(?P<verification_key>%s)$'
+        % settings.EMAIL_VERIFICATION_PAT, JWTActivate.as_view(),
+        name='api_activate'),
     path('auth', JWTLogin.as_view(), name='api_login'),
 ]

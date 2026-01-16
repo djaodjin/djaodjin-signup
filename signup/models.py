@@ -123,6 +123,7 @@ class ActivatedUserManager(UserManager):
         #pylint:disable=too-many-locals
         uses_sso_provider = False
         if email:
+            email = email.lower()
             domain = email.split('@')[-1]
             # XXX Technically we should do the same for all SSO logins,
             # even if the SSO workflow wasn't forced on the user.
@@ -198,7 +199,7 @@ class ActivatedUserManager(UserManager):
                 raise err
             # Connect dangling contacts (i.e. `contact.user is None`)
             # with email and/or phone to user.
-            Contact.objects.untangle_refs(user, **kwargs)
+            Contact.objects.untangle_refs(user, email=email, **kwargs)
         return user
 
 
@@ -312,8 +313,9 @@ class ContactManager(models.Manager):
 
     def email_verification_required(self, email):
         assert email is not None
-        return self.filter(
-            email=email, email_verification_required=True).exists()
+        queryset = self.filter(
+            email=email, email_verification_required=True)
+        return queryset.exists()
 
 
     def phone_verification_required(self, phone):
@@ -348,13 +350,11 @@ class ContactManager(models.Manager):
             try:
                 at_time = datetime_or_now()
                 email_filter = models.Q(email_verification_key=verification_key)
-                if (settings.VERIFICATION_LIFETIME and
-                    not settings.SKIP_EXPIRATION_CHECK):
+                if settings.VERIFICATION_LIFETIME:
                     email_filter &= models.Q(email_verification_at__gt=at_time
                         - settings.VERIFICATION_LIFETIME)
                 phone_filter = models.Q(phone_verification_key=verification_key)
-                if (settings.VERIFICATION_LIFETIME and
-                    not settings.SKIP_EXPIRATION_CHECK):
+                if settings.VERIFICATION_LIFETIME:
                     phone_filter &= models.Q(phone_verification_at__gt=at_time
                         - settings.VERIFICATION_LIFETIME)
                 return self.filter(email_filter | phone_filter).select_related(
@@ -366,7 +366,7 @@ class ContactManager(models.Manager):
     def prepare_email_verification(self, email, user=None, at_time=None,
                                    verification_key=None, reason=None,
                                    uses_sso_provider=False, **kwargs):
-        #pylint:disable=too-many-arguments
+        #pylint:disable=too-many-arguments,too-many-locals
         at_time = datetime_or_now(at_time)
         if verification_key is None:
             random_key = str(random.random()).encode('utf-8')
@@ -376,19 +376,10 @@ class ContactManager(models.Manager):
         # XXX The get() needs to be targeted at the write database in order
         # to avoid potential transaction consistency problems.
         contact = None
-        if user:
-            try:
-                contact = self.get(email__iexact=email, user=user)
-            except self.model.DoesNotExist:
-                pass
-        if not contact:
-            try:
-                contact = self.get(email__iexact=email, user__isnull=True)
-                # We are only going to find a contact where
-                # `contact.user is None` so it is OK to do a direct assignment.
-                contact.user = user
-            except self.model.DoesNotExist:
-                pass
+        try:
+            contact = self.get(email__iexact=email)
+        except self.model.DoesNotExist:
+            pass
         if not contact and user:
             contact = self.filter(email__isnull=True, user=user).first()
             if contact:
@@ -412,9 +403,17 @@ class ContactManager(models.Manager):
                         # on a link that will trigger an activate url, then
                         # filling the first form that showed up.
                         contact.email_verification_key = verification_key
-                    if not (settings.SKIP_EXPIRATION_CHECK and
-                            contact.email_code):
+                    if not contact.email_code:
                         contact.email_code = generate_random_code()
+                        if settings.SKIP_EXPIRATION_CHECK:
+                            # Set `SKIP_EXPIRATION_CHECK` to `True` **ONLY**
+                            # in testing because this will enable to enter
+                            # a predictable verification code (which defies
+                            # the purpose of verification codes except
+                            # in testing).
+                            LOGGER.warning("SKIP_EXPIRATION_CHECK enabled:"\
+                                " email_code is predictable.")
+                            contact.email_code = settings.SKIP_EXPIRATION_CHECK
                     contact.email_verification_at = at_time
                     # XXX It is possible a 'reason' field would be a better
                     # implementation.
@@ -442,9 +441,19 @@ class ContactManager(models.Manager):
                     'email_verified_at': at_time
                 })
             else:
+                email_code = generate_random_code()
+                if settings.SKIP_EXPIRATION_CHECK:
+                    # Set `SKIP_EXPIRATION_CHECK` to `True` **ONLY**
+                    # in testing because this will enable to enter
+                    # a predictable verification code (which defies
+                    # the purpose of verification codes except
+                    # in testing).
+                    LOGGER.warning("SKIP_EXPIRATION_CHECK enabled:"\
+                        " email_code is predictable.")
+                    email_code = settings.SKIP_EXPIRATION_CHECK
                 kwargs.update({
                     'email_verification_key': verification_key,
-                    'email_code': generate_random_code(),
+                    'email_code': email_code,
                     'email_verification_at': at_time
                 })
                 if reason:
@@ -469,19 +478,10 @@ class ContactManager(models.Manager):
         # XXX The get() needs to be targeted at the write database in order
         # to avoid potential transaction consistency problems.
         contact = None
-        if user:
-            try:
-                contact = self.get(phone=phone, user=user)
-            except self.model.DoesNotExist:
-                pass
-        if not contact:
-            try:
-                contact = self.get(phone=phone, user__isnull=True)
-                # We are only going to find a contact where
-                # `contact.user is None` so it is OK to do a direct assignment.
-                contact.user = user
-            except self.model.DoesNotExist:
-                pass
+        try:
+            contact = self.get(phone=phone)
+        except self.model.DoesNotExist:
+            pass
         if not contact and user:
             contact = self.filter(phone__isnull=True, user=user).first()
             if contact:
@@ -500,8 +500,17 @@ class ContactManager(models.Manager):
                     # that will trigger an activate url, then filling the first
                     # form that showed up.
                     contact.phone_verification_key = verification_key
-                if not (settings.SKIP_EXPIRATION_CHECK and contact.phone_code):
+                if not contact.phone_code:
                     contact.phone_code = generate_random_code()
+                    if settings.SKIP_EXPIRATION_CHECK:
+                        # Set `SKIP_EXPIRATION_CHECK` to `True` **ONLY**
+                        # in testing because this will enable to enter
+                        # a predictable verification code (which defies
+                        # the purpose of verification codes except
+                        # in testing).
+                        LOGGER.warning("SKIP_EXPIRATION_CHECK enabled:"\
+                            " phone_code is predictable.")
+                        contact.phone_code = settings.SKIP_EXPIRATION_CHECK
                 contact.phone_verification_at = at_time
                 # XXX It is possible a 'reason' field would be a better
                 # implementation.
@@ -510,11 +519,21 @@ class ContactManager(models.Manager):
                 contact.save()
         else:
             created = True
+            phone_code = generate_random_code()
+            if settings.SKIP_EXPIRATION_CHECK:
+                # Set `SKIP_EXPIRATION_CHECK` to `True` **ONLY**
+                # in testing because this will enable to enter
+                # a predictable verification code (which defies
+                # the purpose of verification codes except
+                # in testing).
+                LOGGER.warning("SKIP_EXPIRATION_CHECK enabled:"\
+                    " phone_code is predictable.")
+                phone_code = settings.SKIP_EXPIRATION_CHECK
             kwargs.update({
                 'user': user,
                 'phone': phone,
                 'phone_verification_key': verification_key,
-                'phone_code': generate_random_code(),
+                'phone_code': phone_code,
                 'phone_verification_at': at_time
             })
             full_name = kwargs.get('full_name')
@@ -544,11 +563,9 @@ class ContactManager(models.Manager):
             email_filter &= models.Q(email_verification_key=email_code)
         else:
             email_filter &= models.Q(email_code=email_code)
-        if (settings.VERIFICATION_LIFETIME and
-             not settings.SKIP_EXPIRATION_CHECK):
+        if settings.VERIFICATION_LIFETIME:
             email_filter &= models.Q(email_verification_at__gt=at_time
                 - settings.VERIFICATION_LIFETIME)
-            # set `SKIP_EXPIRATION_CHECK` to `True` **ONLY** in testing
         queryset = self.filter(email_filter).select_related('user')
         contact = queryset.get()
         if commit:
@@ -573,11 +590,9 @@ class ContactManager(models.Manager):
             phone_filter &= models.Q(phone_verification_key=phone_code)
         else:
             phone_filter &= models.Q(phone_code=phone_code)
-        if (settings.VERIFICATION_LIFETIME and
-            not settings.SKIP_EXPIRATION_CHECK):
+        if settings.VERIFICATION_LIFETIME:
             phone_filter &= models.Q(phone_verification_at__gt=at_time
                 - settings.VERIFICATION_LIFETIME)
-            # set `SKIP_EXPIRATION_CHECK` to `True` **ONLY** in testing
         contact = self.filter(phone_filter).select_related('user').get()
         if commit:
             contact.phone_verification_key = None

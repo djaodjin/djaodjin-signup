@@ -23,7 +23,7 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 """
-URLconf for frictionless signup (API and HTML pages).
+URLconf for djaodjin-signup auth & dashboard API and HTML pages.
 """
 
 from ..compat import include, path

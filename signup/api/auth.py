@@ -1,4 +1,4 @@
-# Copyright (c) 2023, DjaoDjin inc.
+# Copyright (c) 2026, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -24,8 +24,7 @@
 
 import logging
 
-from django.contrib.auth import get_user_model, logout as auth_logout
-from django.contrib.auth.tokens import default_token_generator
+from django.contrib.auth import get_user_model
 import jwt
 from rest_framework import exceptions, permissions, status, serializers
 from rest_framework.generics import GenericAPIView
@@ -36,13 +35,13 @@ from .. import settings
 from ..compat import gettext_lazy as _
 from ..docs import extend_schema, OpenApiResponse
 from ..helpers import as_timestamp, datetime_or_now
-from ..mixins import (LoginMixin, PasswordResetConfirmMixin, RegisterMixin,
-    VerifyMixin, VerifyCompleteMixin, SSORequired, IncorrectUser)
+from ..mixins import (LoginMixin, RegisterMixin, VerifyCompleteMixin,
+    IncorrectUser, SSORequired)
 from ..models import Contact
 from ..serializers_overrides import UserDetailSerializer
 from ..serializers import (CookieQueryParamSerializer,
-    CredentialsSerializer, NoModelSerializer,
-    RecoverSerializer, TokenSerializer, UserActivateSerializer,
+    CredentialsSerializer, NoModelSerializer, RecoverSerializer,
+    TokenSerializer, UserActivateSerializer,
     UserCreateSerializer, ValidationErrorSerializer)
 from ..utils import get_disabled_registration
 
@@ -117,6 +116,14 @@ class JWTLogin(LoginMixin, JWTBase):
 
     Returns a JSON Web Token that can be used in HTTP requests that require
     authentication.
+
+    Authentication can be done either through a ``password``, or by verifying
+    access to an e-mail inbox (``email_code``) or access to a phone
+    (``phone_code``). See `sending a verification code <#auth_recover_create>`_
+
+    When Multi-Factor Authentication (MFA) is enabled, an additional
+    ``otp_code`` must be specified to authenticate a user.
+    See `enabling MFA <#users_otp_update>`_
 
     The API is typically used within an HTML
     `login page </docs/guides/themes/#workflow_login>`_
@@ -227,7 +234,7 @@ class JWTActivate(VerifyCompleteMixin, JWTBase):
 
     .. code-block:: http
 
-        GET /api/auth/activate/16793aa72a4c7ae94b50b20c2eca52df5b0fe2c6\
+        GET /api/auth/16793aa72a4c7ae94b50b20c2eca52df5b0fe2c6\
  HTTP/1.1
 
     responds
@@ -266,7 +273,7 @@ class JWTActivate(VerifyCompleteMixin, JWTBase):
         """
         Activates a user
 
-        Activates a new user and returns a JSON Web Token that can subsequently
+        Activates a user and returns a JSON Web Token that can subsequently
         be used to authenticate the new user in HTTP requests.
 
         **Tags: auth, visitor, usermodel
@@ -275,7 +282,7 @@ class JWTActivate(VerifyCompleteMixin, JWTBase):
 
         .. code-block:: http
 
-            POST /api/auth/activate/16793aa72a4c7ae94b50b20c2eca52df5b0fe2c6\
+            POST /api/auth/16793aa72a4c7ae94b50b20c2eca52df5b0fe2c6\
  HTTP/1.1
 
         .. code-block:: json
@@ -301,7 +308,7 @@ class JWTActivate(VerifyCompleteMixin, JWTBase):
         return super(JWTActivate, self).post(request, *args, **kwargs)
 
 
-class JWTPasswordConfirm(PasswordResetConfirmMixin, JWTBase):
+class JWTPasswordConfirm(VerifyCompleteMixin, JWTBase): #XXX deprecated
     """
     Resets a user password
 
@@ -340,49 +347,16 @@ class JWTPasswordConfirm(PasswordResetConfirmMixin, JWTBase):
         return Response({}, status=status.HTTP_201_CREATED)
 
 
-class JWTLogout(GenericAPIView):
+class RecoverAPIView(LoginMixin, JWTBase):
     """
-    Logs a user out
-
-    Removes all cookies associated with the session.
-
-    This API endpoint is only useful when the user is using Cookie-based
-    authentication. Tokens expire; they cannot be revoked.
-
-    **Tags: auth, user, usermodel
-
-    **Example
-
-    .. code-block:: http
-
-        POST /api/auth/logout  HTTP/1.1
-    """
-    serializer_class = NoModelSerializer
-
-    @extend_schema(request=None, responses={
-        200: OpenApiResponse(None)})
-    def post(self, request, *args, **kwargs):#pylint:disable=unused-argument
-        LOGGER.info("%s signed out.", self.request.user,
-            extra={'event': 'logout', 'request': request})
-        auth_logout(request)
-        response = Response(status=status.HTTP_200_OK)
-        if settings.LOGOUT_CLEAR_COOKIES:
-            for cookie in settings.LOGOUT_CLEAR_COOKIES:
-                response.delete_cookie(cookie)
-        return response
-
-
-class RecoverAPIView(VerifyMixin, JWTBase):
-    """
-    Sends a verification link
+    Sends verification code
 
     Sends a one time code to verify an e-mail or phone number.
 
     The user is uniquely identified by her email address or phone number.
 
-    The API is typically used within an HTML
-    `recover credentials page </docs/guides/themes/#workflow_recover>`_
-    as present in the default theme.
+    The API is typically used within a workflow to authenticate a user
+    by verifying access to an e-mail inbox or a phone.
 
     **Tags: auth, visitor, usermodel
 
@@ -395,7 +369,7 @@ class RecoverAPIView(VerifyMixin, JWTBase):
     .. code-block:: json
 
         {
-            "email": "xia@localhost.localdomain"
+            "username": "xia@localhost.localdomain"
         }
 
     responds
@@ -408,7 +382,8 @@ class RecoverAPIView(VerifyMixin, JWTBase):
     """
     model = get_user_model()
     serializer_class = RecoverSerializer
-    token_generator = default_token_generator
+    default_check_email = True
+    default_check_phone = True
 
     def post(self, request, *args, **kwargs):
         #pylint:disable=unused-argument,useless-parent-delegation

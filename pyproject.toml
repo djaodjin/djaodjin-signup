@@ -57,9 +57,9 @@ include = ["signup*"]
 
 [tool.setuptools.package-data]
 signup = [
-  'templates/accounts/*.html',
-  'templates/accounts/activate/*.html',
-  'templates/contacts/*.html',
+  'templates/activities/accounts/*.html',
+  'templates/activities/contacts/*.html',
+  'templates/login/*.html',
   'templates/notification/*.eml',
   'templates/users/*.html',
   'static/js/*.js'

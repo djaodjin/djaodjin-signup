@@ -26,7 +26,6 @@ Major Features:
    notifications
    api keys
    profile picture
-   mfa
    testcases
    extensions
    quirks

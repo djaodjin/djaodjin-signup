@@ -205,11 +205,10 @@ class AuthMixin(object):
             return True
 
         if not user and cleaned_email:
-            # XXX `and not Contact.objects.is_email_verified(cleaned_email)`
             # If we are going to register a new user
             # through the authentication workflow,
             # we must verify the e-mail address when provided.
-            return True
+            return not settings.DISABLED_VERIFY_EMAIL_ON_REGISTRATION
 
         return False
 
@@ -228,6 +227,9 @@ class AuthMixin(object):
         if not phone and user:
             phone = get_phone(user)
 
+        if not settings.PHONE_VERIFICATION_BACKEND:
+            return False
+
         if Contact.objects.phone_verification_required(phone):
             return True
 
@@ -243,7 +245,7 @@ class AuthMixin(object):
             # If we are going to register a new user
             # through the authentication workflow,
             # we must verify the phone number when provided.
-            return True
+            return not settings.DISABLED_VERIFY_PHONE_ON_REGISTRATION
 
         return False
 
@@ -253,6 +255,7 @@ class AuthMixin(object):
 
 
     def validate_inputs(self, contact=None, raise_exception=True):
+        #pylint:disable=too-many-locals
         initial_data = {}
         if contact:
             fields = {'email', 'phone'}
@@ -271,8 +274,11 @@ class AuthMixin(object):
                 LOGGER.debug("[prefetch_contact_info] fields=%s", str(fields))
             for field_name in fields:
                 field_value = getattr(contact, field_name, None)
-                if not field_value and contact.user:
-                    field_value = getattr(contact.user, field_name, None)
+                if contact.user:
+                    if field_name == 'username' or not field_value:
+                        # We don't want to override the username
+                        # with the contact slug by default.
+                        field_value = getattr(contact.user, field_name, None)
                 if field_value:
                     initial_data.update({field_name: field_value})
 
@@ -284,6 +290,10 @@ class AuthMixin(object):
             form = self.get_form()
             if self.request.method.lower() in ('post',):
                 if not form.is_valid() and raise_exception:
+                    # The form is already populated with the errors
+                    # so we are not raising `ValidationError(form.errors)`.
+                    err = serializers.ValidationError(form.errors)
+                    LOGGER.debug("[validate_inputs] ValidationError(%s)", err)
                     raise serializers.ValidationError()
                 for field_name in six.iterkeys(form.data):
                     cleaned_data.update({
@@ -330,7 +340,8 @@ class AuthMixin(object):
             filter_args = models.Q(username=username)
         if email:
             email_filter_args = (
-                models.Q(email__iexact=email) | models.Q(contacts__email__iexact=email))
+                models.Q(email__iexact=email) |
+                models.Q(contacts__email__iexact=email))
             if filter_args:
                 filter_args &= email_filter_args
             else:
@@ -341,8 +352,16 @@ class AuthMixin(object):
                 filter_args &= phone_filter_args
             else:
                 filter_args = phone_filter_args
-        user = None
+
         users = list(self.model.objects.filter(filter_args).distinct())
+
+        if not users:
+            disabled_registration = get_disabled_registration(self.request)
+            if disabled_registration:
+                raise RegistrationDisabled(
+                    {'detail': _("Registration is disabled")})
+
+        user = None
         if len(users) == 1:
             user = users[0]
             if not email:
@@ -371,7 +390,8 @@ class AuthMixin(object):
         if not email and user:
             email = user.email
 
-        email_code = cleaned_data.get('email_code')
+        email_code = self.kwargs.get(
+            self.key_url_kwarg, cleaned_data.get('email_code'))
 
         # send link through e-mail
         if email and not email_code:
@@ -389,7 +409,8 @@ class AuthMixin(object):
                 # If we do not have a candidate user, we first must give
                 # a chance to the visitor to verify the e-mail address.
                 if not force_verification and requires_verification:
-                    raise VerifyEmailFailed()
+                    raise VerifyEmailFailed({'email':
+        _("This e-mail address must be verified before going any further.")})
 
             if force_verification or requires_verification:
 
@@ -478,7 +499,8 @@ class AuthMixin(object):
                     # a chance to the visitor to verify the phone number.
                     if not force_verification and requires_verification:
                         if settings.PHONE_VERIFICATION_BACKEND:
-                            raise VerifyPhoneFailed()
+                            raise VerifyPhoneFailed({'phone':
+            _("This phone number must be verified before going any further.")})
                         raise ImproperlyConfigured()
 
                 if force_verification or requires_verification:
@@ -561,19 +583,19 @@ class AuthMixin(object):
             if password:
                 user_with_backend = authenticate(self.request,
                     username=user.username, password=password)
-            if not user_with_backend:
-                if not password and not cleaned_data.get('new_password'):
-                    field_name = (
-                        'new_password' if 'new_password' in cleaned_data
-                        else 'password')
-                    raise PasswordRequired(user, detail={
-                        field_name: _("Password is required.")})
-                raise VerifyPasswordFailed()
-
+                if not user_with_backend:
+                    raise VerifyPasswordFailed()
+            if (not user_with_backend and not password and
+                not cleaned_data.get('new_password')):
+                field_name = (
+                    'new_password' if 'new_password' in cleaned_data
+                    else 'password')
+                raise PasswordRequired(user, detail={
+                    field_name: _("Password is required.")})
         else:
             # We are going to register a user, let's give the opportunity
             # to the created user to set a password.
-            if not cleaned_data.get('new_password'):
+            if 'new_password' not in cleaned_data:
                 raise IncorrectUser({'detail':
                     _("Please enter a few information about yourself.")})
 
@@ -632,13 +654,6 @@ class AuthMixin(object):
 
 
     def create_models(self, *args, **cleaned_data):
-        user_extra = {}
-        for field_name, field_value in six.iteritems(cleaned_data):
-            if field_name not in self.registration_fields:
-                if field_name.startswith('user_'):
-                    user_extra.update({field_name[5:]: field_value})
-        if not user_extra:
-            user_extra = None
         email = cleaned_data.get('email')
         password = cleaned_data.get('password')
         first_name = cleaned_data.get('first_name')
@@ -646,6 +661,7 @@ class AuthMixin(object):
         full_name = cleaned_data.get('full_name')
         phone = cleaned_data.get('phone')
         lang = cleaned_data.get('lang')
+        user_extra = cleaned_data.get('user_extra')
         return self.model.objects.create_user(*args, email=email,
             password=password, first_name=first_name, last_name=last_name,
             full_name=full_name, phone=phone, lang=lang, extra=user_extra)
@@ -669,8 +685,10 @@ class AuthMixin(object):
         self.register_check_data(**cleaned_data)
 
         username = cleaned_data.get('username')
-        password = cleaned_data.get('new_password',
-            cleaned_data.get('password'))
+        password = cleaned_data.get('new_password')
+        if not password:
+            password = None # An empty string password will be accepted
+                            # as valid to create the user.
         first_name, last_name = self.first_and_last_names(**cleaned_data)
         full_name = cleaned_data.get('full_name', None)
         if not full_name:
@@ -694,6 +712,13 @@ class AuthMixin(object):
             'phone': phone,
             'lang': lang
         })
+        user_extra = {}
+        for field_name, field_value in six.iteritems(cleaned_data):
+            if field_name not in self.registration_fields:
+                if field_name.startswith('user_'):
+                    user_extra.update({field_name[5:]: field_value})
+        if user_extra:
+            create_models_kwargs.update({'user_extra': user_extra})
 
         user = None
         previously_inactive = True
@@ -731,8 +756,16 @@ class AuthMixin(object):
 
             if user_args:
                 try:
-                    user = self.model.objects.filter(user_args).get()
+                    user = self.model.objects.filter(user_args).distinct().get()
                     previously_inactive = has_invalid_password(user)
+                    # Technically we could modify the username once the e-mail
+                    # has been verified, but we will prevent this here. It
+                    # just feels weird when you land on the registration page
+                    # after entering an invalid `username`.
+                    if (not previously_inactive and
+                        username and user.username != username):
+                        user = None
+                        raise self.model.DoesNotExist
                     # The `User` model already exists. Thus we will update
                     # its field to reflect the updates passed during activation.
                     save_user = False
@@ -946,34 +979,6 @@ class AuthMixin(object):
         return user
 
 
-class VerifyMixin(AuthMixin):
-    """
-    Authenticate by verifying e-mail address or phone number
-    """
-    pattern_name = 'registration_activate'
-    default_check_email = True
-    default_check_phone = True
-
-    #def get_verification_back_url(self, verification_key):
-    #    back_url = None
-    #    if settings.USE_VERIFICATION_LINKS:
-    #        back_url = self.request.build_absolute_uri(reverse(
-    #            'password_reset_confirm', args=(verification_key,)))
-    #    return back_url
-
-    def email_verification_required(self, user, **cleaned_data):
-        email = cleaned_data.get('email')
-        if not email and user:
-            email = user.email
-        return bool(email)
-
-    def phone_verification_required(self, user, **cleaned_data):
-        phone = cleaned_data.get('phone')
-        if not phone and user:
-            phone = get_phone(user)
-        return bool(phone) if cleaned_data.get('phone') else False
-
-
 class LoginMixin(AuthMixin):
     """
     Workflow for authentication (login/sign-in) either through an HTML page
@@ -986,15 +991,10 @@ class RegisterMixin(AuthMixin):
     workflow for registration
     """
 
-    def email_verification_required(self, user, **cleaned_data):
-        return False
-
-    def phone_verification_required(self, user, **cleaned_data):
-        return False
-
-    def check_password(self, user, **cleaned_data):
-        #pylint:disable=unused-argument
-        return None
+# deprecated??
+#    def check_password(self, user, **cleaned_data):
+#        #pylint:disable=unused-argument
+#        return None
 
 
 class VerifyCompleteMixin(RegisterMixin):
@@ -1015,14 +1015,6 @@ class VerifyCompleteMixin(RegisterMixin):
 
     def prefetch_contact_info(self):
         return self.contact
-
-
-class PasswordResetConfirmMixin(VerifyCompleteMixin):
-    """
-    Overrides the `check_password` step in URL `/reset/{verification_key}/`
-    and `/api/auth/reset/{verification_key}/` such that it resets the password
-    for the identified user.
-    """
 
 
 # ------------------------

@@ -1,4 +1,4 @@
-# Copyright (c) 2024, Djaodjin Inc.
+# Copyright (c) 2026, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,12 +22,10 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from ...api.auth import JWTLogout
 from ...compat import path
 from ...api.tokens import JWTRefresh, JWTVerify
 
 urlpatterns = [
     path('auth/tokens/verify', JWTVerify.as_view(), name='api_verify_token'),
     path('auth/tokens', JWTRefresh.as_view(), name='api_refresh_token'),
-    path('auth/logout', JWTLogout.as_view(), name='api_logout'),
 ]

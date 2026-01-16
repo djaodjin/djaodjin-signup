@@ -16,7 +16,7 @@ You are required to login through the following Single Sign On (SSO) provider:
       {{reason}}
     </p>
     {% else %}
-    <form method="post" action=".{% if next %}/?next={{next}}{% endif %}">
+    <form method="post" action="./{% if query %}?{{query}}{% endif %}">
       {% csrf_token %}
       {{ form }}
 
@@ -34,7 +34,7 @@ You are required to login through the following Single Sign On (SSO) provider:
         <button type="submit">
           Yep, it is me.
         </button>
-        <a href="{{urls.user.login}}{% if next %}?next={{next}}{% endif %}">
+        <a href="{{urls.user.login}}{% if query %}?{{query}}{% endif %}">
               Huh, someone else?
         </a>
         <button type="submit" name="reset" value="1">
@@ -42,7 +42,6 @@ You are required to login through the following Single Sign On (SSO) provider:
         </button>
       {% endif %}
     </form>
-    <p>Already have an account? <a href="{% url 'login' %}">Log in</a></p>
     {% endif %}
   </div>
 </div>

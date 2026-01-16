@@ -110,17 +110,6 @@ class SignUpTests(TestCase):
             % signup_settings.EMAIL_VERIFICATION_PAT,
             response.redirect_chain[-1][0]))
 
-    def test_register(self):
-        client = Client()
-        response = client.post(reverse('registration_register'),
-                     {'full_name': 'John Smith', 'email': REGISTRATION_EMAIL},
-                               follow=True)
-        # XXX Haven't found out how to get this assertion to pass,
-        # status_code 302 vs 200 expected.
-        # self.assertRedirects(response, settings.LOGIN_REDIRECT_URL)
-        self.assertTrue(re.match(r'/users/[\w.@+-]+/',
-                                 response.redirect_chain[-1][0]))
-
 
 class DRFTest(TestCase):
 

@@ -22,46 +22,17 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from django.views.generic import TemplateView
-
 from ... import settings
 from ...compat import include, path, re_path
-from ...forms import AuthenticationForm
-from ...views.auth import (ActivationView, PasswordResetConfirmView,
-    RecoverView, SigninView, SignoutView, SignupView, VerificationView)
+from ...views.auth import SigninView, SignoutView, VerifyCompleteView
 from ...views.saml import saml_metadata_view
 
 urlpatterns = [
-    # When the key and/or token are wrong we don't want to give any clue
-    # as to why that is so. Less information communicated to an attacker,
-    # the better.
-    re_path(r'^verify/(?P<verification_key>%s)/'
-        % settings.EMAIL_VERIFICATION_PAT,
-        VerificationView.as_view(), name='verify_channel'),
-    re_path(r'^reset/(?P<verification_key>%s)/'
-        % settings.EMAIL_VERIFICATION_PAT,
-        PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
-    path('activate/email/',
-        TemplateView.as_view(template_name='accounts/activate/email.html'),
-        name='email_verification_link'),
-    path('activate/phone/',
-        TemplateView.as_view(template_name='accounts/activate/phone.html'),
-        name='phone_verification_link'),
-    re_path(r'^activate/(?P<verification_key>%s)/'
-        % settings.EMAIL_VERIFICATION_PAT,
-        ActivationView.as_view(), name='registration_activate'),
-    path('activate/',
-        SigninView.as_view(
-            template_name='accounts/activate/index.html'),
-        name='registration_activate_start'),
+    re_path(r'^login/(?P<verification_key>%s)/'
+        % settings.EMAIL_VERIFICATION_PAT, VerifyCompleteView.as_view(),
+        name='registration_activate'),
     path('', include('social_django.urls', namespace='social')),
-    path('login/',
-        SigninView.as_view(form_class=AuthenticationForm), name='login'),
-    path('logout/',
-        SignoutView.as_view(), name='logout'),
-    path('recover/',
-        RecoverView.as_view(), name='password_reset'),
-    path('register/',
-        SignupView.as_view(), name='registration_register'),
+    path('login/', SigninView.as_view(), name='login'),
+    path('logout/', SignoutView.as_view(), name='logout'),
     path('saml/', saml_metadata_view),
 ]

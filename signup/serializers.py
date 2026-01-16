@@ -250,10 +250,12 @@ class PasswordChangeSerializer(AuthenticatedUserPasswordSerializer):
 
 class RecoverSerializer(NoModelSerializer):
     """
-    Serializer to send an e-mail to a user in order to recover her account.
+    Serializer to send an e-mail to a user in order to veriy access to
+    and e-mail inbox, or send a text message to veriy access to a phone.
     """
-    email = CommField(
-        help_text=_("Email or phone number to recover the account"))
+    username = UsernameOrCommField(
+        help_text=_("Username, e-mail address or phone number to identify"\
+        " the account"))
 
 
 class TokenSerializer(NoModelSerializer):
@@ -287,6 +289,7 @@ class UserCreateSerializer(UserDetailSerializer):
     full_name = serializers.CharField(
         help_text=_("Full name (effectively first name followed by last name)"))
     new_password = serializers.CharField(required=False, write_only=True,
+        allow_null=True,
         style={'input_type': 'password'}, help_text=_("Password with which"\
             " a user can authenticate with the service"))
 

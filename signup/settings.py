@@ -1,4 +1,4 @@
-# Copyright (c) 2025, Djaodjin Inc.
+# Copyright (c) 2026, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -26,21 +26,8 @@
 Convenience module for access of signup app settings, which enforces
 default settings when the main settings module does not contain
 the appropriate settings.
-
-AWS_REGION       region used to create STS temporary credentials
-AWS_UPLOAD_ROLE  role to assume in order to load directly from browser to S3
-AWS_ACCOUNT_ID   account id for the role
-
-DISABLED_AUTHENTICATION
-    total lock down. A page will be displayed on login, registration,
-    password reset, etc. but no new authentication can be performed.
-
-DISABLED_REGISTRATION
-   prevent new users from registering
-
-REQUIRES_RECAPTCHA
-   Requires to answer a recaptcha in registration
 """
+import datetime
 from django.conf import settings
 
 _DEFAULT_ENCRYPTED_FIELD = 'fernet_fields.EncryptedCharField'
@@ -57,6 +44,8 @@ _SETTINGS = {
     'DISABLED_AUTHENTICATION': False,
     'DISABLED_REGISTRATION': False,
     'DISABLED_USER_UPDATE': False,
+    'DISABLED_VERIFY_EMAIL_ON_REGISTRATION': False,
+    'DISABLED_VERIFY_PHONE_ON_REGISTRATION': False,
     'EMAIL_DYNAMIC_VALIDATOR': None,
     'EMAIL_VERIFICATION_BACKEND':
         'signup.backends.email_verification.base.EmailVerificationBackend',
@@ -91,7 +80,7 @@ _SETTINGS = {
     'USER_OTP_REQUIRED': None,
     'USER_SERIALIZER': 'signup.serializers_overrides.UserSerializer',
     'USER_API_KEY_LIFETIME': None, # ex: `datetime.timedelta(days=365)`
-    'VERIFICATION_LIFETIME': None, # ex: `datetime.timedelta(hours=24)`
+    'VERIFICATION_LIFETIME': datetime.timedelta(hours=1),
     'VERIFIED_LIFETIME': None # ex: `datetime.timedelta(days=365)`
 }
 _SETTINGS.update(getattr(settings, 'SIGNUP', {}))
@@ -161,8 +150,9 @@ LOGIN_THROTTLE = _SETTINGS.get('LOGIN_THROTTLE')
 # Configuring authentication pipeline
 # -----------------------------------
 
-#: When `True`, authentication on the site is disabled.
-#: This setting can either be a boolean value or a callable function.
+#: When `True`, authentication on the site is totally locked down.
+#: A page will be displayed on login, registration, etc. No new
+#: authentication can be performed.
 DISABLED_AUTHENTICATION = _SETTINGS.get('DISABLED_AUTHENTICATION')
 
 #: When `True`, registration of new users on the site is disabled.
@@ -188,6 +178,14 @@ VERIFICATION_LIFETIME = _SETTINGS.get('VERIFICATION_LIFETIME')
 #: Maximum number of attempts a user has to verify a one-time code
 #: before being kicked out.
 MFA_MAX_ATTEMPTS = _SETTINGS.get('MFA_MAX_ATTEMPTS')
+
+#: When `True`, verify email before allowing registration to proceed.
+DISABLED_VERIFY_EMAIL_ON_REGISTRATION = _SETTINGS.get(
+    'DISABLED_VERIFY_EMAIL_ON_REGISTRATION')
+
+#: When `True`, verify phone before allowing registration to proceed.
+DISABLED_VERIFY_PHONE_ON_REGISTRATION = _SETTINGS.get(
+    'DISABLED_VERIFY_PHONE_ON_REGISTRATION')
 
 #: When `True`, validates ReCaptcha before continuing with authentication.
 REQUIRES_RECAPTCHA = _SETTINGS.get('REQUIRES_RECAPTCHA')
@@ -245,8 +243,10 @@ NOTIFICATIONS_OPT_OUT = _SETTINGS.get('NOTIFICATIONS_OPT_OUT')
 #: The default language code when registering a new user.
 LANGUAGE_CODE = getattr(settings, 'LANGUAGE_CODE')
 
-
+#: region used to create STS temporary credentials
 AWS_REGION = _SETTINGS.get('AWS_REGION')
+
+#: role to assume in order to load directly from browser to S3
 AWS_UPLOAD_ROLE = _SETTINGS.get('AWS_UPLOAD_ROLE')
 AWS_EXTERNAL_ID = _SETTINGS.get('AWS_EXTERNAL_ID')
 LDAP_SERVER_URI = _SETTINGS.get('LDAP', {}).get('SERVER_URI', None)
