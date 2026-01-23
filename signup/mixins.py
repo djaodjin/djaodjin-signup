@@ -636,7 +636,7 @@ class AuthMixin(object):
                     " Please start again.")})
             if nb_attempts > 0:
                 raise serializers.ValidationError({
-                    'code': _("OTP code does not match.")})
+                    'otp_code': _("OTP code does not match.")})
 
 
     @staticmethod
