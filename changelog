@@ -8,13 +8,20 @@ Roadmap
 Released versions
 =================
 
+0.11.1
+
+  * fixes drop of redirect when landing page defined
+  * fixes input name to otp_code
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Sat, 24 Jan 2026 08:55:00 -0700
+
 0.11.0
 
   * replaces 'register/', 'activate/', and 'recover/' pages by 'login/'
   * re-auths with password, email_code or phone_code
   * renames SKIP_EXPIRATION_CHECK to SKIP_VERIFICATION_CHECK
 
- -- Sebastien Mirolo <smirolo@djaodjin.com>  Fri, 16 Jan 2026 11::25 -0700
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Fri, 16 Jan 2026 11:25:00 -0700
 
 0.10.6
 

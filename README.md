@@ -67,10 +67,9 @@ Tested with
 - **Python:** 3.12, **Django:** 5.2 (next)
 - **Python:** 3.9, **Django:** 3.2 (legacy)
 
-0.11.0
+0.11.1
 
-  * replaces 'register/', 'activate/', and 'recover/' pages by 'login/'
-  * re-auths with password, email_code or phone_code
-  * renames SKIP_EXPIRATION_CHECK to SKIP_VERIFICATION_CHECK
+  * fixes drop of redirect when landing page defined
+  * fixes input name to otp_code
 
 [previous release notes](changelog)
