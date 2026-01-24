@@ -124,7 +124,7 @@ class AuthResponseMixin(TemplateResponseMixin, FormMixin):
         query = ""
         next_url = validate_redirect(self.request)
         if next_url:
-            query = "%s%s=%s" % (sep, REDIRECT_FIELD_NAME, next_url)
+            query += "%s%s=%s" % (sep, REDIRECT_FIELD_NAME, next_url)
             sep = "&"
         if query:
             context.update({'query': query})
@@ -321,11 +321,11 @@ class SigninView(LoginMixin, AuthResponseMixin, ProcessFormView):
         query = ""
         next_url = validate_redirect(self.request)
         if next_url:
-            query = "%s%s=%s" % (sep, REDIRECT_FIELD_NAME, next_url)
+            query += "%s%s=%s" % (sep, REDIRECT_FIELD_NAME, next_url)
             sep = "&"
         landing = self.get_landing()
         if landing:
-            query = "%s%s=%s" % (sep, self.landing_query_param, landing)
+            query += "%s%s=%s" % (sep, self.landing_query_param, landing)
             sep = "&"
         if query:
             context.update({'query': query})
