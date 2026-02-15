@@ -70,7 +70,8 @@ class ActivityListCreateAPIView(ContactMixin, ListCreateAPIView):
                 "picture": null,
                 "slug": "alice"
               },
-              "account": null
+              "account": null,
+              "contact": null
             }, {
               "created_at": "2018-01-02T00:00:00Z",
               "text": "Follow up e-mail",
@@ -86,7 +87,8 @@ class ActivityListCreateAPIView(ContactMixin, ListCreateAPIView):
                 "picture": null,
                 "type": "organization",
                 "credentials": false
-              }
+              },
+              "contact": null
             }]
         }
     """

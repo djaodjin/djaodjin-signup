@@ -266,7 +266,8 @@ class JWTActivate(VerifyCompleteMixin, JWTBase):
         serializer = self.get_serializer(token.user)
         return Response(serializer.data)
 
-    @extend_schema(parameters=[CookieQueryParamSerializer], responses={
+    @extend_schema(operation_id='auth_activate_verification_key',
+        parameters=[CookieQueryParamSerializer], responses={
         201: OpenApiResponse(TokenSerializer),
         400: OpenApiResponse(ValidationErrorSerializer)})
     def post(self, request, *args, **kwargs):#pylint:disable=unused-argument
@@ -377,7 +378,7 @@ class RecoverAPIView(LoginMixin, JWTBase):
     .. code-block:: json
 
         {
-            "email": "xia@localhost.localdomain"
+            "username": "xia@localhost.localdomain"
         }
     """
     model = get_user_model()

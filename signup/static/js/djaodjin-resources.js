@@ -312,7 +312,7 @@ const djApi = {
         // - http(elem, url, data, success)
         // - http(elem, url, data, success, fail)
         args['elem'] = elem;
-        if( typeof url != 'string' && !self._isArray(arg) ) {
+        if( typeof url != 'string' && !self._isArray(url) ) {
             throw '`url` should be a string or an array of ajax queries';
         }
         args['url'] = url;
@@ -463,7 +463,7 @@ const djApi = {
         fetch(self._safeUrl(self.apiBase, args.url), {
             method: "POST",
             headers: headers,
-            body: JSON.stringify(args.data),
+            body: args.data ? JSON.stringify(args.data) : null,
             credentials: 'include',
             traditional: true,
         }).then(async function(resp) {
@@ -582,7 +582,7 @@ const djApi = {
         fetch(self._safeUrl(self.apiBase, args.url), {
             method: "PUT",
             headers: headers,
-            body: JSON.stringify(args.data),
+            body: args.data ? JSON.stringify(args.data) : null,
             credentials: 'include',
             traditional: true,
         }).then(async function(resp) {
@@ -642,7 +642,7 @@ const djApi = {
         fetch(self._safeUrl(self.apiBase, args.url), {
             method: "PATCH",
             headers: headers,
-            body: JSON.stringify(args.data),
+            body: args.data ? JSON.stringify(args.data) : null,
             credentials: 'include',
             traditional: true,
         }).then(async function(resp) {

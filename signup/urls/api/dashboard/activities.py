@@ -23,8 +23,7 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from ....compat import path
-from ....api.activities import (ActivityByAccountAPIView,
-    ActivityByAccountIndexAPIView)
+from ....api.activities import ActivityByAccountAPIView, ActivityListAPIView
 from ....api.users import ActivityByAccountContactAPIView
 
 urlpatterns = [
@@ -35,6 +34,6 @@ urlpatterns = [
         ActivityByAccountAPIView.as_view(),
         name='api_profile_activities'),
     path('activities',
-        ActivityByAccountIndexAPIView.as_view(),
+        ActivityListAPIView.as_view(),
         name='api_profile_activities_index'),
 ]

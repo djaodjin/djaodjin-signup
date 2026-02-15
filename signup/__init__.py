@@ -26,4 +26,4 @@
 PEP 386-compliant version number for the signup django app.
 """
 
-__version__ = '0.11.1'
+__version__ = '0.11.2-dev'

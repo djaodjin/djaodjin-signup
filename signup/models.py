@@ -953,7 +953,8 @@ class OTPGenerator(models.Model):
             # because this will enable to enter a predictable OTP code
             # (which defies the purpose of OTP code except in testing).
             LOGGER.warning("SKIP_VERIFICATION_CHECK enabled:"\
-                " OTP is predictable.")
+                " OTP is predictable (%s).",
+                totp.at(self.user.date_joined))
             return totp.verify(code, self.user.date_joined)
         return totp.verify(code)
 

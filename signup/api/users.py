@@ -1,4 +1,4 @@
-# Copyright (c) 2025, DjaoDjin inc.
+# Copyright (c) 2026, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -733,7 +733,7 @@ class ActivityByAccountContactAPIView(UserListMixin, generics.ListAPIView):
 
     .. code-block:: http
 
-        GET /api/profile/xia/contacts HTTP/1.1
+        GET /api/activities/xia/contacts HTTP/1.1
 
     responds
 

@@ -1,4 +1,4 @@
-# Copyright (c) 2025, Djaodjin Inc.
+# Copyright (c) 2026, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -27,8 +27,10 @@
 import logging
 
 from rest_framework import generics
+from rest_framework.mixins import CreateModelMixin
 
 from .. import filters
+from ..docs import extend_schema
 from ..models import Activity
 from ..mixins import AccountMixin
 from ..serializers import ActivitySerializer, ActivityByAccountCreateSerializer
@@ -36,118 +38,9 @@ from ..serializers import ActivitySerializer, ActivityByAccountCreateSerializer
 LOGGER = logging.getLogger(__name__)
 
 
-class ActivityByAccountAPIView(AccountMixin, generics.ListCreateAPIView):
+class ActivityListAPIView(generics.ListAPIView):
     """
-    Lists activities for an account
-
-    Returns a list of {{PAGE_SIZE}} activity records for {account}.
-
-    **Tags: profile, broker, usermodel
-
-    **Example
-
-    .. code-block:: http
-
-        GET /api/profile/xia/activities HTTP/1.1
-
-    responds
-
-    .. code-block:: json
-
-        {
-            "count": 1,
-            "next": null,
-            "previous": null,
-            "results": [{
-              "created_at": "2018-01-01T00:00:00Z",
-              "text": "Phone call",
-              "created_by": {
-                "username": "alice",
-                "printable_name": "Alice",
-                "picture": null,
-                "slug": "alice"
-              },
-              "account": null
-            }, {
-              "created_at": "2018-01-02T00:00:00Z",
-              "text": "Follow up e-mail",
-              "created_by": {
-                "username": "alice",
-                "printable_name": "Alice",
-                "picture": null,
-                "slug": "alice"
-              },
-              "account": {
-                "slug": "cowork",
-                "printable_name": "Coworking Space",
-                "picture": null,
-                "type": "organization",
-                "credentials": false
-              }
-            }]
-        }
-    """
-    search_fields = (
-        'text',
-    )
-    ordering_fields = (
-        ('created_at', 'created_at'),
-    )
-    ordering = ('created_at',)
-
-    filter_backends = (filters.SearchFilter, filters.OrderingFilter)
-    serializer_class = ActivitySerializer
-
-    def get_queryset(self):
-        kwargs = {
-            'account__%s' % str(self.lookup_field): self.kwargs.get(
-                self.account_url_kwarg)
-        }
-        return Activity.objects.filter(**kwargs)
-
-
-    def get_serializer_class(self):
-        if self.request.method.lower() == 'post':
-            return ActivityByAccountCreateSerializer
-        return super(ActivityByAccountAPIView, self).get_serializer_class()
-
-    def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user, account=self.account)
-
-    def post(self, request, *args, **kwargs):
-        """
-        Records new activity with a profile
-
-        **Tags: profile, broker
-
-        **Examples
-
-        .. code-block:: http
-
-            POST /api/profile/xia/activities HTTP/1.1
-
-        .. code-block:: json
-
-            {
-              "text": "Phone call",
-              "account": "cowork"
-            }
-
-        responds
-
-        .. code-block:: json
-
-            {
-              "text": "Phone call",
-              "account": "cowork"
-            }
-        """
-        return self.create(request, *args, **kwargs)
-
-
-class ActivityByAccountIndexAPIView(ActivityByAccountAPIView):
-    """
-    Lists activities for an account
+    Lists activities
 
     Returns a list of {{PAGE_SIZE}} activity records for {account}.
 
@@ -176,7 +69,13 @@ class ActivityByAccountIndexAPIView(ActivityByAccountAPIView):
                 "picture": null,
                 "slug": "alice"
               },
-              "account": null
+              "account": null,
+              "contact": {
+                "username": "xia",
+                "printable_name": "Xia",
+                "picture": null,
+                "slug": "xia"
+              }
             }, {
               "created_at": "2018-01-02T00:00:00Z",
               "text": "Follow up e-mail",
@@ -192,9 +91,121 @@ class ActivityByAccountIndexAPIView(ActivityByAccountAPIView):
                 "picture": null,
                 "type": "organization",
                 "credentials": false
+              },
+              "contact": null
+            }]
+        }
+    """
+    search_fields = (
+        'text',
+    )
+    ordering_fields = (
+        ('created_at', 'created_at'),
+    )
+    ordering = ('created_at',)
+
+    filter_backends = (filters.SearchFilter, filters.OrderingFilter)
+    serializer_class = ActivitySerializer
+
+    def get_queryset(self):
+        return Activity.objects.all()
+
+
+class ActivityByAccountAPIView(AccountMixin, CreateModelMixin,
+                               ActivityListAPIView):
+    """
+    Lists activities with a profile
+
+    Returns a list of {{PAGE_SIZE}} activity records for {account}.
+
+    **Tags: profile, broker, usermodel
+
+    **Example
+
+    .. code-block:: http
+
+        GET /api/activities/cowork HTTP/1.1
+
+    responds
+
+    .. code-block:: json
+
+        {
+            "count": 1,
+            "next": null,
+            "previous": null,
+            "results": [{
+              "created_at": "2018-01-02T00:00:00Z",
+              "text": "Follow up e-mail",
+              "created_by": {
+                "username": "alice",
+                "printable_name": "Alice",
+                "picture": null,
+                "slug": "alice"
+              },
+              "account": {
+                "slug": "cowork",
+                "printable_name": "Coworking Space",
+                "picture": null,
+                "type": "organization",
+                "credentials": false
+              },
+              "contact": {
+                "username": "xia",
+                "printable_name": "Xia",
+                "picture": null,
+                "slug": "xia"
               }
             }]
         }
     """
+
+    @extend_schema(operation_id='activities_by_account_list')
+    def get(self, request, *args, **kwargs):
+        return super(ActivityByAccountAPIView, self).get(
+            request, *args, **kwargs)
+
     def get_queryset(self):
-        return Activity.objects.all()
+        kwargs = {
+            'account__%s' % str(self.lookup_field): self.kwargs.get(
+                self.account_url_kwarg)
+        }
+        return Activity.objects.filter(**kwargs)
+
+    def get_serializer_class(self):
+        if self.request.method.lower() == 'post':
+            return ActivityByAccountCreateSerializer
+        return super(ActivityByAccountAPIView, self).get_serializer_class()
+
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user, account=self.account)
+
+    def post(self, request, *args, **kwargs):
+        """
+        Records new activity with a profile
+
+        **Tags: profile, broker
+
+        **Examples
+
+        .. code-block:: http
+
+            POST /api/activities/cowork HTTP/1.1
+
+        .. code-block:: json
+
+            {
+              "text": "Phone call",
+              "contact": "xia"
+            }
+
+        responds
+
+        .. code-block:: json
+
+            {
+              "text": "Phone call",
+              "contact": "xia"
+            }
+        """
+        return self.create(request, *args, **kwargs)
