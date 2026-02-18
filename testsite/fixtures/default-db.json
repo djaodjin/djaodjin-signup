@@ -456,4 +456,17 @@
     "fields": {
       "priv_key": "3AKSBTYDCIVLHM7SHR2RGW46SRLSV5XC",
       "user": 199}, "model": "signup.OTPGenerator", "pk": 199
+},
+{
+    "fields": {
+      "date_joined": "2026-01-01T00:00:00+00:00",
+      "email": "_archive+200@localhost.localdomain",
+      "first_name": "",
+      "last_name": "",
+      "is_active": false,
+      "is_staff": false,
+      "is_superuser": false,
+      "last_login": "2025-01-01T00:00:00+00:00",
+      "password": "!!!",
+      "username": "_archive_200"}, "model": "auth.User", "pk": 200
 }]
