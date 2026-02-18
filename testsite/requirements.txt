@@ -59,4 +59,4 @@ Sphinx==5.1.1
 sphinxcontrib-httpdomain==1.8.1
 
 # development (native)
-cryptography==44.0.1                 # fixtures have encrypted OTP keys
+cryptography==46.0.5                 # fixtures have encrypted OTP keys
