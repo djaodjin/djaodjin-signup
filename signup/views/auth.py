@@ -511,8 +511,9 @@ class SigninView(LoginMixin, AuthResponseMixin, ProcessFormView):
                 context.update({'check_phone': check_phone})
 
         except exceptions.AuthenticationFailed as err:
-            LOGGER.debug("[SigninView/AuthenticationFailed] %s", err)
             form = self.get_form()
+            LOGGER.debug("[SigninView/AuthenticationFailed] %s form is %s",
+                err, form.__class__)
             cleaned_data = self.validate_inputs(raise_exception=False)
             self._update_form_errors(form, err)
             #pylint:disable=too-many-nested-blocks

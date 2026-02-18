@@ -584,7 +584,9 @@ class AuthMixin(object):
                 user_with_backend = authenticate(self.request,
                     username=user.username, password=password)
                 if not user_with_backend:
-                    raise VerifyPasswordFailed()
+                    raise VerifyPasswordFailed({
+                        'username': _("Incorrect authentication credentials"),
+                        'password': _("Incorrect authentication credentials")})
             if (not user_with_backend and not password and
                 not cleaned_data.get('new_password')):
                 field_name = (
