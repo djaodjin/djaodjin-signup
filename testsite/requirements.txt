@@ -41,10 +41,10 @@ python-ldap==3.4.5
 pytz==2025.1
 six==1.16.0
 python3-saml==1.16.0                 # latest 1.16.0
-social-auth-app-django==5.2.0 ; python_version < "3.9" # 5.2.0 drops
-                                     # support for Django<3.2. See:
-                                     # https://github.com/python-social-auth/social-app-django/blob/master/CHANGELOG.md
-social-auth-app-django==5.7.0 ; python_version >= "3.9"
+social-auth-app-django==5.2.0 ; python_version < "3.9"
+social-auth-app-django==5.4.3 ; python_version >= "3.9" and python_version < "3.12"
+social-auth-app-django==5.7.0 ; python_version >= "3.12"
+                                     # 5.2.0 drops support for Django<3.2
 
 # testsite-only
 coverage==7.2.1
