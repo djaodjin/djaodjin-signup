@@ -29,7 +29,7 @@ from django.contrib.staticfiles.views import serve as django_static_serve
 from django.views.generic.base import RedirectView, TemplateView
 from signup.compat import reverse_lazy, include, path, re_path
 from signup.api.activities import (ActivityByAccountAPIView,
-    ActivityByAccountIndexAPIView)
+    ActivityListAPIView)
 from signup.api.contacts import (ActivityListCreateAPIView,
 
     ContactDetailAPIView, ContactListAPIView, ContactPictureAPIView)
@@ -60,7 +60,7 @@ urlpatterns = \
             lookup_field='username')),
         name='api_profile_activities'),
     path('api/activities',
-        login_required(ActivityByAccountIndexAPIView.as_view()),
+        login_required(ActivityListAPIView.as_view()),
         name='api_profile_activities_index'),
     # signup.urls.api.dashboard.contacts
     path('api/contacts/<slug:user>/activities',
