@@ -188,7 +188,7 @@ LOGGING = {
     'loggers': {
         'signup': {
             'handlers': [],
-            'level': 'INFO',
+            'level': 'DEBUG',
         },
 #        'django.db.backends': {
 #           'handlers': ['db_log'],
