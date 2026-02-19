@@ -8,6 +8,13 @@ Roadmap
 Released versions
 =================
 
+0.11.2
+
+  * attaches invalid credentials to input fields
+  * fixes incorrect view name in testsite
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Tue, 18 Feb 2026 16:55:00 -0700
+
 0.11.1
 
   * fixes drop of redirect when landing page defined

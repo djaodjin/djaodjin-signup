@@ -63,13 +63,14 @@ Release Notes
 
 Tested with
 
-- **Python:** 3.10, **Django:** 4.2 ([LTS](https://www.djangoproject.com/download/))
-- **Python:** 3.12, **Django:** 5.2 (next)
+- **Python:** 3.12, **Django:** 5.2 ([LTS](https://www.djangoproject.com/download/))
+- **Python:** 3.14, **Django:** 6.0 (next)
+- **Python:** 3.10, **Django:** 4.2 (legacy)
 - **Python:** 3.9, **Django:** 3.2 (legacy)
 
-0.11.1
+0.11.2
 
-  * fixes drop of redirect when landing page defined
-  * fixes input name to otp_code
+  * attaches invalid credentials to input fields
+  * fixes incorrect view name in testsite
 
 [previous release notes](changelog)
