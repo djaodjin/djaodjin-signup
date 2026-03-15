@@ -823,7 +823,11 @@ class Activity(models.Model):
     """
     Activity associated to a contact.
     """
-    created_at = models.DateTimeField(auto_now_add=True,
+
+    # Implementation Note:
+    # If we use `auto_now_add` it will override any `created_at` we have set,
+    # while importing data from a ticketing system for example.
+    created_at = models.DateTimeField(
         help_text=_("Date/time of creation (in ISO format)"))
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL,
         null=True, on_delete=models.SET_NULL,

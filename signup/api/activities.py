@@ -31,6 +31,7 @@ from rest_framework.mixins import CreateModelMixin
 
 from .. import filters
 from ..docs import extend_schema
+from ..helpers import datetime_or_now
 from ..models import Activity
 from ..mixins import AccountMixin
 from ..serializers import ActivitySerializer, ActivityByAccountCreateSerializer
@@ -102,7 +103,7 @@ class ActivityListAPIView(generics.ListAPIView):
     ordering_fields = (
         ('created_at', 'created_at'),
     )
-    ordering = ('created_at',)
+    ordering = ('-created_at',)
 
     filter_backends = (filters.SearchFilter, filters.OrderingFilter)
     serializer_class = ActivitySerializer
@@ -178,7 +179,8 @@ class ActivityByAccountAPIView(AccountMixin, CreateModelMixin,
         return super(ActivityByAccountAPIView, self).get_serializer_class()
 
     def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user, account=self.account)
+        serializer.save(created_by=self.request.user, account=self.account,
+            created_at=datetime_or_now())
 
     def post(self, request, *args, **kwargs):
         """

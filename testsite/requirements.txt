@@ -34,26 +34,27 @@ djangorestframework==3.15.2 ; python_version >= "3.9" # Breaking
 
 docutils==0.16
 phonenumbers==8.13.7
-PyJWT==2.11.0                        # 2.11.0 supports Python 3.14
+PyJWT==2.12.0                        # 2.11.0 supports Python 3.14
                                      # 2.10.0 requires Python>=3.9
                                      # 2.6.0 requires Python>=3.7
 pyotp==2.8.0
 python-ldap==3.4.5
 pytz==2025.1
 six==1.16.0
-python3-saml==1.16.0                 # latest 1.16.0
+python3-saml==1.16.0              # latest 1.16.0
 social-auth-app-django==5.2.0 ; python_version < "3.9"
 social-auth-app-django==5.4.3 ; python_version >= "3.9" and python_version < "3.12"
 social-auth-app-django==5.7.0 ; python_version >= "3.12"
-                                     # 5.2.0 drops support for Django<3.2
+                                  # 5.2.0 drops support for Django<3.2
 
 # testsite-only
 coverage==7.2.1
 django-extensions==4.1      ; python_version >= "3.10"
 django-extensions==3.2.3    ; python_version < "3.10"
-gunicorn==23.0.0                     # requires Py3.7
+gunicorn==23.0.0                  # requires Py3.7
 whitenoise==6.4.0
 
 # development
-Sphinx==5.1.1
+Sphinx==5.3.0                     # last version that supports Py3.7
+sphinx_rtd_theme==2.0.0
 sphinxcontrib-httpdomain==1.8.1

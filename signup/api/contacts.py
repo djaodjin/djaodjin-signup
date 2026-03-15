@@ -30,6 +30,7 @@ from rest_framework.generics import ListCreateAPIView
 
 from .users import UserDetailAPIView, UserListCreateAPIView, UserPictureAPIView
 from .. import filters
+from ..helpers import datetime_or_now
 from ..mixins import ContactMixin
 from ..models import Activity
 from ..serializers import ActivitySerializer, ActivityCreateSerializer
@@ -112,7 +113,8 @@ class ActivityListCreateAPIView(ContactMixin, ListCreateAPIView):
         return super(ActivityListCreateAPIView, self).get_serializer_class()
 
     def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user, contact=self.contact)
+        serializer.save(created_by=self.request.user, contact=self.contact,
+            created_at=datetime_or_now())
 
     def post(self, request, *args, **kwargs):
         """

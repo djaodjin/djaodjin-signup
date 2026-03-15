@@ -177,8 +177,8 @@ class StringListField(serializers.ListField):
 class NotificationsSerializer(serializers.ModelSerializer):
 
     notifications = StringListField(allow_empty=True,
-        help_text=_("List of notifications from %s") %
-            ', '.join([item[0] for item in Notification.NOTIFICATION_TYPE]))
+        help_text=_("List of notifications from %(ids)s") % {'ids':
+            ', '.join([item[0] for item in Notification.NOTIFICATION_TYPE])})
 
     class Meta:
         model = get_user_model()
