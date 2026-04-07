@@ -37,7 +37,7 @@ from phonenumber_field.formfields import PhoneNumberField
 from . import settings, validators
 from .compat import gettext_lazy as _, six
 from .helpers import full_name_natural_split
-from .models import get_disabled_email_update
+from .models import Contact, get_disabled_email_update
 from .utils import get_recaptcha_form_field
 
 
@@ -163,6 +163,19 @@ class PasswordConfirmMixin(object):
                     raise forms.ValidationError(
                         _("Password and password confirmation do not match."))
         return self.cleaned_data
+
+
+class ContactForm(forms.ModelForm):
+
+    submit_title = _("Update")
+
+    email = forms.EmailField(label=_("E-mail address"), required=False)
+    phone = PhoneField(label=_("Phone number"), required=False)
+
+    class Meta:
+        model = Contact
+        fields = ['nick_name', 'full_name', 'email', 'phone']
+
 
 
 class PasswordUpdateForm(PasswordConfirmMixin, forms.ModelForm):

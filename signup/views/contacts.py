@@ -1,4 +1,4 @@
-# Copyright (c) 2025, Djaodjin Inc.
+# Copyright (c) 2026, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -24,10 +24,11 @@
 
 """Views about contact activities"""
 
-from django.views.generic import DetailView, TemplateView
+from django.views.generic import DetailView, TemplateView, UpdateView
 
 from .. import settings
 from ..compat import reverse
+from ..forms import ContactForm
 from ..helpers import update_context_urls
 from ..mixins import AccountMixin, ContactMixin
 from ..models import Contact
@@ -71,9 +72,22 @@ class AccountListView(AccountListMixin, TemplateView):
         return context
 
 
-class ContactDetailView(ContactMixin, DetailView):
+class ActivityListView(AccountListMixin, TemplateView):
+
+    template_name = 'activities/index.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(ActivityListView, self).get_context_data(**kwargs)
+        update_context_urls(context, {
+            'api_activities': reverse('api_profile_activities_index'),
+        })
+        return context
+
+
+class ContactDetailView(ContactMixin, UpdateView):
 
     template_name = 'activities/contacts/contact.html'
+    form_class = ContactForm
     model = Contact
 
     def get_object(self):

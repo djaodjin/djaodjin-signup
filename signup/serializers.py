@@ -1,4 +1,4 @@
-# Copyright (c) 2025, DjaoDjin inc.
+# Copyright (c) 2026, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,7 +22,7 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import logging
+import json, logging
 
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
@@ -66,6 +66,26 @@ class UsernameOrCommField(serializers.CharField):
         self.validators.append(validate_username_or_email_or_phone)
 
 
+class ExtraField(serializers.CharField):
+
+    def to_internal_value(self, data):
+        if isinstance(data, dict):
+            try:
+                return json.dumps(data)
+            except (TypeError, ValueError):
+                pass
+        return super(ExtraField, self).to_internal_value(data)
+
+    def to_representation(self, value):
+        if isinstance(value, dict):
+            return value
+        try:
+            return json.loads(value)
+        except (TypeError, ValueError):
+            pass
+        return super(ExtraField, self).to_representation(value)
+
+
 class NoModelSerializer(serializers.Serializer):
 
     def create(self, validated_data):
@@ -84,10 +104,13 @@ class ActivitySerializer(serializers.ModelSerializer):
         help_text=_("Contact the activity is associated to"))
     account = get_account_serializer()(allow_null=True,
         help_text=_("Account the activity is associated to"))
+    extra = ExtraField(required=False, read_only=True,
+        help_text=_("Extra meta data (can be stringify JSON)"))
 
     class Meta:
         model = Activity
-        fields = ('created_at', 'created_by', 'text', 'account', 'contact')
+        fields = ('created_at', 'created_by', 'text', 'account', 'contact',
+            'extra')
         read_only_fields = ('created_at', 'created_by')
 
 

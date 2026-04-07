@@ -24,7 +24,7 @@
 
 from ....compat import path
 from ....views.contacts import (AccountDetailView, AccountListView,
-    ContactListView, ContactDetailView)
+    ActivityListView, ContactListView, ContactDetailView)
 
 urlpatterns = [
     # These three URLs must be protected.
@@ -34,4 +34,5 @@ urlpatterns = [
     path('contacts/<slug:user>/',
         ContactDetailView.as_view(), name='signup_contact'),
     path('contacts/', ContactListView.as_view(), name='signup_contacts'),
+    path('', ActivityListView.as_view(), name='signup_activities'),
 ]
