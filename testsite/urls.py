@@ -43,7 +43,7 @@ from signup.api.users import (ActivityByAccountContactAPIView,
 from signup.decorators import active_required
 from signup.views.contacts import (AccountDetailView, AccountListView,
     ContactListView, ContactDetailView)
-from signup.views.users import (PasswordChangeView,
+from signup.views.users import (OTPUpdateView, PasswordChangeView,
     UserPublicKeyUpdateView, UserProfileView, UserNotificationsView,
     redirect_to_user_profile)
 
@@ -132,6 +132,9 @@ urlpatterns = \
          login_required(ContactListView.as_view()),
          name='signup_contacts'),
     # signup.urls.views.dashboard.users
+    path('users/<slug:user>/otp/',
+         login_required(OTPUpdateView.as_view()),
+         name='otp_update'),
     path('users/<slug:user>/password/',
          login_required(PasswordChangeView.as_view()),
          name='password_change'),

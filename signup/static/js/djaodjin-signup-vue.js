@@ -1,4 +1,15 @@
 /** Components running in the browser.
+
+   userPasswordModalMixin
+
+Vue.component('activity-list' itemListMixin
+Vue.component('contact-list', itemListMixin
+Vue.component('contact-update', itemListMixin
+Vue.component('user-update', itemMixin
+Vue.component('user-update-password', httpRequestMixin, userPasswordModalMixin
+Vue.component('user-update-otp', httpRequestMixin, userPasswordModalMixin
+Vue.component('user-rotate-api-keys', itemListMixin, userPasswordModalMixin
+Vue.component('user-update-pubkey', httpRequestMixin, userPasswordModalMixin
  */
 
 
@@ -28,37 +39,27 @@ var userPasswordModalMixin = {
         if( vm.usePhoneCode || vm.phoneCode ) data['phone_code'] = vm.phoneCode;
             return data;
         },
-        modalShow: function() {
+        clearAuth: function() {
             var vm = this;
-            clearMessages();
             vm.password = '';
             vm.otpCode = '';
             vm.emailCode = '';
             vm.phoneCode = '';
             vm.codeSent = false;
-            if( vm.dialog ) {
-                vm.dialog.on('shown.bs.modal', function() {
-                    vm.$nextTick(function() {
-                        var fields = vm.$refs.password;
-                        if( typeof fields.length != 'undefined' ) {
-                            if( fields.length > 0 ) {
-                                fields[0].focus();
-                            }
-                        } else {
-                            fields.focus();
-                        }
-                    });
-                });
-                vm.dialog.modal("show");
-            }
         },
-        modalHide: function(){
-            if(this.dialog){
-                this.dialog.modal("hide");
+        modalHide: function() {
+            var vm = this;
+            var dialog = vm.$el.querySelector(vm.modalSelector);
+            if( dialog ) {
+                if( typeof bootstrap != 'undefined' ) {
+                    var modal = bootstrap.Modal.getOrCreateInstance(dialog);
+                    modal.hide();
+                }
             }
         },
         failCb: function(resp){
             var vm = this;
+            vm.clearAuth();
             showErrorMessages(resp);
             if( resp.status === 400 || resp.status === 401 ) {
                 // Give a chance to the request user to correct the input value.
@@ -105,12 +106,14 @@ var userPasswordModalMixin = {
                 }
                 vm.$nextTick(function() {
                     var fields = vm.$refs.emailCode;
-                    if( typeof fields.length != 'undefined' ) {
-                        if( fields.length > 0 ) {
-                            fields[0].focus();
+                    if( fields ) {
+                        if( typeof fields.length != 'undefined' ) {
+                            if( fields.length > 0 ) {
+                                fields[0].focus();
+                            }
+                        } else {
+                            fields.focus();
                         }
-                    } else {
-                        fields.focus();
                     }
                 });
             }, function(resp) {
@@ -120,12 +123,14 @@ var userPasswordModalMixin = {
                 // showErrorMessages(resp);
                 vm.$nextTick(function() {
                     var fields = vm.$refs.emailCode;
-                    if( typeof fields.length != 'undefined' ) {
-                        if( fields.length > 0 ) {
-                            fields[0].focus();
+                    if( fields ) {
+                        if( typeof fields.length != 'undefined' ) {
+                            if( fields.length > 0 ) {
+                                fields[0].focus();
+                            }
+                        } else {
+                            fields.focus();
                         }
-                    } else {
-                        fields.focus();
                     }
                 });
              });
@@ -143,12 +148,14 @@ var userPasswordModalMixin = {
                 }
                 vm.$nextTick(function() {
                     var fields = vm.$refs.phoneCode;
-                    if( typeof fields.length != 'undefined' ) {
-                        if( fields.length > 0 ) {
-                            fields[0].focus();
+                    if( fields ) {
+                        if( typeof fields.length != 'undefined' ) {
+                            if( fields.length > 0 ) {
+                                fields[0].focus();
+                            }
+                        } else {
+                            fields.focus();
                         }
-                    } else {
-                        fields.focus();
                     }
                 });
             }, function(resp) {
@@ -158,26 +165,57 @@ var userPasswordModalMixin = {
                 // showErrorMessages(resp);
                 vm.$nextTick(function() {
                     var fields = vm.$refs.phoneCode;
-                    if( typeof fields.length != 'undefined' ) {
-                        if( fields.length > 0 ) {
-                            fields[0].focus();
+                    if( fields ) {
+                        if( typeof fields.length != 'undefined' ) {
+                            if( fields.length > 0 ) {
+                                fields[0].focus();
+                            }
+                        } else {
+                            fields.focus();
                         }
-                    } else {
-                        fields.focus();
                     }
                 });
             });
         },
     },
-    computed: {
-        dialog: function(){ // XXX depends on jQuery / bootstrap.js
-            var dialog = $(this.$el).find(this.modalSelector);
-            if(dialog && jQuery().modal){
-                return dialog;
-            }
-        },
-    },
+    mounted: function() {
+        var vm = this;
+        var dialog = vm.$el.querySelector(vm.modalSelector);
+        if( dialog ) {
+            dialog.addEventListener('shown.bs.modal', function() {
+                vm.$nextTick(function() {
+                    var fields = vm.$refs.password;
+                    if( fields ) {
+                        if( typeof fields.length != 'undefined' ) {
+                            if( fields.length > 0 ) {
+                                fields[0].focus();
+                            }
+                        } else {
+                            fields.focus();
+                        }
+                    }
+                });
+            });
+        }
+    }
 }
+
+
+Vue.component('activity-list', {
+    mixins: [
+        itemListMixin
+    ],
+    data: function () {
+        return {
+            url: this.$urls.api_activities,
+        };
+    },
+    methods: {
+    },
+    mounted: function(){
+        this.get();
+    },
+});
 
 
 Vue.component('contact-list', {
@@ -265,7 +303,9 @@ Vue.component('contact-update', {
 
 
 Vue.component('user-update', {
-    mixins: [httpRequestMixin],
+    mixins: [
+        itemMixin
+    ],
     data: function () {
         return {
             url: this.$urls.user.api_profile,
@@ -273,7 +313,6 @@ Vue.component('user-update', {
             verify_url: this.$urls.api_recover + '?noreset=1',
             redirect_url: this.$urls.profile_redirect,
             api_activate_url: this.$urls.user.api_activate,
-            formFields: {},
             emailCode: null,
             phoneCode: null,
             picture: null,
@@ -295,13 +334,6 @@ Vue.component('user-update', {
             vm.reqDelete(vm.url,
             function() {
                 window.location = vm.redirect_url;
-            });
-        },
-        get: function(){
-            var vm = this;
-            vm.reqGet(vm.url,
-            function(resp) {
-                vm.formFields = resp;
             });
         },
         updateProfile: function(){
@@ -351,30 +383,12 @@ Vue.component('user-update', {
                 form.append('file', blob, vm.picture.getChosenFile().name);
                 vm.reqPostBlob(vm.picture_url, form,
                 function(resp) {
-                    vm.formFields.picture = resp.location;
+                    vm.item.picture = resp.location;
                     vm.picture.remove();
                     vm.$forceUpdate();
                     showMessages(["Profile was updated."], "success");
                 });
             }, 'image/png');
-        },
-        validateForm: function(){ // XXX depends on jQuery
-            var vm = this;
-            var isEmpty = true;
-            var fields = $(vm.$el).find('[name]').not(
-                '[name="csrfmiddlewaretoken"]');
-            for( var fieldIdx = 0; fieldIdx < fields.length; ++fieldIdx ) {
-                const fieldName = $(fields[fieldIdx]).attr('name');
-                const fieldValue = $(fields[fieldIdx]).val();
-                if( vm.formFields[fieldName] !== fieldValue ) {
-                    vm.formFields[fieldName] = fieldValue;
-                }
-                if( vm.formFields[fieldName] ) {
-                    // We have at least one piece of information available.
-                    isEmpty = false;
-                }
-            }
-            return !isEmpty;
         },
         verifyEmail: function() {
             var vm = this;
@@ -445,18 +459,20 @@ Vue.component('user-update-password', {
         modalShowAndValidate: function(nextCb) {
             var vm = this;
             vm.nextCb = nextCb ? nextCb : null;
-            vm.modalShow();
+            vm.clearAuth();
         },
         updatePassword: function(){
             var vm = this;
             // We are using the view (and not the API) so that the redirect
             // to the profile page is done correctly and a success message
             // shows up.
+            clearMessages();
             vm.reqPut(vm.url, vm.appendAuth({
                 new_password: vm.newPassword,
                 new_password2: vm.newPassword2 // XXX used?
             }),
             function(resp) {
+                vm.clearAuth();
                 vm.newPassword = '';
                 vm.newPassword2 = '';
                 vm.modalHide();
@@ -478,12 +494,14 @@ Vue.component('user-update-password', {
         var vm = this;
         vm.$nextTick(function() {
             var fields = vm.$refs.newPassword;
-            if( typeof fields.length != 'undefined' ) {
-                if( fields.length > 0 ) {
-                    fields[0].focus();
+            if( fields ) {
+                if( typeof fields.length != 'undefined' ) {
+                    if( fields.length > 0 ) {
+                        fields[0].focus();
+                    }
+                } else {
+                    fields.focus();
                 }
-            } else {
-                fields.focus();
             }
         });
     }
@@ -510,27 +528,31 @@ Vue.component('user-update-otp', {
         modalShowAndValidate: function(nextCb) {
             var vm = this;
             vm.nextCb = nextCb ? nextCb : null;
-            vm.modalShow();
+            vm.clearAuth();
         },
         disableOTP: function() {
             var vm = this;
+            clearMessages();
             vm.reqPut(vm.otp_url, vm.appendAuth({
                 otp_enabled: false,
                 email_verification_enabled: vm.emailVerificationEnabled,
                 phone_verification_enabled: vm.phoneVerificationEnabled
             }),
             function(resp){
+                vm.clearAuth();
                 vm.otpEnabled = false;
             });
         },
         enableOTP: function() {
             var vm = this;
+            clearMessages();
             vm.reqPut(vm.otp_url, vm.appendAuth({
                 otp_enabled: true,
                 email_verification_enabled: vm.emailVerificationEnabled,
                 phone_verification_enabled: vm.phoneVerificationEnabled
             }),
             function(resp){
+                vm.clearAuth();
                 vm.otpEnabled = true;
                 vm.otpPrivKey = resp.priv_key;
                 vm.$nextTick(function() {
@@ -542,11 +564,12 @@ Vue.component('user-update-otp', {
                 });
             });
         },
-        submitPassword: function(){
+        submitPassword: function(nextCb) {
             var vm = this;
             vm.modalHide();
-            if( vm.nextCb ) {
-                vm[vm.nextCb]();
+            if( !nextCb ) nextCb = vm.nextCb;
+            if( nextCb ) {
+                vm[nextCb]();
             }
         },
     },
@@ -576,10 +599,12 @@ Vue.component('user-rotate-api-keys', {
     methods: {
         generateKey: function() {
             var vm = this;
+            clearMessages();
             vm.reqPost(vm.url, vm.appendAuth({
                 title: vm.title
             }),
             function(resp) {
+                vm.clearAuth();
                 vm.apiKey = resp.secret;
                 vm.apiTitle = vm.title;
                 vm.title = '';
@@ -609,14 +634,16 @@ Vue.component('user-rotate-api-keys', {
         confirmDelete: function(key) {
             var vm = this;
             vm.deleteKeyPending = key.api_pub_key;
-            vm.modalShow();
+            vm.clearAuth();
         },
         deleteKey: function() {
             var vm = this;
-            if (vm.deleteKeyPending && vm.password) {
-                vm.reqPost(`${vm.url}/${vm.deleteKeyPending}`, vm.appendAuth({
-                }),
+            if( vm.deleteKeyPending ) {
+                clearMessages();
+                vm.reqPost(`${vm.url}/${vm.deleteKeyPending}`,
+                    vm.appendAuth({}),
                 function() {
+                    vm.clearAuth();
                     vm.deleteKeyPending = null;
                     vm.modalHide();
                     vm.get();
@@ -647,10 +674,12 @@ Vue.component('user-update-pubkey', {
     methods: {
         updatePubkey: function(){
             var vm = this;
+            clearMessages();
             vm.reqPut(vm.url, vm.appendAuth({
                 pubkey: vm.pubkey,
             }),
             function(resp){
+                vm.clearAuth();
                 vm.modalHide();
                 if( resp.detail ) {
                     showMessages([resp.detail], "success");

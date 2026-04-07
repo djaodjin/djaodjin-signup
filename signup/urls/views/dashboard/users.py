@@ -23,12 +23,14 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from ....compat import path
-from ....views.users import (PasswordChangeView,
+from ....views.users import (OTPUpdateView, PasswordChangeView,
     UserPublicKeyUpdateView, UserProfileView, UserNotificationsView,
     redirect_to_user_profile)
 
 urlpatterns = [
     # These three URLs must be protected.
+    path('<slug:user>/otp/',
+        OTPUpdateView.as_view(), name='otp_update'),
     path('<slug:user>/password/',
         PasswordChangeView.as_view(), name='password_change'),
     path('<slug:user>/pubkey/',

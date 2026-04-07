@@ -216,9 +216,20 @@ class UserNotificationsView(UserMixin, UpdateView):
         return reverse('users_notifications', args=(self.user,))
 
 
+class OTPUpdateView(UserProfileView):
+    """
+    Update OTP for a User
+
+    Shows page at URL `/users/{user}/otp/`
+    """
+    template_name = 'users/otp.html'
+
+
 class PasswordChangeView(AuthenticatedUserPasswordMixin, UserProfileView):
     """
     Update password for a User
+
+    Shows page at URL `/users/{user}/password/`
     """
     form_class = PasswordChangeForm
     template_name = 'users/password.html'

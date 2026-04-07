@@ -41,9 +41,9 @@
             </div>
           </div>
           <div>
-          <label for="id_title">Key Title</label>
-          <input type="text" id="id_title"
-                 name="title" v-model="title">
+            <label for="id_title">Key Title</label>
+            <input type="text" id="id_title"
+                   name="title" v-model="title">
           </div>
           <div>
             <label for="generate-key-password">Password</label>
@@ -82,7 +82,6 @@
       <li>
           <label for="id_password">Password:</label>
           <input type="password" name="password" placeholder="Password" required="" id="id_password" v-model="password">
-          <div v-show="passwordIncorrect">Incorrect password</div>
       </li>
       <div>
           <input type="submit" name="submit" value="Submit" id="submit-id-submit">
