@@ -46,28 +46,36 @@
   {% block footer %}{% endblock %}
 </body>
 {% block scripts %}
-<script type="text/javascript" charset="utf-8" src="/static/js/djresources.js"></script>
-<script type="text/javascript" charset="utf-8" src="/static/vendor/vue.js"></script>
-<script type="text/javascript" charset="utf-8" src="/static/vendor/vue-croppa.js"></script>
-<script type="text/javascript" charset="utf-8" src="/static/js/djaodjin-resources-vue.js"></script>
-<script type="text/javascript" charset="utf-8" src="/static/js/djaodjin-signup-vue.js"></script>
+<script type="text/javascript" charset="utf-8" src="/static/js/djresources.js" defer></script>
+<script type="text/javascript" charset="utf-8" src="/static/vendor/vue.js" defer></script>
+<script type="text/javascript" charset="utf-8" src="/static/vendor/vue-croppa.js" defer></script>
+<script type="text/javascript" charset="utf-8" src="/static/js/djresourcesvue.js" defer></script>
+<script type="text/javascript" charset="utf-8" src="/static/js/djaodjin-signup-vue.js" defer></script>
 <script type="text/javascript">
-Vue.prototype.$itemsPerPage =
-    {% if items_per_page %}{{items_per_page}}{% else %}25{% endif %};
-//Vue.prototype.$sortDirection = ;
-//Vue.prototype.$sortByField = ;
-Vue.prototype.$dateRange = {
-    start_at: "{% if start_at %}{{start_at|date:"Y-m-dTG:i:s"}}{% endif %}",
-    ends_at: "{% if ends_at %}{{ends_at|date:"Y-m-dTG:i:s"}}{% endif %}"
-};
-Vue.prototype.$urls = {% if urls %}{{urls|to_json}}{% else %}{}{% endif %};
+function onLoadBase() {
+    Vue.prototype.$itemsPerPage =
+      {% if items_per_page %}{{items_per_page}}{% else %}25{% endif %};
+    Vue.prototype.$dateRange = {
+      start_at: "{% if start_at %}{{start_at|date:"Y-m-dTG:i:s"}}{% endif %}",
+      ends_at: "{% if ends_at %}{{ends_at|date:"Y-m-dTG:i:s"}}{% endif %}"
+    };
+    Vue.prototype.$urls = {% if urls %}{{urls|to_json}}{% else %}{}{% endif %};
 
-Vue.use(Croppa);
+    Vue.use(Croppa);
 
-var app = new Vue({
-  el: '#app',
-  delimiters: ["[[","]]"],
-});
+    var app = new Vue({
+      el: '#app',
+      delimiters: ["[[","]]"],
+    });
+}
+
+if (document.readyState === "loading") {
+    // The document is still loading, wait for the event
+    document.addEventListener("DOMContentLoaded", onLoadBase);
+} else {
+    // The DOM is already ready (interactive or complete state)
+    onLoadBase();
+}
 </script>
 {% block users_bodyscripts %}{% endblock %}
 {% endblock %}

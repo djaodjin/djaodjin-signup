@@ -1,18 +1,40 @@
-/** Components running in the browser.
+/** Components running in the browser for djaodjin-signup
 
-   userPasswordModalMixin
+    Vue.component('activity-list' mixins: [itemListMixin])
+    Vue.component('contact-list', mixins: [itemListMixin])
+    Vue.component('contact-update', mixins: [itemListMixin])
+    Vue.component('user-update', mixins: [itemMixin])
+    Vue.component('user-update-password',
+        mixins: [httpRequestMixin, userPasswordModalMixin])
+    Vue.component('user-update-otp',
+        mixins: [httpRequestMixin, userPasswordModalMixin])
+    Vue.component('user-rotate-api-keys',
+        mixins: [itemListMixin, userPasswordModalMixin])
+    Vue.component('user-update-pubkey',
+        mixins: [httpRequestMixin, userPasswordModalMixin])
+*/
 
-Vue.component('activity-list' itemListMixin
-Vue.component('contact-list', itemListMixin
-Vue.component('contact-update', itemListMixin
-Vue.component('user-update', itemMixin
-Vue.component('user-update-password', httpRequestMixin, userPasswordModalMixin
-Vue.component('user-update-otp', httpRequestMixin, userPasswordModalMixin
-Vue.component('user-rotate-api-keys', itemListMixin, userPasswordModalMixin
-Vue.component('user-update-pubkey', httpRequestMixin, userPasswordModalMixin
+(function (root, factory) {
+    if (typeof define === 'function' && define.amd) {
+        // AMD. Register as an anonymous module.
+        define(['exports', 'Vue', 'djresourcesvue'], factory);
+    } else if (typeof exports === 'object' &&
+               typeof exports.nodeName !== 'string') {
+        // CommonJS
+        factory(exports, require('Vue'), require('djresourcesvue'));
+    } else {
+        // Browser true globals added to `window`.
+        factory(root, root.Vue, root.djresourcesvue);
+        // If we want to put the exports in a namespace, use the following line
+        // instead.
+        // factory((root.namespace = {}), root.namespace);
+    }
+}(typeof self !== 'undefined' ? self : this,
+  function (exports, Vue, djresourcesvue) {
+
+/** Adds the `request.user` authentication (password, email/phone verification,
+    OTP) to the HTTP request.
  */
-
-
 var userPasswordModalMixin = {
     data: function () {
         return {
@@ -692,3 +714,8 @@ Vue.component('user-update-pubkey', {
         },
     },
 });
+
+    // attach properties to the exports object to define
+    // the exported module properties.
+    exports.userPasswordModalMixin = userPasswordModalMixin;
+}));
