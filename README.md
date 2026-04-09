@@ -68,9 +68,9 @@ Tested with
 - **Python:** 3.10, **Django:** 4.2 (legacy)
 - **Python:** 3.9, **Django:** 3.2 (legacy)
 
-0.11.2
+0.11.3
 
-  * attaches invalid credentials to input fields
-  * fixes incorrect view name in testsite
+  * removes dependency on jQuery for UI components
+  * sets `created_at` correctly when importing `Activity`
 
 [previous release notes](changelog)
