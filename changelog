@@ -8,6 +8,12 @@ Roadmap
 Released versions
 =================
 
+0.11.4
+
+  * works with webpack/nodejs and case-sensitive filesystems
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Thu,  9 Apr 2026 17:25:00 -0700
+
 0.11.3
 
   * removes dependency on jQuery for UI components
