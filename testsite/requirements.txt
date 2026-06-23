@@ -1,8 +1,11 @@
+# Unified requirements file supporting py37-django3.2, py39-django4.2,
+# py312-django5.2, and py314-django6.0 for djaodjin-signup
+
 boto3==1.33.13                       # last version compatible with Py3.7
 Django==3.2.25 ; python_version < "3.9"
-Django==4.2.29 ; python_version >= "3.9" and python_version < "3.12"
-Django==5.2.12 ; python_version >= "3.12" and python_version < "3.14"
-Django==6.0.4  ; python_version >= "3.14"
+Django==4.2.30 ; python_version >= "3.9" and python_version < "3.12"
+Django==5.2.14 ; python_version >= "3.12" and python_version < "3.14"
+Django==6.0.5  ; python_version >= "3.14"
 
 django-fernet-fields @ git+https://github.com/djaodjin/django-fernet-fields.git@6f261ed465a7fbafa1c41b635f7acd9fd6f3ccca
 django-phonenumber-field==5.2.0      # Latest 8.0.0. Some breaking

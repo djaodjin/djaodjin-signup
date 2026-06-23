@@ -410,7 +410,8 @@ class AuthMixin(object):
                 # a chance to the visitor to verify the e-mail address.
                 if not force_verification and requires_verification:
                     raise VerifyEmailFailed({'email':
-        _("This e-mail address must be verified before going any further.")})
+        _("This e-mail address must be verified before going any further."\
+" (Click the button below to e-mail a verification code to the address.)")})
 
             if force_verification or requires_verification:
 

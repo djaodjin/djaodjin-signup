@@ -1,4 +1,4 @@
-# Copyright (c) 2024, Djaodjin Inc.
+# Copyright (c) 2026, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -33,7 +33,7 @@ from six.moves.urllib.parse import urlparse, urlunparse
 #pylint:disable=ungrouped-imports
 try:
     from datetime import timezone
-    import zoneinfo
+    import zoneinfo                     # introduced in py39
 
     def timezone_or_utc(tzone=None):
         if tzone:
