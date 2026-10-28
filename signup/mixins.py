@@ -627,6 +627,7 @@ class AuthMixin(object):
 
 
     def check_otp(self, user, **cleaned_data):
+        assert user is not None
         otp_code = cleaned_data.get('otp_code')
         if OTPGenerator.objects.filter(user=user).exists():
             if not otp_code:
@@ -811,28 +812,14 @@ class AuthMixin(object):
             handle_uniq_error(err, renames=self.renames)
 
         self.register_finalize(user, **cleaned_data)
+        #pylint:disable=protected-access
         if previously_inactive:
             if not user.last_login:
-                phone = user.get_phone()
-                lang = user.get_lang()
-                LOGGER.info("'%s <%s>' registered with username '%s'%s%s",
-                    user.get_full_name(), user.email, user,
-                    (" and phone %s" % str(phone)) if phone else "",
-                    (" and preferred language %s" % str(lang)) if lang else "",
-                    extra={'event': 'register', 'user': user})
-                signals.user_registered.send(sender=__name__, user=user,
-                        request=self.request)
+                user._create_user_notification = 'user_registered'
             else:
-                LOGGER.info("'%s <%s>' activated with username '%s'",
-                    user.get_full_name(), user.email, user,
-                    extra={'event': 'activate', 'user': user})
-                signals.user_activated.send(sender=__name__, user=user,
-                    request=self.request)
+                user._create_user_notification = 'user_activated'
         else:
-            LOGGER.info("%s password reset", user,
-                extra={'event': 'resetpassword', 'user': user})
-            signals.user_reset_password.send(
-                sender=__name__, user=user, request=self.request)
+            user._create_user_notification = 'user_reset_password'
 
         # Bypassing authentication here, we are doing frictionless
         # registration the first time around.
@@ -954,9 +941,6 @@ class AuthMixin(object):
                 " cleaned_data=%s) returned user.backend=%s", log_prev_user,
                 cleaned_data, getattr(user, 'backend', None))
 
-            # Login, Verify: If required, check 2FA
-            self.check_otp(user, **cleaned_data)
-
             # Verify: If does not exist, create User from Contact
             # Register: Create User
             if not user:
@@ -975,9 +959,39 @@ class AuthMixin(object):
                 # at this point, we can't continue.
                 raise exceptions.AuthenticationFailed()
 
+            # Login, Verify: If required, check 2FA
+            self.check_otp(user, **cleaned_data)
+
             # Login, Verify, Register: Create session
             LOGGER.debug("[run_pipeline] create session for user=%s", user)
             self.create_session(user)
+
+        # If an exception is raised before reaching here, all updates
+        # to the database will be rewinded. So we only want to send
+        # notifications when changes have been committed.
+        if hasattr(user, '_create_user_notification'):
+            #pylint:disable=protected-access
+            if user._create_user_notification == 'user_registered':
+                phone = user.get_phone()
+                lang = user.get_lang()
+                LOGGER.info("'%s <%s>' registered with username '%s'%s%s",
+                    user.get_full_name(), user.email, user,
+                    (" and phone %s" % str(phone)) if phone else "",
+                    (" and preferred language %s" % str(lang)) if lang else "",
+                    extra={'event': 'register', 'user': user})
+                signals.user_registered.send(sender=__name__, user=user,
+                        request=self.request)
+            elif user._create_user_notification == 'user_activated':
+                LOGGER.info("'%s <%s>' activated with username '%s'",
+                    user.get_full_name(), user.email, user,
+                    extra={'event': 'activate', 'user': user})
+                signals.user_activated.send(sender=__name__, user=user,
+                    request=self.request)
+            elif user._create_user_notification == 'user_reset_password':
+                LOGGER.info("%s password reset", user,
+                    extra={'event': 'resetpassword', 'user': user})
+                signals.user_reset_password.send(
+                    sender=__name__, user=user, request=self.request)
 
         return user
 
