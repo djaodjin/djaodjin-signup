@@ -66,7 +66,7 @@ class AuthResponseMixin(TemplateResponseMixin, FormMixin):
     set_password_form_class = CodeActivationForm
 
     def _update_form_focus(self, form, field_focus):
-        for field_name, field in form.fields.items():
+        for field_name in form.fields.keys():
             if field_name == field_focus:
                 form.fields[field_name].widget.attrs['autofocus'] = True
             else:

@@ -382,10 +382,8 @@ Vue.component('user-update', {
                 vm.codeSent = false;
                 vm.emailCode = null;
                 vm.phoneCode = null;
-                // XXX should really be success but then it needs to be changed
-                // in Django views as well.
                 if( resp.detail ) {
-                    showMessages([resp.detail], "info");
+                    showMessages([resp.detail], "success");
                 }
             }, function(resp) {
                 vm.codeSent = false;

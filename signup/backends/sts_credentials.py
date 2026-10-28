@@ -96,7 +96,8 @@ def temporary_security_token(request,
 def _signed_policy(region, service, requested_at,
                    access_key, secret_key, security_token,
                    bucket=None, key_prefix="", acl=None):
-    #pylint:disable=too-many-arguments,too-many-locals
+    #pylint:disable=too-many-arguments,too-many-positional-arguments
+    #pylint:disable=too-many-locals
     signature_date = requested_at.strftime("%Y%m%d")
     x_amz_credential = '/'.join([
         access_key, signature_date, region, service, 'aws4_request'])
@@ -157,7 +158,8 @@ def aws_bucket_context(request, location, acls=None, aws_upload_role=None,
     Context to use in templates to upload from the client brower
     to the bucket directly.
     """
-    #pylint:disable=too-many-arguments,too-many-locals
+    #pylint:disable=too-many-arguments,too-many-positional-arguments
+    #pylint:disable=too-many-locals
     context = {}
     if is_authenticated(request):
         # Derives a bucket_name and key_prefix from a location

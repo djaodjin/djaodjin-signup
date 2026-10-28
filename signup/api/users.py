@@ -309,7 +309,7 @@ class UserDetailAPIView(UserMixin, generics.RetrieveUpdateDestroyAPIView):
             with transaction.atomic(using=user._state.db):
                 user.contacts.all().update(user=None)
                 self.delete_records(user)
-                requires_logout = (self.request.user == user)
+                requires_logout = bool(self.request.user == user)
                 user.username = slug
                 user.email = email
                 user.password = '!'
@@ -482,7 +482,7 @@ class UserDetailAPIView(UserMixin, generics.RetrieveUpdateDestroyAPIView):
         # `update` as well.
         #pylint:disable=pointless-statement,protected-access
         serializer.data
-        serializer._data.update({'detail': _("Profile updated.")})
+        serializer._data.update({'detail': _("Profile was updated.")})
 
 
 class UserListMixin(object):
@@ -1001,7 +1001,7 @@ class UserNotificationsAPIView(UserMixin, generics.RetrieveUpdateAPIView):
         notifications = []
         for notification_slug in six.iterkeys(self.get_notifications(
                     user=self.user)):
-            enabled = (notification_slug in notification_slugs)
+            enabled = bool(notification_slug in notification_slugs)
             if settings.NOTIFICATIONS_OPT_OUT:
                 if not enabled:
                     notifications += [notification_slug]
@@ -1025,7 +1025,7 @@ class UserNotificationsAPIView(UserMixin, generics.RetrieveUpdateAPIView):
             self.user.notifications.clear()
             for notification_slug in six.iterkeys(self.get_notifications(
                     user=self.user)):
-                enabled = (notification_slug in notification_slugs)
+                enabled = bool(notification_slug in notification_slugs)
                 #pylint:disable=unused-variable
                 notification, notused = Notification.objects.get_or_create(
                     slug=notification_slug)

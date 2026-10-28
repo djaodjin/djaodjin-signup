@@ -6,10 +6,11 @@ It exposes the WSGI callable as a module-level variable named ``application``.
 For more information on this file, see
 https://docs.djangoproject.com/en/1.6/howto/deployment/wsgi/
 """
-import os, signal
+import os, signal, sys
 
 from django.core.wsgi import get_wsgi_application
 
+cov = None
 
 def save_coverage(*args):
     sys.stderr.write("saving coverage\n")
@@ -17,7 +18,7 @@ def save_coverage(*args):
     cov.save()
 
 if os.getenv('DJANGO_COVERAGE'):
-    import atexit, sys
+    import atexit
     import coverage
     data_file=os.path.join(os.getenv('DJANGO_COVERAGE'),
         ".coverage.%d" % os.getpid())

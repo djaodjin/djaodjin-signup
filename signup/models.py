@@ -366,7 +366,8 @@ class ContactManager(models.Manager):
     def prepare_email_verification(self, email, user=None, at_time=None,
                                    verification_key=None, reason=None,
                                    uses_sso_provider=False, **kwargs):
-        #pylint:disable=too-many-arguments,too-many-locals
+        #pylint:disable=too-many-arguments,too-many-positional-arguments
+        #pylint:disable=too-many-locals
         at_time = datetime_or_now(at_time)
         if verification_key is None:
             random_key = str(random.random()).encode('utf-8')
@@ -758,7 +759,7 @@ class Contact(models.Model):
     def get_lang(self):
         return self.lang
 
-    def save(self, force_insert=False, force_update=False,
+    def save(self, *args, force_insert=False, force_update=False,
              using=None, update_fields=None):
         if not self.lang:
             self.lang = settings.LANGUAGE_CODE
