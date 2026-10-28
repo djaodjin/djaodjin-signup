@@ -309,7 +309,7 @@ class UserCreateSerializer(UserDetailSerializer):
 
     username = serializers.CharField(required=False,
         help_text=_("Unique identifier for the user, typically used in URLs"))
-    full_name = serializers.CharField(
+    full_name = serializers.CharField(required=False,
         help_text=_("Full name (effectively first name followed by last name)"))
     new_password = serializers.CharField(required=False, write_only=True,
         allow_null=True,
