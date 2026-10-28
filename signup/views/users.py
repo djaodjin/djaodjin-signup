@@ -1,4 +1,4 @@
-# Copyright (c) 2023, Djaodjin Inc.
+# Copyright (c) 2026, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -163,7 +163,7 @@ class UserProfileView(UserMixin, UpdateView):
         return context
 
     def get_success_url(self):
-        messages.info(self.request, _("Profile updated."))
+        messages.success(self.request, _("Profile was updated."))
         return reverse('users_profile', args=(self.user,))
 
 

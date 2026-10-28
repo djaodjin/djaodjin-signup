@@ -1,3 +1,26 @@
+# Copyright (c) 2026, DjaoDjin inc.
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice,
+#    this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+# TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+# PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+# OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+# OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 # -*- Makefile -*-
 
 -include $(buildTop)/share/dws/prefix.mk
@@ -33,7 +56,7 @@ DB_NAME       ?= $(RUN_DIR)/db.sqlite
 
 $(info Path to python executable (i.e. PYTHON) while running make: $(shell which $(PYTHON)))
 
-MANAGE        := TESTSITE_SETTINGS_LOCATION=$(CONFIG_DIR) RUN_DIR=$(RUN_DIR) $(PYTHON) manage.py
+MANAGE        := $(if $(wildcard $(CONFIG_DIR)/.),TESTSITE_SETTINGS_LOCATION=$(CONFIG_DIR),) RUN_DIR=$(RUN_DIR) $(PYTHON) manage.py
 
 # Django 1.7,1.8 sync tables without migrations by default while Django 1.9
 # requires a --run-syncdb argument.
@@ -87,14 +110,15 @@ initdb: clean-dbs
 	cd $(srcDir) && $(MANAGE) loaddata testsite/fixtures/default-db.json
 
 
-vendor-assets-prerequisites: $(libDir)/.npm/djaodjin-signup-packages
+vendor-assets-prerequisites: $(installTop)/.npm/djaodjin-signup-packages
 
 
 $(DESTDIR)$(CONFIG_DIR)/credentials: $(srcDir)/testsite/etc/credentials
 	$(installDirs) $(dir $@)
 	@if [ ! -f $@ ] ; then \
 		echo "creating $@ ..." ; \
-		sed -e "s,\%(SECRET_KEY)s,`$(PYTHON) -c 'import sys ; from random import choice ; sys.stdout.write("".join([choice("abcdefghijklmnopqrstuvwxyz0123456789!@#$%^*-_=+") for i in range(50)]))'`," -e "s,\%(FERNET_KEY)s,`$(PYTHON) -c 'import sys ; from random import choice ; sys.stdout.write("".join([choice("abcdefghijklmnopqrstuvwxyz0123456789!@#$%^*-_=+") for i in range(50)]))'`," $< > $@ ; \
+		sed -e "s,\%(SECRET_KEY)s,`$(PYTHON) -c 'import sys ; from random import choice ; sys.stdout.write("".join([choice("abcdefghijklmnopqrstuvwxyz0123456789!@#$%^*-_=+") for i in range(50)]))'`," -e "s,\%(FERNET_KEY)s,`$(PYTHON) -c 'import sys ; from random import choice ; sys.stdout.write("".join([choice("abcdefghijklmnopqrstuvwxyz0123456789!@#$%^*-_=+") for i in range(50)]))'`," \
+		$< > $@ ; \
 	else \
 		echo "warning: We are keeping $@ intact but $< contains updates that might affect behavior of the testsite." ; \
 	fi
@@ -102,14 +126,13 @@ $(DESTDIR)$(CONFIG_DIR)/credentials: $(srcDir)/testsite/etc/credentials
 
 $(DESTDIR)$(CONFIG_DIR)/gunicorn.conf: $(srcDir)/testsite/etc/gunicorn.conf
 	$(installDirs) $(dir $@)
-	[ -f $@ ] || sed \
-		-e 's,%(LOCALSTATEDIR)s,$(LOCALSTATEDIR),' \
-		-e 's,%(RUN_DIR)s,$(RUN_DIR),' $< > $@
+	[ -f $@ ] || sed -e 's,%(RUN_DIR)s,$(RUN_DIR),' \
+		-e 's,%(LOCALSTATEDIR)s,$(LOCALSTATEDIR),' $< > $@
 
 
-$(libDir)/.npm/djaodjin-signup-packages: $(srcDir)/testsite/package.json
+$(installTop)/.npm/djaodjin-signup-packages: $(srcDir)/testsite/package.json
 	$(installFiles) $^ $(libDir)
-	$(NPM) install --cache $(libDir)/.npm --prefix $(libDir)
+	$(NPM) install --cache $(installTop)/.npm --prefix $(libDir)
 	$(installDirs) -d $(ASSETS_DIR)/vendor
 	$(installFiles) $(libDir)/node_modules/qrcode/build/qrcode.js $(ASSETS_DIR)/vendor
 	$(installFiles) $(libDir)/node_modules/vue/dist/vue.js $(ASSETS_DIR)/vendor
