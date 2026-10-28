@@ -68,9 +68,9 @@ Tested with
 - **Python:** 3.10, **Django:** 4.2 (legacy)
 - **Python:** 3.9, **Django:** 3.2 (legacy)
 
-0.11.4
+0.11.5
 
-  * removes dependency on jQuery for UI components
-  * sets `created_at` correctly when importing `Activity`
+  * prevents reset password to bypass OTP if exists (security fix)
+  * enables reset of a user password through the API
 
 [previous release notes](changelog)
