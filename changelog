@@ -8,6 +8,13 @@ Roadmap
 Released versions
 =================
 
+0.11.6
+
+  * fixes security issue in search filter
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Wed, 25 Nov 2026 22:56:00 -0700
+
+
 0.11.5
 
   * prevents reset password to bypass OTP if exists (security fix)
