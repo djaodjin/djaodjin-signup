@@ -161,27 +161,35 @@ class SearchFilter(BaseSearchFilter):
             getattr(queryset, 'query', None), 'annotations', None)
         if annotations:
             model_fields |= set(annotations.keys())
+
         # We add all the fields that could be aliases then filter out the ones
         # which are not present in the model.
+        valid_field_candidates = []
         alternate_fields = getattr(view, 'alternate_fields', {})
-        for field in fields:
-            field_lookup = field[0]
-            lookup = self.lookup_prefixes.get(field_lookup)
-            if lookup:
-                field = field[1:]
-            alternate_field = alternate_fields.get(field, None)
-            if alternate_field:
-                if lookup:
-                    alternate_field = field_lookup + alternate_field
-                if isinstance(alternate_field, (list, tuple)):
-                    fields += tuple(alternate_field)
-                else:
-                    fields += tuple([alternate_field])
-
         search_fields = getattr(view, 'search_fields', [])
         json_field = self.get_json_field(view)
-        valid_fields = []
         for field in fields:
+            lookup = None
+            field_name = field
+            if self.lookup_prefixes.get(field_name[0]):
+                lookup = field_name[0]
+                field_name = field_name[1:]
+            if json_field and field_name.startswith('%s__' % json_field):
+                if json_field in model_fields:
+                    valid_field_candidates.append(field)
+            elif field_name in search_fields:
+                valid_field_candidates.append(field)
+                alternate_field = alternate_fields.get(field_name, None)
+                if alternate_field:
+                    if lookup:
+                        alternate_field = lookup + alternate_field
+                    if isinstance(alternate_field, (list, tuple)):
+                        valid_field_candidates += tuple(alternate_field)
+                    else:
+                        valid_field_candidates.append(alternate_field)
+
+        valid_fields = []
+        for field in valid_field_candidates:
             field_name = field
             lookup = self.lookup_prefixes.get(field_name[0])
             if lookup:
@@ -189,31 +197,36 @@ class SearchFilter(BaseSearchFilter):
             if json_field and field_name.startswith('%s__' % json_field):
                 if json_field in model_fields:
                     valid_fields.append(field)
-            elif field in search_fields:
-                if '__' in field_name:
-                    relation, rel_field = field_name.split('__')
-                    try:
-                        # check if the field is a relation
-                        rel = queryset.model._meta.get_field(
-                            relation).remote_field
-                        if rel:
-                            # if the field doesn't exist the
-                            # call will throw an exception
-                            rel.model._meta.get_field(rel_field)
-                            valid_fields.append(field)
-                    except FieldDoesNotExist:
-                        pass
-                elif field_name in model_fields:
-                    try:
-                        rel = queryset.model._meta.get_field(
-                            field_name).remote_field
-                    except FieldDoesNotExist:
-                        rel = None
-                    if not rel:
-                        # if it is a relation fields (as a result valid),
-                        # we don't want to end-up with a problem later on
-                        # when we are trying `field__icontains=`.
+            elif '__' in field_name:
+                relation, rel_field = field_name.split('__')
+                try:
+                    # check if the field is a relation
+                    rel = queryset.model._meta.get_field(
+                        relation).remote_field
+                    if rel:
+                        # if the field doesn't exist the
+                        # call will throw an exception
+                        rel.model._meta.get_field(rel_field)
                         valid_fields.append(field)
+                except FieldDoesNotExist:
+                    pass
+            elif field_name in model_fields:
+                try:
+                    rel = queryset.model._meta.get_field(
+                        field_name).remote_field
+                except FieldDoesNotExist:
+                    rel = None
+                if not rel:
+                    # if it is a relation fields (as a result valid),
+                    # we don't want to end-up with a problem later on
+                    # when we are trying `field__icontains=`.
+                    valid_fields.append(field)
+
+        LOGGER.debug("[SearchFilter.filter_valid_fields(fields=%s)] "\
+            "alternate_fields=%s, search_fields=%s, json_field=%s "\
+            "valid_field_candidates=%s, valid_fields=%s",
+            fields, alternate_fields, search_fields, json_field,
+            valid_field_candidates, valid_fields)
 
         return tuple(valid_fields)
 
