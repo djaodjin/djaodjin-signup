@@ -4,8 +4,15 @@
 boto3==1.33.13                       # last version compatible with Py3.7
 Django==3.2.25 ; python_version < "3.9"
 Django==4.2.30 ; python_version >= "3.9" and python_version < "3.12"
-Django==5.2.16 ; python_version >= "3.12" and python_version < "3.14"
-Django==6.0.7  ; python_version >= "3.14"
+Django==5.2.19 ; python_version >= "3.12" and python_version < "3.14"
+Django==6.1.3  ; python_version >= "3.14"
+djangorestframework==3.14.0 ; python_version < "3.9"
+                             # 3.12.4 not compatible with Django4.2
+djangorestframework==3.15.2 ;python_version >= "3.9" and python_version < "3.12"
+                             # Breaking changes in 3.15.0 and 3.15.1.
+                             # Requires Django>=4.2 and Python >=3.8.
+djangorestframework==3.18.3 ; python_version >= "3.12"
+                             # 3.18 dropped support for Django4.2
 
 django-fernet-fields @ git+https://github.com/djaodjin/django-fernet-fields.git@6f261ed465a7fbafa1c41b635f7acd9fd6f3ccca
 django-phonenumber-field==5.2.0      # Latest 8.0.0. Some breaking
@@ -26,18 +33,11 @@ django-storages==1.13.2              # Latest is 1.14.4. Breaking
                                      # Read the change log:
                                      # https://github.com/jschneier/django-storages/blob/master/CHANGELOG.rst
 
-djangorestframework==3.14.0 ; python_version < "3.9"
-djangorestframework==3.15.2 ; python_version >= "3.9" # Breaking
-                                     # changes in 3.15.0 and 3.15.1
-                                     # were reverted in 3.15.2.
-                                     # Requires Django >=4.2 and
-                                     # Python >=3.8. See release notes
-                                     # for details:
-                                     # https://github.com/encode/django-rest-framework/releases
-
 docutils==0.16
 phonenumbers==8.13.7
-PyJWT==2.12.0                        # 2.11.0 supports Python 3.14
+PyJWT==2.8.0                ; python_version < "3.9"
+PyJWT==2.15.1               ; python_version >= "3.9"
+                                     # 2.11.0 supports Python 3.14
                                      # 2.10.0 requires Python>=3.9
                                      # 2.6.0 requires Python>=3.7
 pyotp==2.8.0

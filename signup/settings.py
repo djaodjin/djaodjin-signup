@@ -52,6 +52,7 @@ _SETTINGS = {
     'ENCRYPTED_FIELD': _DEFAULT_ENCRYPTED_FIELD,
     'EXTRA_FIELD': None,
     'EXTRA_MIXIN': object,
+    'IS_JSON_SQL_FEATURE_AVAILABLE': False,
     'JWT_ALGORITHM': 'HS256',
     'JWT_SECRET_KEY': getattr(settings, 'SECRET_KEY'),
     'LDAP': {
@@ -229,6 +230,8 @@ RANDOM_SEQUENCE = _SETTINGS.get('RANDOM_SEQUENCE')
 
 # Miscellaneous
 # -------------
+
+IS_JSON_SQL_FEATURE_AVAILABLE = _SETTINGS.get('IS_JSON_SQL_FEATURE_AVAILABLE')
 
 #: List of HTTP Cookie to clear when a user logs out
 LOGOUT_CLEAR_COOKIES = _SETTINGS.get('LOGOUT_CLEAR_COOKIES')

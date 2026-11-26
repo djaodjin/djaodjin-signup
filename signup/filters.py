@@ -1,4 +1,4 @@
-# Copyright (c) 2022, DjaoDjin inc.
+# Copyright (c) 2026, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -29,6 +29,8 @@ import logging
 
 from django.core.exceptions import FieldDoesNotExist
 from django.db import models
+from django.db.models.expressions import RawSQL
+from django.db.models.functions import Cast
 from rest_framework.filters import (OrderingFilter as BaseOrderingFilter,
     SearchFilter as BaseSearchFilter)
 
@@ -39,12 +41,42 @@ from .compat import force_str, six
 LOGGER = logging.getLogger(__name__)
 
 
+def search_terms_as_list(params):
+    """
+    Search terms are set by a ?q=... query parameter.
+    When multiple search terms must be matched, they can be delimited
+    by a comma.
+    """
+    params = params.replace('\x00', '')  # strip null characters
+    results = []
+    inside = False
+    first = 0
+    for last, letter in enumerate(params):
+        if inside:
+            if letter == '"':
+                if first < last:
+                    results += [params[first:last]]
+                first = last + 1
+                inside = False
+        else:
+            if letter in (',',):
+                if first < last:
+                    results += [params[first:last]]
+                first = last + 1
+            elif letter == '"':
+                inside = True
+                first = last + 1
+    if first < len(params):
+        results += [params[first:len(params)]]
+    return results
+
+
 class SearchFilter(BaseSearchFilter):
 
     search_field_param = settings.SEARCH_FIELDS_PARAM
 
-
     def filter_queryset(self, request, queryset, view):
+        #pylint:disable=too-many-locals
         search_fields = self.get_valid_fields(request, queryset, view)
         search_terms = self.get_search_terms(request)
         LOGGER.debug("[SearchFilter.filter_queryset] search_terms=%s, "\
@@ -53,30 +85,62 @@ class SearchFilter(BaseSearchFilter):
         if not search_fields or not search_terms:
             return queryset
 
+        json_field = self.get_json_field(view)
+        json_field_as_json = '%s_json' % (json_field if json_field else "")
+        model_search_fields = []
+        json_search_fields = []
+        for field in search_fields:
+            field_name = field
+            lookup = self.lookup_prefixes.get(field_name[0])
+            if lookup:
+                field_name = field_name[1:]
+            if json_field and field_name.startswith('%s__' % json_field):
+                json_field_name = field_name.replace(
+                    json_field, json_field_as_json)
+                json_search_fields += [
+                    (lookup + json_field_name) if lookup else json_field_name]
+            else:
+                model_search_fields += [field]
+        if json_search_fields:
+            json_field_valid = "%s_valid" % json_field_as_json
+            if settings.IS_JSON_SQL_FEATURE_AVAILABLE:
+                queryset = queryset.annotate(
+                    **{json_field_valid: RawSQL("%s IS JSON" % json_field, [])})
+            else:
+                # sqlite3 defines a `JSON_VALID` function.
+                # PostgresQL < 16 requires to create a database function.
+                queryset = queryset.annotate(**{json_field_valid: models.Func(
+                    json_field, function='JSON_VALID',
+                    output_field=models.BooleanField())})
+            queryset = queryset.annotate(
+                    **{json_field_as_json: models.Case(
+                    models.When(models.Q(**{json_field_valid: True}),
+                    then=Cast(json_field, output_field=models.JSONField())))})
+
         try:
             # djangorestframework>=3.15
             orm_lookups = [
                 self.construct_search(six.text_type(search_field), queryset)
-                for search_field in search_fields
+                for search_field in (model_search_fields + json_search_fields)
             ]
         except TypeError:
             # djangorestframework<=3.14
             #pylint:disable=no-value-for-parameter
             orm_lookups = [
                 self.construct_search(six.text_type(search_field))
-                for search_field in search_fields
+                for search_field in (model_search_fields + json_search_fields)
             ]
 
         conditions = []
         for search_term in search_terms:
             queries = [
-                models.Q(**{orm_lookup: search_term})
+                self.build_search_query(orm_lookup, search_term)
                 for orm_lookup in orm_lookups
             ]
             conditions.append(reduce(operator.or_, queries))
         queryset = queryset.filter(reduce(operator.or_, conditions))
 
-        if self.must_call_distinct(queryset, search_fields):
+        if self.must_call_distinct(queryset, model_search_fields):
             # Filtering against a many-to-many field requires us to
             # call queryset.distinct() in order to avoid duplicate items
             # in the resulting queryset.
@@ -85,75 +149,110 @@ class SearchFilter(BaseSearchFilter):
         return queryset
 
 
-    @staticmethod
-    def filter_valid_fields(queryset, fields, view):
-        #pylint:disable=protected-access
+    def build_search_query(self, orm_lookup, search_term):
+        return models.Q(**{orm_lookup: search_term})
+
+
+    def filter_valid_fields(self, queryset, fields, view):
+        #pylint:disable=too-many-locals,protected-access
         model_fields = {
             field.name for field in queryset.model._meta.get_fields()}
+        annotations = getattr(
+            getattr(queryset, 'query', None), 'annotations', None)
+        if annotations:
+            model_fields |= set(annotations.keys())
         # We add all the fields that could be aliases then filter out the ones
         # which are not present in the model.
         alternate_fields = getattr(view, 'alternate_fields', {})
         for field in fields:
+            field_lookup = field[0]
+            lookup = self.lookup_prefixes.get(field_lookup)
+            if lookup:
+                field = field[1:]
             alternate_field = alternate_fields.get(field, None)
             if alternate_field:
+                if lookup:
+                    alternate_field = field_lookup + alternate_field
                 if isinstance(alternate_field, (list, tuple)):
                     fields += tuple(alternate_field)
                 else:
                     fields += tuple([alternate_field])
 
+        search_fields = getattr(view, 'search_fields', [])
+        json_field = self.get_json_field(view)
         valid_fields = []
         for field in fields:
-            if '__' in field:
-                relation, rel_field = field.split('__')
-                try:
-                    # check if the field is a relation
-                    rel = queryset.model._meta.get_field(relation).remote_field
-                    if rel:
-                        # if the field doesn't exist the
-                        # call will throw an exception
-                        rel.model._meta.get_field(rel_field)
+            field_name = field
+            lookup = self.lookup_prefixes.get(field_name[0])
+            if lookup:
+                field_name = field_name[1:]
+            if json_field and field_name.startswith('%s__' % json_field):
+                if json_field in model_fields:
+                    valid_fields.append(field)
+            elif field in search_fields:
+                if '__' in field_name:
+                    relation, rel_field = field_name.split('__')
+                    try:
+                        # check if the field is a relation
+                        rel = queryset.model._meta.get_field(
+                            relation).remote_field
+                        if rel:
+                            # if the field doesn't exist the
+                            # call will throw an exception
+                            rel.model._meta.get_field(rel_field)
+                            valid_fields.append(field)
+                    except FieldDoesNotExist:
+                        pass
+                elif field_name in model_fields:
+                    try:
+                        rel = queryset.model._meta.get_field(
+                            field_name).remote_field
+                    except FieldDoesNotExist:
+                        rel = None
+                    if not rel:
+                        # if it is a relation fields (as a result valid),
+                        # we don't want to end-up with a problem later on
+                        # when we are trying `field__icontains=`.
                         valid_fields.append(field)
-                except FieldDoesNotExist:
-                    pass
-            elif field in model_fields:
-                valid_fields.append(field)
 
         return tuple(valid_fields)
 
 
+    def get_json_field(self, view):
+        json_field = getattr(view, 'json_field', None)
+        if json_field and json_field in getattr(view, 'search_fields', []):
+            return json_field
+        return None
+
+
+    def get_query_param(self, request, key, default_value=None):
+        try:
+            return request.query_params.get(key, default_value)
+        except AttributeError:
+            pass
+        return request.GET.get(key, default_value)
+
+
+    def get_query_param_list(self, request, key, default_value=None):
+        try:
+            return request.query_params.getlist(key, default_value)
+        except AttributeError:
+            pass
+        return request.GET.getlist(key, default_value)
+
+
     def get_query_fields(self, request):
-        return request.query_params.getlist(self.search_field_param)
+        return self.get_query_param_list(request, self.search_field_param)
 
 
     def get_search_terms(self, request):
         """
-        Search terms are set by a ?search=... query parameter,
-        and may be comma and/or whitespace delimited.
+        Search terms are set by a ?q=... query parameter.
+        When multiple search terms must be matched, they can be delimited
+        by a comma.
         """
-        params = request.query_params.get(self.search_param, '')
-        params = params.replace('\x00', '')  # strip null characters
-        params = params.replace(',', ' ')
-        results = []
-        inside = False
-        first = 0
-        for last, letter in enumerate(params):
-            if inside:
-                if letter == '"':
-                    if first < last:
-                        results += [params[first:last]]
-                    first = last + 1
-                    inside = False
-            else:
-                if letter in (' ', '\t'):
-                    if first < last:
-                        results += [params[first:last]]
-                    first = last + 1
-                elif letter == '"':
-                    inside = True
-                    first = last + 1
-        if first < len(params):
-            results += [params[first:len(params)]]
-        return results
+        return search_terms_as_list(
+            self.get_query_param(request, self.search_param, ''))
 
 
     def get_valid_fields(self, request, queryset, view, context=None):
@@ -174,11 +273,26 @@ class SearchFilter(BaseSearchFilter):
 
 
     def get_schema_operation_parameters(self, view):
-        search_fields = getattr(view, 'search_fields', [])
+        search_fields = getattr(view, 'search_fields', None)
+        json_field = self.get_json_field(view)
+        search_field_names = []
+        if search_fields:
+            for search_field in search_fields:
+                if isinstance(search_field, tuple):
+                    search_field_names += [search_field[1]]
+                else:
+                    search_field_names += [search_field]
         search_fields_description = (
-            "restrict searches to one or more fields in: %s."\
-            " searches all fields when unspecified."  % (
-            ', '.join(search_fields)))
+            "restrict searches to one or more fields in: %(search_fields)s."\
+            " searches all fields when unspecified.")
+        if json_field:
+            search_fields_description += (
+            " If %(json_field)s is valid JSON, using target keys works"\
+            " by adding a '__' between %(json_field)s and the target key"\
+            " (example: '%(json_field)s__birth_date').")
+        search_fields_description = search_fields_description % {
+            'json_field': json_field,
+            'search_fields': ', '.join(search_field_names)}
         return [
             {
                 'name': self.search_param,
