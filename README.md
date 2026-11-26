@@ -68,8 +68,8 @@ Tested with
 - **Python:** 3.10, **Django:** 4.2 (legacy)
 - **Python:** 3.9, **Django:** 3.2 (legacy)
 
-0.11.6
+0.11.7
 
-  * fixes security issue in search filter
+  * fixes regression introduced in commit 323aee9b (0.11.6)
 
 [previous release notes](changelog)
